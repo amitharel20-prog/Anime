@@ -19,7 +19,7 @@
 :root{
   --bg:#f3f2ee; --surface:#ffffff; --fg:#1d1f3a; --muted:#6b6d85; --line:#dfdde6;
   --accent:#3b4bb8; --accent-fg:#ffffff; --gold:#c9861a;
-  --s-watch:#2a8a5f; --s-plan:#3b4bb8; --s-done:#7a4bb0; --s-drop:#9a5a4a;
+  --s-watch:#2a8a5f; --s-plan:#3b4bb8; --s-done:#7a4bb0; --s-drop:#9a5a4a; --s-hold:#a07812;
   --display:"Secular One","Assistant",system-ui,sans-serif;
   --body:"Assistant",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
   color-scheme:light;
@@ -27,7 +27,7 @@
 @media (prefers-color-scheme:dark){:root{
   --bg:#13142a; --surface:#1d1f3a; --fg:#ecebf3; --muted:#9a9cb8; --line:#2e3157;
   --accent:#8b97ff; --accent-fg:#13142a; --gold:#f0b54a;
-  --s-watch:#5fd29c; --s-plan:#8b97ff; --s-done:#c49bf0; --s-drop:#e09a86;
+  --s-watch:#5fd29c; --s-plan:#8b97ff; --s-done:#c49bf0; --s-drop:#e09a86; --s-hold:#e8c15a;
   color-scheme:dark;
 }}
 *{box-sizing:border-box}
@@ -68,8 +68,28 @@ main{padding-block:16px}
 .stats b{display:block;font-family:var(--display);font-weight:400;font-size:22px;color:var(--fg);font-variant-numeric:tabular-nums}
 
 .list{display:grid;gap:10px;margin-top:14px}
-.row{display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px;text-align:start;width:100%}
-.row img,.row .ph{width:64px;height:90px;object-fit:cover;border-radius:6px;background:var(--line)}
+.row{display:grid;grid-template-columns:1fr auto;align-items:stretch;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.rmain{display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;background:none;border:0;padding:8px;text-align:start;width:100%;min-width:0}
+.rmain .t{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.rmain .name,.rmain .sub{display:block}
+.rmain .bar{display:block;width:100%}
+.side{border:0;border-inline-start:1px solid var(--line);background:none;width:56px;font-size:20px;font-weight:700;color:var(--accent);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.side small{font-size:11px;font-weight:600;color:var(--muted)}
+.side.addnew{background:var(--accent);color:var(--accent-fg)}
+.side.addnew small{color:var(--accent-fg)}
+.plus1{color:var(--s-watch)}
+.st-hold{color:var(--s-hold)}
+.sheet{position:fixed;inset:0;z-index:30}
+.sheet-bg{position:absolute;inset:0;background:rgba(10,10,25,.45)}
+.sheet-card{position:absolute;inset:auto 0 0;background:var(--surface);border-radius:16px 16px 0 0;padding:16px max(16px,env(safe-area-inset-left,0px)) calc(20px + env(safe-area-inset-bottom,0px));max-width:720px;margin:0 auto}
+.sheet-h{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+.sheet-h b{font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sheet-list{display:grid;gap:8px}
+.sheet-list button{display:flex;justify-content:space-between;border:1px solid currentColor;background:var(--bg);border-radius:10px;padding:14px 16px;font-size:17px;font-weight:700}
+.sheet-list button span{color:var(--fg)}
+.sheet-list button[aria-pressed="true"]{background:currentColor}
+.sheet-list button[aria-pressed="true"] span{color:var(--bg)}
+.rmain img,.rmain .ph{width:64px;height:90px;object-fit:cover;border-radius:6px;background:var(--line)}
 .row .t{min-width:0}
 .row .name{font-weight:700;line-height:1.3;overflow-wrap:anywhere}
 .row .sub{color:var(--muted);font-size:13px}
@@ -99,7 +119,7 @@ main{padding-block:16px}
 .facts{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:14px;color:var(--muted)}
 .facts b{color:var(--fg)}
 h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:24px 0 8px}
-.statusset{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.statusset{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .statusset button{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 2px;font-weight:700;font-size:14px}
 .statusset button[aria-pressed="true"]{border-color:currentColor;background:currentColor}
 .statusset button[aria-pressed="true"] span{color:var(--bg)}
@@ -136,7 +156,7 @@ h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute
 .bigstats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 .bigstats div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;color:var(--muted);font-size:14px}
 .bigstats b{display:block;font-family:var(--display);font-weight:400;font-size:30px;line-height:1.1;color:var(--fg);font-variant-numeric:tabular-nums}
-.statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}
+.statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:6px;text-align:center}
 .statgrid div{border:1px solid currentColor;border-radius:10px;padding:8px 2px;font-size:13px;font-weight:700}
 .statgrid b{display:block;font-family:var(--display);font-weight:400;font-size:22px}
 .bars{display:grid;gap:6px}
@@ -157,7 +177,7 @@ h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute
 .steps li{min-width:0}
 .mono-wrap code{font-size:14px;background:var(--bg);padding:2px 6px;border-radius:6px;word-break:break-all;direction:ltr;unicode-bidi:isolate}
 nav.tabs button{font-size:12px}
-@media (prefers-reduced-motion:no-preference){.row,.chip,.btn{transition:transform .1s}.row:active{transform:scale(.99)}}
+@media (prefers-reduced-motion:no-preference){.rmain,.chip,.btn{transition:transform .1s}.rmain:active{transform:scale(.99)}}
 </style>
 </head>
 <body>
@@ -180,6 +200,7 @@ nav.tabs button{font-size:12px}
 </div></nav>
 
 <div class="toast" id="toast" hidden role="status"></div>
+<div class="sheet" id="sheet" hidden></div>
 
 <script>
 "use strict";
@@ -187,9 +208,10 @@ nav.tabs button{font-size:12px}
 const KEY = "animeTracker.v1";
 const STATUS = {
   watching:{label:"בצפייה", cls:"st-watching"},
-  plan:{label:"אראה", cls:"st-plan"},
-  done:{label:"ראיתי", cls:"st-done"},
-  dropped:{label:"נטשתי", cls:"st-dropped"}
+  done:{label:"נצפה", cls:"st-done"},
+  hold:{label:"בהמתנה", cls:"st-hold"},
+  dropped:{label:"נטשתי", cls:"st-dropped"},
+  plan:{label:"אצפה בעתיד", cls:"st-plan"}
 };
 const FORMAT = {TV:"סדרה",TV_SHORT:"סדרה קצרה",MOVIE:"סרט",SPECIAL:"ספיישל",OVA:"OVA",ONA:"ONA",MUSIC:"קליפ"};
 const AIR = {FINISHED:"הסתיימה",RELEASING:"משודרת עכשיו",NOT_YET_RELEASED:"טרם יצאה",CANCELLED:"בוטלה",HIATUS:"בהפסקה"};
@@ -327,7 +349,7 @@ function renderList(){
     <div class="sortrow"><label for="sort">מיון</label><select id="sort">${Object.entries(SORTS).map(([k,s])=>`<option value="${k}" ${k===sortKey?"selected":""}>${s.label}</option>`).join("")}</select></div>
     <div class="list">${items.map(rowHTML).join("") || `<div class="empty">אין כאן כלום עדיין.</div>`}</div>`;
   view.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ listFilter=c.dataset.f; renderList(); });
-  view.querySelectorAll(".row").forEach(r=>r.onclick=()=>go({tab:"list",detail:+r.dataset.id}));
+  bindRows(view,"list");
   $("#sort").onchange=ev=>{ prefs.sort=ev.target.value; savePrefs(); renderList(); };
   const tb=$("#toBackup"); if(tb) tb.onclick=()=>go({tab:"settings"},false);
   const tn=$("#toNew"); if(tn) tn.onclick=()=>{ listFilter="new"; renderList(); };
@@ -336,17 +358,70 @@ function rowHTML(e){
   const w = watchedCount(e), tot = e.episodes, n = newEps(e);
   const sub = [FORMAT[e.format]||e.format, e.year].filter(Boolean).join(" · ");
   const pr = tot ? `${w}/${tot} פרקים` : (w?`${w} פרקים`:"");
-  return `<button class="row" data-id="${e.id}">
+  const canPlus = e.status==="watching" && (!tot || watchedMax(e)<tot);
+  return `<div class="row"><button class="rmain" data-id="${e.id}">
     ${poster(e.cover)}
-    <div class="t"><div class="name">${esc(e.title)}</div>
-      <div class="sub">${esc(sub)}${pr?" · "+pr:""}</div>
+    <span class="t"><span class="name">${esc(e.title)}</span>
+      <span class="sub">${esc(sub)}${pr?" · "+pr:""}</span>
       ${e.status?`<span class="pill ${STATUS[e.status].cls}">${STATUS[e.status].label}</span>`:""}
       ${n?`<span class="pill st-new">${n===1?"פרק חדש":n+" פרקים חדשים"}</span>`:""}
-      ${e.status==="watching"&&tot?`<div class="bar"><i style="width:${Math.min(100,w/tot*100)}%"></i></div>`:""}
-    </div>
-    <div class="myscore">${e.score??"–"}<small>הציון שלי</small></div>
-  </button>`;
+      ${e.status==="watching"&&tot?`<span class="bar"><i style="width:${Math.min(100,w/tot*100)}%"></i></span>`:""}
+    </span>
+    <span class="myscore">${e.score??"–"}<small>הציון שלי</small></span></button>
+    ${canPlus?`<button class="side plus1" data-plus="${e.id}" aria-label="סמן את הפרק הבא כנצפה">+1<small>פרק</small></button>`:`<button class="side" data-add="${e.id}" aria-label="העבר לרשימה אחרת">⋯<small>רשימה</small></button>`}
+  </div>`;
 }
+function resultHTML(m){
+  const mine = db.items[m.id];
+  const title = m.title.english || m.title.romaji || m.title.native;
+  const sub = [FORMAT[m.format]||m.format, m.seasonYear, epCount(m)?epCount(m)+" פרקים":null].filter(Boolean).join(" · ");
+  return `<div class="row"><button class="rmain" data-id="${m.id}">${poster(m.coverImage&&(m.coverImage.medium||m.coverImage.large))}
+    <span class="t"><span class="name">${esc(title)}</span><span class="sub">${esc(sub)}</span>
+    ${mine&&mine.status?`<span class="pill ${STATUS[mine.status].cls}">${STATUS[mine.status].label}</span>`:""}</span>
+    <span class="myscore">${m.averageScore?(m.averageScore/10).toFixed(1):"–"}<small>AniList</small></span></button>
+    <button class="side ${mine&&mine.status?"":"addnew"}" data-add="${m.id}" aria-label="הוסף לרשימה">${mine&&mine.status?"⋯":"+"}<small>${mine&&mine.status?"רשימה":"הוסף"}</small></button></div>`;
+}
+function bindRows(root, tab, mediaList){
+  root.querySelectorAll(".rmain").forEach(b=>b.onclick=()=>{
+    const id=+b.dataset.id; const m = mediaList&&mediaList.find(x=>x.id===id); if(m) cacheMedia[id]=m;
+    go({tab, detail:id});
+  });
+  root.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{
+    const id=+b.dataset.add; const m = mediaList&&mediaList.find(x=>x.id===id); if(m) cacheMedia[id]=m;
+    openListSheet(id);
+  });
+  root.querySelectorAll("[data-plus]").forEach(b=>b.onclick=()=>{
+    const it = db.items[+b.dataset.plus]; if(!it) return;
+    const n = watchedMax(it)+1; it.eps[n]={...(it.eps[n]||{}),w:true};
+    let msg = `פרק ${n} סומן כנצפה`;
+    if(it.episodes && watchedMax(it)>=it.episodes){ it.status="done"; msg=`סיימת! ${it.title} עבר ל'נצפה'`; }
+    touch(it); toast(msg); render();
+  });
+}
+
+/* ---------- חלונית בחירת רשימה ---------- */
+function openListSheet(id){
+  const it = db.items[id], m = cacheMedia[id];
+  const title = it ? it.title : (m ? (m.title.english||m.title.romaji) : "");
+  const sh = $("#sheet");
+  sh.innerHTML = `<div class="sheet-bg" data-close></div><div class="sheet-card" role="dialog" aria-label="הוסף לרשימה">
+    <div class="sheet-h"><b>${esc(title)}</b><button class="linkbtn" data-close>סגור</button></div>
+    <div class="sheet-list">${Object.entries(STATUS).map(([k,s])=>`<button class="${s.cls}" data-st="${k}" aria-pressed="${it&&it.status===k}"><span>${s.label}</span>${it&&it.status===k?"<span>✓</span>":""}</button>`).join("")}</div>
+    ${it&&it.status?`<button class="btn" data-st="" style="width:100%;margin-top:8px">הסר מהרשימות</button>`:""}
+  </div>`;
+  sh.hidden=false;
+  sh.querySelectorAll("[data-close]").forEach(b=>b.onclick=closeSheet);
+  sh.querySelectorAll("[data-st]").forEach(b=>b.onclick=()=>{
+    const st = b.dataset.st;
+    if(!st){ removeItem(id); toast("הוסר מהרשימות"); closeSheet(); render(); return; }
+    const e = getOrCreate(id, m);
+    e.status = st;
+    if(st==="done" && e.episodes){ for(let n=1;n<=e.episodes;n++) e.eps[n]={...(e.eps[n]||{}),w:true}; }
+    delete db.meta.deleted[id];
+    touch(e); toast(`נוסף ל'${STATUS[st].label}'`); closeSheet(); render();
+  });
+}
+function closeSheet(){ const sh=$("#sheet"); sh.hidden=true; sh.innerHTML=""; }
 
 /* ---------- רענון פרקים מ־AniList ---------- */
 let refreshing=false;
@@ -414,42 +489,64 @@ function renderStats(){
     ${genres.length?`<h3>ז'אנרים שאני רואה הכי הרבה</h3><div class="bars genres">${genres.map(([name,v])=>`<div class="barrow"><span class="lbl" dir="ltr">${esc(name)}</span><span class="track"><i style="width:${v.n/maxG*100}%"></i></span><span class="val">${v.n}${v.c?` · <em>${(v.s/v.c).toFixed(1)}</em>`:""}</span></div>`).join("")}</div><p class="note">המספר הוא כמה אנימות, ואחריו הציון הממוצע שנתת בז'אנר.</p>`:""}
     ${top.length?`<h3>הכי אהבתי</h3><div class="list">${top.map(rowHTML).join("")}</div>`:""}
     <div style="height:16px"></div>`;
-  view.querySelectorAll(".row").forEach(r=>r.onclick=()=>go({tab:"stats",detail:+r.dataset.id}));
+  bindRows(view,"stats");
 }
 
-/* ---------- חיפוש ---------- */
+/* ---------- חיפוש וגילוי ---------- */
+function curSeason(){
+  const d=new Date(), m=d.getMonth();
+  const s = m<=1||m===11?"WINTER":m<=4?"SPRING":m<=7?"SUMMER":"FALL";
+  return {s, y: m===11? d.getFullYear()+1 : d.getFullYear()};
+}
+const SEASON_HE = {WINTER:"חורף",SPRING:"אביב",SUMMER:"קיץ",FALL:"סתיו"};
+const BROWSE = {
+  season:{label:()=>{const c=curSeason();return `העונה (${SEASON_HE[c.s]} ${c.y})`;}, q:()=>{const c=curSeason();return [`season:$s,seasonYear:$y,sort:POPULARITY_DESC`,{s:c.s,y:c.y},`$s:MediaSeason,$y:Int`];}},
+  trending:{label:()=>"חם עכשיו", q:()=>[`sort:TRENDING_DESC`,{},""]},
+  top:{label:()=>"המדורגים ביותר", q:()=>[`sort:SCORE_DESC,format_in:[TV,MOVIE,ONA,OVA]`,{},""]},
+  popular:{label:()=>"הכי פופולריים", q:()=>[`sort:POPULARITY_DESC`,{},""]},
+  upcoming:{label:()=>"בקרוב", q:()=>[`status:NOT_YET_RELEASED,sort:POPULARITY_DESC`,{},""]}
+};
+const browseCache = {};
+let browseTab = "season";
+async function loadBrowse(k){
+  if(browseCache[k]) return browseCache[k];
+  const [args,vars,decl] = BROWSE[k].q();
+  const d = await anilist(`query${decl?`(${decl})`:""}{Page(perPage:40){media(type:ANIME,isAdult:false,${args}){${MEDIA_FIELDS}}}}`,vars);
+  return browseCache[k]=d.Page.media;
+}
 function renderSearch(){
   setHeader("חיפוש אנימה", false);
   view.innerHTML = `
-    <form class="search" id="sf"><input id="q" type="search" placeholder="שם באנגלית או ביפנית, למשל Frieren" value="${esc(lastSearch.q)}" autocomplete="off" enterkeyhint="search"><button class="btn primary">חפש</button></form>
+    <form class="search" id="sf"><input id="q" type="search" placeholder="חפש אנימה, למשל Frieren" value="${esc(lastSearch.q)}" autocomplete="off" enterkeyhint="search"><button class="btn primary">חפש</button></form>
+    <div id="browseBar"></div>
     <div id="sr" class="list"></div>`;
-  const sr = $("#sr");
+  const sr = $("#sr"), bar=$("#browseBar");
   const show = res => {
-    sr.innerHTML = res.length ? res.map(m=>{
-      const e = db.items[m.id] || entryFromMedia(m);
-      const sub = [FORMAT[m.format]||m.format, m.seasonYear, epCount(m)?epCount(m)+" פרקים":null].filter(Boolean).join(" · ");
-      return `<button class="row" data-id="${m.id}">${poster(m.coverImage&&m.coverImage.medium)}
-        <div class="t"><div class="name">${esc(e.title)}</div><div class="sub">${esc(sub)}</div>
-        ${db.items[m.id]&&db.items[m.id].status?`<span class="pill ${STATUS[db.items[m.id].status].cls}">${STATUS[db.items[m.id].status].label}</span>`:""}</div>
-        <div class="myscore">${m.averageScore?(m.averageScore/10).toFixed(1):"–"}<small>AniList</small></div></button>`;
-    }).join("") : (lastSearch.q?`<div class="empty">לא נמצאו תוצאות. נסה את השם באנגלית או ביפנית.</div>`:`<div class="empty"><h2>מה תרצה למצוא?</h2><p>החיפוש עובד מול AniList, שמכיל כמעט כל אנימה שיצאה.</p></div>`);
-    sr.querySelectorAll(".row").forEach(r=>r.onclick=()=>{
-      const m = res.find(x=>x.id==r.dataset.id);
-      cacheMedia[m.id]=m; go({tab:"search",detail:m.id});
-    });
+    sr.innerHTML = res.length ? res.map(resultHTML).join("") : `<div class="empty">לא נמצאו תוצאות. נסה את השם באנגלית או ביפנית.</div>`;
+    bindRows(sr,"search",res);
   };
-  show(lastSearch.results);
+  const showBrowse = async ()=>{
+    bar.innerHTML = `<div class="chips" style="margin-top:12px">${Object.entries(BROWSE).map(([k,b])=>`<button class="chip" data-b="${k}" aria-pressed="${browseTab===k}">${b.label()}</button>`).join("")}</div>`;
+    bar.querySelectorAll("[data-b]").forEach(c=>c.onclick=()=>{ browseTab=c.dataset.b; showBrowse(); });
+    if(!browseCache[browseTab]) sr.innerHTML=`<div class="empty">טוען…</div>`;
+    try{ const res = await loadBrowse(browseTab); if(!lastSearch.q) show(res); }
+    catch(err){ sr.innerHTML=`<div class="msg">לא הצלחתי לטעון: ${esc(err.message)}. בדוק חיבור לאינטרנט.</div>`; }
+  };
+  if(lastSearch.q){
+    bar.innerHTML = `<button class="linkbtn" id="clearQ" style="margin-top:8px">← חזרה לגילוי אנימות</button>`;
+    $("#clearQ").onclick=()=>{ lastSearch={q:"",results:[]}; renderSearch(); };
+    show(lastSearch.results);
+  } else showBrowse();
   $("#sf").onsubmit = async ev=>{
     ev.preventDefault();
     const q = $("#q").value.trim(); if(!q) return;
     $("#q").blur();
     sr.innerHTML = `<div class="empty">מחפש…</div>`;
     try{
-      const d = await anilist(`query($s:String){Page(perPage:25){media(search:$s,type:ANIME,sort:SEARCH_MATCH){${MEDIA_FIELDS}}}}`,{s:q});
-      lastSearch = {q, results:d.Page.media}; show(lastSearch.results);
+      const d = await anilist(`query($s:String){Page(perPage:30){media(search:$s,type:ANIME,isAdult:false,sort:SEARCH_MATCH){${MEDIA_FIELDS}}}}`,{s:q});
+      lastSearch = {q, results:d.Page.media}; renderSearch();
     }catch(err){ sr.innerHTML = `<div class="msg">החיפוש נכשל: ${esc(err.message)}. בדוק חיבור לאינטרנט ונסה שוב.</div>`; }
   };
-  if(!lastSearch.q) setTimeout(()=>$("#q").focus(),50);
 }
 
 /* ---------- מסך אנימה ---------- */
@@ -533,7 +630,7 @@ function detailHTML(id, m){
   view.querySelectorAll("[data-ep]").forEach(c=>c.onchange=()=>{
     const it=getOrCreate(id,base); const n=c.dataset.ep;
     it.eps[n]={...(it.eps[n]||{}),w:c.checked}; if(!it.status) it.status="watching";
-    const w=watchedCount(it); if(it.episodes && w===it.episodes && it.status==="watching"){ it.status="done"; toast("סיימת את כל הפרקים. סומן כ'ראיתי'"); detailHTML(id,m); }
+    const w=watchedCount(it); if(it.episodes && w===it.episodes && it.status==="watching"){ it.status="done"; toast("סיימת את כל הפרקים. עבר לרשימת 'נצפה'"); detailHTML(id,m); }
     touch(it);
   });
   view.querySelectorAll("[data-eps]").forEach(s=>s.onchange=()=>{
@@ -695,7 +792,7 @@ function bindSyncCard(){
 }
 
 function impStatus(html){ $("#imp") && ($("#imp").innerHTML = `<div class="msg">${html}</div>`); }
-const ALS = {CURRENT:"watching",REPEATING:"watching",PAUSED:"watching",PLANNING:"plan",COMPLETED:"done",DROPPED:"dropped"};
+const ALS = {CURRENT:"watching",REPEATING:"watching",PAUSED:"hold",PLANNING:"plan",COMPLETED:"done",DROPPED:"dropped"};
 function applyImported(m, status, score, progress){
   const e = db.items[m.id] || entryFromMedia(m);
   e.status = status; if(score) e.score = Math.round(score);
@@ -715,7 +812,7 @@ async function importAniList(user){
   }catch(err){ impStatus(`הייבוא נכשל: ${esc(err.message)}. בדוק ששם המשתמש נכון ושהרשימה ציבורית.`); }
 }
 
-const MALS = {"Watching":"watching","Plan to Watch":"plan","Completed":"done","On-Hold":"watching","Dropped":"dropped","1":"watching","2":"done","3":"watching","4":"dropped","6":"plan"};
+const MALS = {"Watching":"watching","Plan to Watch":"plan","Completed":"done","On-Hold":"hold","Dropped":"dropped","1":"watching","2":"done","3":"hold","4":"dropped","6":"plan"};
 async function readMaybeGzip(file){
   const buf = new Uint8Array(await file.arrayBuffer());
   if(buf[0]===0x1f && buf[1]===0x8b){
