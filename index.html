@@ -345,7 +345,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 44;
+const APP_VERSION = 45;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -1446,6 +1446,7 @@ function renderSettings(){
       const wiki=ids.filter(id=>!fanFor(db.items[id])&&heCache[id]&&heCache[id].src==="wiki").length, mtc=ids.filter(id=>!fanFor(db.items[id])&&heCache[id]&&heCache[id].src==="mt").length;
       const missing=ids.length-fan-wiki-mtc; const blocked=Date.now()<mtBlockedUntil;
       return `<div class="card"><h2>שמות בעברית</h2><p>מתוך ${ids.length} האנימות ברשימה שלך: ${fan} מאתרי תרגום ישראליים, ${wiki} מוויקיפדיה, ${mtc} בתרגום אוטומטי${missing?`, ו־${missing} לפי הצליל (עד שיימצא להם תרגום)`:""}.</p>
+      ${missing?`<div class="actions" style="margin-top:8px"><button class="btn" id="copyMissing">העתק את השמות שלפי הצליל</button></div><p class="note">אפשר להדביק אותם בצ'אט עם Claude ולכתוב ליד כל אחד איך תרצה שייקרא.</p>`:""}
       ${blocked?`<p class="note">שירות התרגום החינמי הגיע למגבלה היומית. השאר יתורגמו אוטומטית אחרי ${new Date(mtBlockedUntil).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})}.</p>`:(missing?`<p class="note">השמות החסרים ממשיכים להיטען ברקע.</p>`:"")}</div>`; })()}
     <div class="card"><h2>עדכון האפליקציה</h2><p>אם ביקשת שינוי והוא עוד לא מופיע, לוחצים כאן כדי לטעון מיד את הגרסה הכי חדשה. הרשימה שלך לא נמחקת.</p>
       <div class="actions"><button class="btn primary" id="forceUpd">טען את הגרסה החדשה</button></div></div>
@@ -1473,6 +1474,11 @@ function renderSettings(){
     $("#adultConfirm").innerHTML=`<div class="confirm"><span>אני בן 18 ומעלה</span><button class="btn primary" id="adY">אישור</button><button class="btn" id="adN">ביטול</button></div>`;
     $("#adY").onclick=()=>{ prefs.adult=true; savePrefs(); for(const k in browseCache) delete browseCache[k]; for(const k in seasonCache) delete seasonCache[k]; lastSearch={q:"",results:[]}; toast("אנימות 18+ יופיעו בחיפוש"); renderSettings(); };
     $("#adN").onclick=()=>{ $("#adultConfirm").innerHTML=""; };
+  };
+  const cm=$("#copyMissing"); if(cm) cm.onclick=()=>{
+    const list = Object.values(db.items).filter(e=>e.status && !fanFor(e) && !heOf(e.id))
+      .map(e=>`${enTitle(e)} — ${translitHe(enTitle(e))}`).sort();
+    copyText(list.join("\n"), `הועתקו ${list.length} שמות`);
   };
   $("#forceUpd").onclick = async ()=>{
     toast("טוען גרסה חדשה…");
