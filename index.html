@@ -248,7 +248,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 13;
+const APP_VERSION = 14;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -797,6 +797,8 @@ function renderSettings(){
     <div class="card"><h2>ייבוא מ־MyAnimeList</h2><p>באתר MAL: לחץ על התמונה שלך ← Export, ייצא את רשימת האנימה, ופתח את הקובץ שירד (.xml או .gz). אחר כך בחר אותו כאן.</p>
       <div class="actions"><label class="btn primary" for="mf">בחר קובץ מ־MAL</label><input type="file" id="mf" accept=".xml,.gz,text/xml,application/xml,application/gzip" hidden></div></div>
     <div id="imp"></div>
+    <div class="card"><h2>עדכון האפליקציה</h2><p>אם ביקשת שינוי והוא עוד לא מופיע, לוחצים כאן כדי לטעון מיד את הגרסה הכי חדשה. הרשימה שלך לא נמחקת.</p>
+      <div class="actions"><button class="btn primary" id="forceUpd">טען את הגרסה החדשה</button></div></div>
     <p class="note" style="text-align:center">גרסה ${APP_VERSION}</p>`;
 
   $("#bk").onclick = ()=>{
@@ -815,6 +817,12 @@ function renderSettings(){
     }catch(e){ toast("הקובץ לא נראה כמו גיבוי של האפליקציה"); }
   };
   bindSyncCard();
+  $("#forceUpd").onclick = async ()=>{
+    toast("טוען גרסה חדשה…");
+    try{ if(window.caches){ for(const k of await caches.keys()) await caches.delete(k); } }catch(e){}
+    try{ if(navigator.serviceWorker){ for(const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); } }catch(e){}
+    location.replace(location.pathname + "?v=" + Date.now());
+  };
   $("#ai").onclick = ()=>importAniList($("#au").value.trim());
   $("#mf").onchange = ev=>{ const f=ev.target.files[0]; if(f) importMAL(f); };
 }
