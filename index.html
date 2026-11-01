@@ -248,6 +248,16 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 #scRange.unset{opacity:.5}
 .scoreticks{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);padding:0 4px;font-variant-numeric:tabular-nums}
 .scorebox .linkbtn,.scorebox .note{display:block;text-align:center;margin:8px auto 0}
+.lockchip{display:inline-flex;align-items:center;gap:5px}
+.lockscreen{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:30px 12px}
+.lockscreen h2{font-family:var(--display);font-weight:400;font-size:22px;margin:0}
+.lockicon svg{width:44px;height:44px;color:var(--accent)}
+.lockscreen input{width:180px;text-align:center;font-size:24px;letter-spacing:.3em;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px}
+.lockscreen .btn{min-width:180px}
+#pinMsg{color:#c0392b;min-height:1.2em}
+.lockbar{display:flex;align-items:center;gap:8px;margin-top:12px;color:var(--accent);font-weight:700}
+.lockbar .linkbtn{margin-inline-start:auto}
+.lockact{display:flex;align-items:center;justify-content:center;gap:6px}
 @media (prefers-reduced-motion:no-preference){.rmain,.chip,.btn{transition:transform .1s}.rmain:active{transform:scale(.99)}}
 </style>
 </head>
@@ -301,7 +311,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 23;
+const APP_VERSION = 24;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -420,6 +430,41 @@ function render(){
   renderList();
 }
 
+/* ---------- רשימה נעולה ---------- */
+const LOCK_ICON = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+let lockOpen = false;
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden") lockOpen=false; });
+async function hashPin(pin){
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("anime-lock:"+pin));
+  return Array.from(new Uint8Array(buf),b=>b.toString(16).padStart(2,"0")).join("");
+}
+function lockScreenHTML(){
+  const setup = !prefs.pinHash;
+  return `<div class="lockscreen">
+    <div class="lockicon">${LOCK_ICON}</div>
+    <h2>${setup?"בחר קוד לרשימה הנעולה":"הקלד קוד כדי לפתוח"}</h2>
+    <p class="note">${setup?"4 ספרות או יותר. בלי הקוד אי אפשר לראות מה ברשימה הזו.":""}</p>
+    <input type="password" inputmode="numeric" pattern="[0-9]*" id="pinIn" autocomplete="off" placeholder="••••" maxlength="12">
+    ${setup?`<input type="password" inputmode="numeric" pattern="[0-9]*" id="pinIn2" autocomplete="off" placeholder="שוב, לאימות" maxlength="12">`:""}
+    <button class="btn primary" id="pinGo">${setup?"שמור קוד":"פתח"}</button>
+    <p class="note" id="pinMsg"></p></div>`;
+}
+function bindLockScreen(){
+  const inp=$("#pinIn"); setTimeout(()=>inp.focus(),50);
+  const go2 = async ()=>{
+    const pin=inp.value.trim(), msg=$("#pinMsg");
+    if(!/^\d{4,12}$/.test(pin)){ msg.textContent="הקוד צריך להיות 4 ספרות או יותר"; return; }
+    if(!prefs.pinHash){
+      if($("#pinIn2").value.trim()!==pin){ msg.textContent="הקודים לא זהים, נסה שוב"; return; }
+      prefs.pinHash = await hashPin(pin); savePrefs(); lockOpen=true; toast("הקוד נשמר"); renderList(); return;
+    }
+    if(await hashPin(pin)===prefs.pinHash){ lockOpen=true; renderList(); }
+    else { msg.textContent="קוד שגוי"; inp.value=""; inp.focus(); }
+  };
+  $("#pinGo").onclick=go2;
+  view.querySelectorAll(".lockscreen input").forEach(i=>i.onkeydown=ev=>{ if(ev.key==="Enter") go2(); });
+}
+
 /* ---------- הרשימה שלי ---------- */
 const LIST_STEP = 40;
 let listLimit = LIST_STEP;
@@ -435,12 +480,16 @@ function prog(e){ return e.episodes ? watchedCount(e)/e.episodes : 0; }
 function renderList(){
   setHeader("הרשימה שלי", false);
   const all = Object.values(db.items).filter(e=>e.status);
-  const counts = {}; Object.keys(STATUS).forEach(k=>counts[k]=all.filter(e=>e.status===k).length);
-  const fresh = all.filter(e=>newEps(e)>0);
+  // אנימות "נעולות" מופיעות רק בלשונית הנעול, אבל נספרות בסך הכל
+  const visible = all.filter(e=>!e.locked);
+  const lockedItems = all.filter(e=>e.locked);
+  const counts = {}; Object.keys(STATUS).forEach(k=>counts[k]=visible.filter(e=>e.status===k).length);
+  const fresh = visible.filter(e=>newEps(e)>0);
   if(listFilter==="new" && !fresh.length) listFilter="watching";
-  if(!counts[listFilter] && listFilter!=="all" && listFilter!=="new") listFilter = counts.watching?"watching":"all";
+  if(!counts[listFilter] && !["all","new","locked"].includes(listFilter)) listFilter = counts.watching?"watching":"all";
   const sortKey = SORTS[prefs.sort] ? prefs.sort : "newEps";
-  const items = all.filter(e=>listFilter==="all"||(listFilter==="new"?newEps(e)>0:e.status===listFilter)).sort(SORTS[sortKey].fn);
+  const showLocked = listFilter==="locked";
+  const items = (showLocked ? (lockOpen?lockedItems:[]) : visible.filter(e=>listFilter==="all"||(listFilter==="new"?newEps(e)>0:e.status===listFilter))).sort(SORTS[sortKey].fn);
   const lb = db.meta.lastBackup || 0;
   const needBackup = all.length>=5 && Date.now()-lb > 14*864e5 && !syncCfg();
 
@@ -458,9 +507,11 @@ function renderList(){
       ${fresh.length?`<button class="chip" data-f="new" aria-pressed="${listFilter==="new"}">פרקים חדשים<span class="n">${fresh.length}</span></button>`:""}
       ${Object.entries(STATUS).map(([k,s])=>`<button class="chip schip ${s.cls}" data-f="${k}" aria-pressed="${listFilter===k}"><span class="cl">${s.label}</span><span class="n">${counts[k]}</span></button>`).join("")}
       <button class="chip" data-f="all" aria-pressed="${listFilter==="all"}">הכל<span class="n">${all.length}</span></button>
+      <button class="chip lockchip" data-f="locked" aria-pressed="${showLocked}">${LOCK_ICON}<span class="cl">נעול</span>${lockOpen?`<span class="n">${lockedItems.length}</span>`:""}</button>
     </div>
     <div class="sortrow"><label for="sort">מיון</label><select id="sort">${Object.entries(SORTS).map(([k,s])=>`<option value="${k}" ${k===sortKey?"selected":""}>${s.label}</option>`).join("")}</select><button class="linkbtn" id="toStats" style="margin-inline-start:auto">סטטיסטיקות ←</button></div>
-    <div class="list" id="myList">${items.slice(0,listLimit).map(rowHTML).join("") || `<div class="empty">אין כאן כלום עדיין.</div>`}</div>
+    ${showLocked&&!lockOpen ? lockScreenHTML() : `${showLocked?`<div class="lockbar">${LOCK_ICON}<span>רשימה נעולה</span><button class="linkbtn" id="relock">נעל שוב</button></div>`:""}
+    <div class="list" id="myList">${items.slice(0,listLimit).map(rowHTML).join("") || `<div class="empty">${showLocked?"אין כאן אנימות. כדי להעביר אנימה לכאן, לוחצים על ⋯ לידה ובוחרים 'העבר לנעול'.":"אין כאן כלום עדיין."}</div>`}</div>`}
     ${items.length>listLimit?`<div id="moreRows" class="empty">טוען עוד…</div>`:""}`;
   // טוען את הרשימה בחלקים כשגוללים, כדי שהמסך ייפתח מהר
   const mr=$("#moreRows");
@@ -475,6 +526,8 @@ function renderList(){
     io.observe(mr);
   }
   view.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ listFilter=c.dataset.f; listLimit=LIST_STEP; renderList(); window.scrollTo(0,0); });
+  if(showLocked && !lockOpen) bindLockScreen();
+  const rl=$("#relock"); if(rl) rl.onclick=()=>{ lockOpen=false; renderList(); };
   bindRows(view,"list");
   const sl=$("#toStats"); if(sl) sl.onclick=()=>go({tab:"stats"});
   $("#sort").onchange=ev=>{ prefs.sort=ev.target.value; savePrefs(); listLimit=LIST_STEP; renderList(); };
@@ -501,7 +554,7 @@ function rowHTML(e){
   </div>`;
 }
 function resultHTML(m){
-  const mine = db.items[m.id];
+  const mine0 = db.items[m.id]; const mine = mine0&&!mine0.locked ? mine0 : null;
   const title = m.title.english || m.title.romaji || m.title.native;
   const sub = [FORMAT[m.format]||m.format, m.seasonYear, epCount(m)?epCount(m)+" פרקים":null].filter(Boolean).join(" · ");
   return `<div class="row"><button class="rmain" data-id="${m.id}">${poster(m.coverImage&&(m.coverImage.medium||m.coverImage.large), m.isAdult)}
@@ -536,10 +589,15 @@ function openListSheet(id){
   sh.innerHTML = `<div class="sheet-bg" data-close></div><div class="sheet-card" role="dialog" aria-label="הוסף לרשימה">
     <div class="sheet-h"><b>${esc(title)}</b><button class="linkbtn" data-close>סגור</button></div>
     <div class="sheet-list">${Object.entries(STATUS).map(([k,s])=>`<button class="${s.cls}" data-st="${k}" aria-pressed="${it&&it.status===k}"><span>${s.label}</span>${it&&it.status===k?"<span>✓</span>":""}</button>`).join("")}</div>
+    ${it&&it.status?`<button class="btn lockact" id="lockToggle" style="width:100%;margin-top:8px">${LOCK_ICON} ${it.locked?"הוצא מהנעול":"העבר לנעול"}</button>`:""}
     ${it&&it.status?`<button class="btn" data-st="" style="width:100%;margin-top:8px">הסר מהרשימות</button>`:""}
   </div>`;
   sh.hidden=false;
   sh.querySelectorAll("[data-close]").forEach(b=>b.onclick=closeSheet);
+  const lt=sh.querySelector("#lockToggle"); if(lt) lt.onclick=()=>{
+    const e=db.items[id]; e.locked=!e.locked; touch(e);
+    toast(e.locked?"הועבר לנעול":"הוצא מהנעול"); closeSheet(); render();
+  };
   sh.querySelectorAll("[data-st]").forEach(b=>b.onclick=()=>{
     const st = b.dataset.st;
     if(!st){ removeItem(id); toast("הוסר מהרשימות"); closeSheet(); render(); return; }
@@ -602,7 +660,7 @@ function renderStats(){
   all.filter(e=>e.status==="done"||e.status==="watching").forEach(e=>(e.genres||[]).forEach(x=>{ g[x]=g[x]||{n:0,s:0,c:0}; g[x].n++; if(e.score){g[x].s+=e.score; g[x].c++;} }));
   const genres = Object.entries(g).sort((a,b)=>b[1].n-a[1].n).slice(0,8);
   const maxG = Math.max(1,...genres.map(x=>x[1].n));
-  const top = scored.slice().sort((a,b)=>b.score-a.score||b.updated-a.updated).slice(0,5);
+  const top = scored.filter(e=>!e.locked).slice().sort((a,b)=>b.score-a.score||b.updated-a.updated).slice(0,5);
   const missingDur = all.some(e=>watchedCount(e)&&!e.duration);
   view.innerHTML = `
     <div class="bigstats">
@@ -692,7 +750,7 @@ function renderSearch(){
 
 /* ---------- בית (כמו MAL) ---------- */
 function posterCard(m){
-  const mine = db.items[m.id];
+  const mine0 = db.items[m.id]; const mine = mine0&&!mine0.locked ? mine0 : null;
   const title = m.title ? (m.title.english||m.title.romaji||m.title.native) : m.titleStr;
   const img = m.coverImage ? (m.coverImage.medium||m.coverImage.large) : m.cover;
   const score = m.averageScore ? (m.averageScore/10).toFixed(1) : null;
@@ -714,7 +772,7 @@ const HOME_Q = (()=>{ const c=curSeason(); const f=`{${MEDIA_FIELDS}}`;
 let homeData = null;
 async function renderHome(){
   setHeader("אנימה", false);
-  const watching = Object.values(db.items).filter(e=>e.status==="watching").sort((a,b)=>(newEps(b)>0)-(newEps(a)>0)||b.updated-a.updated);
+  const watching = Object.values(db.items).filter(e=>e.status==="watching"&&!e.locked).sort((a,b)=>(newEps(b)>0)-(newEps(a)>0)||b.updated-a.updated);
   const rail = (title, key, items, more) => `<section class="rail"><div class="railh"><h2>${title}</h2>${more?`<button class="linkbtn" data-more="${more}">הכל ←</button>`:""}</div>
     <div class="rails" data-rail="${key}">${items}</div></section>`;
   const sk = Array.from({length:6},()=>`<div class="pc sk"><span class="pimg"></span><span class="ptitle">&nbsp;</span></div>`).join("");
