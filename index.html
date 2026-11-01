@@ -276,8 +276,8 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 .ntext small{color:var(--muted);font-weight:400;font-size:12px}
 .reldate{font-size:13px;font-weight:700;color:var(--accent)}
 .relbig{margin-top:10px;display:inline-block;padding:6px 12px;border-radius:10px;background:var(--accent);color:var(--accent-fg);font-weight:700;font-size:14px}
-.epdate{display:block;font-size:11px;color:var(--muted)}
-.epdate.future{color:var(--accent);font-weight:700}
+.epdate{display:block;font-size:11px;color:var(--s-watch);font-weight:700}
+.epdate.future{color:var(--muted);font-weight:400}
 .ep .ttl{white-space:normal}
 @media (prefers-reduced-motion:no-preference){.rmain,.chip,.btn{transition:transform .1s}.rmain:active{transform:scale(.99)}}
 </style>
@@ -333,7 +333,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 32;
+const APP_VERSION = 33;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
