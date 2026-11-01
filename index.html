@@ -199,6 +199,8 @@ nav.tabs button{font-size:12px}
 .seasonnav{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .seasonnav b{font-family:var(--display);font-weight:400;font-size:22px}
 nav.tabs button{font-size:11px}
+.adultimg{filter:blur(14px) saturate(.6);transform:scale(1.1)}
+.r18{color:#c0392b}
 @media (prefers-reduced-motion:no-preference){.rmain,.chip,.btn{transition:transform .1s}.rmain:active{transform:scale(.99)}}
 </style>
 </head>
@@ -248,7 +250,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 16;
+const APP_VERSION = 17;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -274,7 +276,7 @@ function entryFromMedia(m){
     title: m.title.english || m.title.romaji || m.title.native,
     romaji: m.title.romaji || "", cover: m.coverImage ? (m.coverImage.large||m.coverImage.medium) : "",
     episodes: epCount(m), format:m.format||"", year:m.seasonYear||(m.startDate&&m.startDate.year)||null,
-    genres:m.genres||[], duration:m.duration||null, air:m.status||null,
+    genres:m.genres||[], duration:m.duration||null, air:m.status||null, adult:!!m.isAdult,
     next:m.nextAiringEpisode?{ep:m.nextAiringEpisode.episode,at:m.nextAiringEpisode.airingAt}:null,
     status:null, score:null, eps:{}, updated:Date.now()
   };
@@ -299,7 +301,7 @@ function epCount(m){
 function watchedCount(e){ return Object.values(e.eps||{}).filter(x=>x.w).length; }
 
 /* ---------- AniList ---------- */
-const MEDIA_FIELDS = `id idMal title{romaji english native} coverImage{large medium} episodes format status seasonYear startDate{year} averageScore genres duration nextAiringEpisode{episode airingAt}`;
+const MEDIA_FIELDS = `id idMal isAdult title{romaji english native} coverImage{large medium} episodes format status seasonYear startDate{year} averageScore genres duration nextAiringEpisode{episode airingAt}`;
 async function anilist(query, variables, tries=3){
   for(let i=0;i<tries;i++){
     const r = await fetch("https://graphql.anilist.co",{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({query,variables})});
@@ -310,6 +312,7 @@ async function anilist(query, variables, tries=3){
   }
   throw new Error("AniList עמוס כרגע. נסה שוב בעוד דקה.");
 }
+function adultFilter(){ return prefs.adult ? "" : "isAdult:false,"; }
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
 
 /* ---------- עזרי תצוגה ---------- */
@@ -320,7 +323,7 @@ let toastT;
 function toast(t){ const el=$("#toast"); el.textContent=t; el.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>el.hidden=true,2800); }
 function setHeader(title, back){ $("#pageTitle").textContent=title; $("#backBtn").hidden=!back; }
 function setTab(t){ if(t==="stats") t="list"; document.querySelectorAll("nav.tabs button").forEach(b=>{ if(b.dataset.tab===t) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); }); }
-function poster(src, alt){ return src ? `<img src="${esc(src)}" alt="" loading="lazy">` : `<div class="ph" aria-hidden="true"></div>`; }
+function poster(src, adult){ return src ? `<img src="${esc(src)}" alt="" loading="lazy"${adult?' class="adultimg"':""}>` : `<div class="ph" aria-hidden="true"></div>`; }
 
 /* ---------- ניווט ---------- */
 let stack = [];
@@ -398,7 +401,7 @@ function rowHTML(e){
   const pr = tot ? `${w}/${tot} פרקים` : (w?`${w} פרקים`:"");
   const canPlus = e.status==="watching" && (!tot || watchedMax(e)<tot);
   return `<div class="row"><button class="rmain" data-id="${e.id}">
-    ${poster(e.cover)}
+    ${poster(e.cover, e.adult)}
     <span class="t"><span class="name">${esc(e.title)}</span>
       <span class="sub">${esc(sub)}${pr?" · "+pr:""}</span>
       ${e.status?`<span class="pill ${STATUS[e.status].cls}">${STATUS[e.status].label}</span>`:""}
@@ -413,8 +416,8 @@ function resultHTML(m){
   const mine = db.items[m.id];
   const title = m.title.english || m.title.romaji || m.title.native;
   const sub = [FORMAT[m.format]||m.format, m.seasonYear, epCount(m)?epCount(m)+" פרקים":null].filter(Boolean).join(" · ");
-  return `<div class="row"><button class="rmain" data-id="${m.id}">${poster(m.coverImage&&(m.coverImage.medium||m.coverImage.large))}
-    <span class="t"><span class="name">${esc(title)}</span><span class="sub">${esc(sub)}</span>
+  return `<div class="row"><button class="rmain" data-id="${m.id}">${poster(m.coverImage&&(m.coverImage.medium||m.coverImage.large), m.isAdult)}
+    <span class="t"><span class="name">${esc(title)}</span><span class="sub">${esc(sub)}${m.isAdult?' · <b class="r18">18+</b>':""}</span>
     ${mine&&mine.status?`<span class="pill ${STATUS[mine.status].cls}">${STATUS[mine.status].label}</span>`:""}</span>
     <span class="myscore">${m.averageScore?(m.averageScore/10).toFixed(1):"–"}<small>AniList</small></span></button>
     <button class="side ${mine&&mine.status?"":"addnew"}" data-add="${m.id}" aria-label="הוסף לרשימה">${mine&&mine.status?"⋯":"+"}<small>${mine&&mine.status?"רשימה":"הוסף"}</small></button></div>`;
@@ -549,7 +552,7 @@ let browseTab = "season";
 async function loadBrowse(k){
   if(browseCache[k]) return browseCache[k];
   const [args,vars,decl] = BROWSE[k].q();
-  const d = await anilist(`query${decl?`(${decl})`:""}{Page(perPage:40){media(type:ANIME,isAdult:false,${args}){${MEDIA_FIELDS}}}}`,vars);
+  const d = await anilist(`query${decl?`(${decl})`:""}{Page(perPage:40){media(type:ANIME,${adultFilter()}${args}){${MEDIA_FIELDS}}}}`,vars);
   return browseCache[k]=d.Page.media;
 }
 function renderSearch(){
@@ -581,7 +584,7 @@ function renderSearch(){
     $("#q").blur();
     sr.innerHTML = `<div class="empty">מחפש…</div>`;
     try{
-      const d = await anilist(`query($s:String){Page(perPage:30){media(search:$s,type:ANIME,isAdult:false,sort:SEARCH_MATCH){${MEDIA_FIELDS}}}}`,{s:q});
+      const d = await anilist(`query($s:String){Page(perPage:30){media(search:$s,type:ANIME,${adultFilter()}sort:SEARCH_MATCH){${MEDIA_FIELDS}}}}`,{s:q});
       lastSearch = {q, results:d.Page.media}; renderSearch();
     }catch(err){ sr.innerHTML = `<div class="msg">החיפוש נכשל: ${esc(err.message)}. בדוק חיבור לאינטרנט ונסה שוב.</div>`; }
   };
@@ -595,7 +598,7 @@ function posterCard(m){
   const img = m.coverImage ? (m.coverImage.large||m.coverImage.medium) : m.cover;
   const score = m.averageScore ? (m.averageScore/10).toFixed(1) : null;
   return `<div class="pc"><button class="pcmain" data-id="${m.id}">
-      <span class="pimg">${img?`<img src="${esc(img)}" alt="" loading="lazy">`:""}
+      <span class="pimg">${img?`<img src="${esc(img)}" alt="" loading="lazy"${(m.isAdult||m.adult)?' class="adultimg"':""}>`:""}
         ${score?`<span class="pscore">★ ${score}</span>`:""}
         ${mine&&mine.status?`<span class="pst ${STATUS[mine.status].cls}"><span>${STATUS[mine.status].label}</span></span>`:""}</span>
       <span class="ptitle">${esc(title)}</span></button>
@@ -662,7 +665,7 @@ async function renderSeasonal(){
     if(!seasonCache[key]){
       let all=[], page=1, more=true;
       while(more && page<=4){
-        const d = await anilist(`query($s:MediaSeason,$y:Int,$p:Int){Page(page:$p,perPage:50){pageInfo{hasNextPage} media(type:ANIME,isAdult:false,season:$s,seasonYear:$y,sort:POPULARITY_DESC){${MEDIA_FIELDS}}}}`,{s,y,p:page});
+        const d = await anilist(`query($s:MediaSeason,$y:Int,$p:Int){Page(page:$p,perPage:50){pageInfo{hasNextPage} media(type:ANIME,${adultFilter()}season:$s,seasonYear:$y,sort:POPULARITY_DESC){${MEDIA_FIELDS}}}}`,{s,y,p:page});
         all = all.concat(d.Page.media); more = d.Page.pageInfo.hasNextPage; page++;
       }
       seasonCache[key]=all;
@@ -712,7 +715,7 @@ function detailHTML(id, m){
   rels.sort((a,b)=>(a.relationType==="PREQUEL"?0:a.relationType==="SEQUEL"?1:2)-(b.relationType==="PREQUEL"?0:b.relationType==="SEQUEL"?1:2));
 
   view.innerHTML = `
-    <div class="hero">${base&&base.coverImage?`<img src="${esc(base.coverImage.large||base.coverImage.medium)}" alt="">`:poster(e.cover)}
+    <div class="hero">${base&&base.coverImage?`<img src="${esc(base.coverImage.large||base.coverImage.medium)}" alt=""${base.isAdult?' class="adultimg"':""}>`:poster(e.cover, e.adult)}
       <div><h2>${esc(e.title)}</h2>${e.romaji&&e.romaji!==e.title?`<div class="alt">${esc(e.romaji)}</div>`:""}
         <div class="facts">
           ${e.format?`<span>${esc(FORMAT[e.format]||e.format)}</span>`:""}
@@ -799,6 +802,9 @@ function renderSettings(){
     <div class="card"><h2>ייבוא מ־MyAnimeList</h2><p>באתר MAL: לחץ על התמונה שלך ← Export, ייצא את רשימת האנימה, ופתח את הקובץ שירד (.xml או .gz). אחר כך בחר אותו כאן.</p>
       <div class="actions"><label class="btn primary" for="mf">בחר קובץ מ־MAL</label><input type="file" id="mf" accept=".xml,.gz,text/xml,application/xml,application/gzip" hidden></div></div>
     <div id="imp"></div>
+    <div class="card"><h2>תוכן למבוגרים</h2><p>אנימות עם דירוג גיל רגיל (כולל 13+, 17+ ו־ecchi) כבר מופיעות בחיפוש. כאן אפשר להוסיף גם אנימות שמסומנות ב־AniList כתוכן מיני מפורש (18+). הפוסטרים שלהן מוצגים מטושטשים.</p>
+      <label class="fld" style="display:flex;gap:10px;align-items:center"><input type="checkbox" id="adultT" ${prefs.adult?"checked":""} style="width:22px;height:22px"> הצג אנימות 18+ בחיפוש ובעונתי</label>
+      <div id="adultConfirm"></div></div>
     <div class="card"><h2>עדכון האפליקציה</h2><p>אם ביקשת שינוי והוא עוד לא מופיע, לוחצים כאן כדי לטעון מיד את הגרסה הכי חדשה. הרשימה שלך לא נמחקת.</p>
       <div class="actions"><button class="btn primary" id="forceUpd">טען את הגרסה החדשה</button></div></div>
     <p class="note" style="text-align:center">גרסה ${APP_VERSION}</p>`;
@@ -819,6 +825,13 @@ function renderSettings(){
     }catch(e){ toast("הקובץ לא נראה כמו גיבוי של האפליקציה"); }
   };
   bindSyncCard();
+  $("#adultT").onchange = ev=>{
+    if(!ev.target.checked){ prefs.adult=false; savePrefs(); for(const k in browseCache) delete browseCache[k]; for(const k in seasonCache) delete seasonCache[k]; lastSearch={q:"",results:[]}; toast("אנימות 18+ מוסתרות"); return; }
+    ev.target.checked=false;
+    $("#adultConfirm").innerHTML=`<div class="confirm"><span>אני בן 18 ומעלה</span><button class="btn primary" id="adY">אישור</button><button class="btn" id="adN">ביטול</button></div>`;
+    $("#adY").onclick=()=>{ prefs.adult=true; savePrefs(); for(const k in browseCache) delete browseCache[k]; for(const k in seasonCache) delete seasonCache[k]; lastSearch={q:"",results:[]}; toast("אנימות 18+ יופיעו בחיפוש"); renderSettings(); };
+    $("#adN").onclick=()=>{ $("#adultConfirm").innerHTML=""; };
+  };
   $("#forceUpd").onclick = async ()=>{
     toast("טוען גרסה חדשה…");
     try{ if(window.caches){ for(const k of await caches.keys()) await caches.delete(k); } }catch(e){}
