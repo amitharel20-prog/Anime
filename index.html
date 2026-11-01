@@ -345,7 +345,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 47;
+const APP_VERSION = 48;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -423,7 +423,7 @@ let toastT;
 function toast(t){ const el=$("#toast"); el.textContent=t; el.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>el.hidden=true,2800); }
 function setHeader(title, back, o){
   const t=$("#pageTitle");
-  if(o){ t.dataset.tid=o.id; t.dataset.en=enTitle(o); t.textContent=nameOf(o); } else { delete t.dataset.tid; t.textContent=title; }
+  if(o){ nameObjs.set(o.id,o); t.dataset.tid=o.id; t.dataset.en=enTitle(o); t.textContent=nameOf(o); } else { delete t.dataset.tid; t.textContent=title; }
   $("#backBtn").hidden=!back;
 }
 function setTab(t){ if(t==="stats") t="list"; document.querySelectorAll("nav.tabs button").forEach(b=>{ if(b.dataset.tab===t) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); }); }
@@ -716,11 +716,21 @@ function fanFor(o){
       const rest = phraseHe(t.slice(i));
       if(!rest){ res=FAN.get(base); break; }
       if(!/[A-Za-z]/.test(rest)){ res=FAN.get(base)+" "+rest; break; }
-      // כותרת משנה (למשל "...!: Zankyou-hen") — השם הידוע + המשך לפי הצליל, רק לשמות ארוכים כדי לא לטעות
-      if(base.length>=12 && /^[\s!?.]*[:\-–]/.test(t.slice(i))){ res=FAN.get(base)+": "+translitHe(rest.replace(/^[\s:\-–]+/,"")); break; }
+      // כותרת משנה ("...: The Divine Visionary Final Exam Arc") — השם הידוע + תרגום של ההמשך.
+      // רק לשמות ארוכים, כדי לא לטעות בשמות קצרים כמו "Monster"
+      if(base.length>=12){ const sub=subtitleHe(rest.replace(/^[\s:\-–]+/,"")); res=FAN.get(base)+(sub?": "+sub:""); break; }
     }
   }
   fanMemo.set(o.id,res); return res;
+}
+// תרגום כותרות משנה: אם יש כבר תרגום — משתמשים בו, אחרת לפי הצליל ומבקשים תרגום ברקע
+function subtitleHe(s){
+  const key = "p:"+keyN(s), c = heCache[key];
+  if(c && c.t) return c.t;
+  // יפנית ("Zankyou-hen") — לפי הצליל; אנגלית — מחכים לתרגום, ובינתיים רק השם הידוע
+  if(/^[a-z]+-hen$/i.test(s.trim()) || !/[a-z]{3,}/i.test(s)) return translitHe(s);
+  if(!c && Date.now()>=mtBlockedUntil){ heWant.set(key,{mal:null,en:s,phrase:true}); scheduleHe(); return null; }
+  return c ? translitHe(s) : null;
 }
 function heOf(id){
   const it=db.items[id]; const f = it && fanFor(it);
@@ -738,12 +748,13 @@ function wantHe(o){
   heWant.set(o.id, {mal, en:enTitle(o)}); scheduleHe();
 }
 // שם אנימה לתצוגה (מתעדכן לבד כשהתרגום מגיע)
-function tn(o){ if(isHeLang()) wantHe(o); return `<span data-tid="${o.id}" data-en="${esc(enTitle(o))}">${esc(nameOf(o))}</span>`; }
+const nameObjs = new Map();
+function tn(o){ nameObjs.set(o.id,o); if(isHeLang()) wantHe(o); return `<span data-tid="${o.id}" data-en="${esc(enTitle(o))}">${esc(nameOf(o))}</span>`; }
 function applyHeNames(){
   document.querySelectorAll("[data-tid]").forEach(el=>{
     if(!isHeLang()){ el.textContent = el.dataset.en; return; }
-    const id=+el.dataset.tid; const c = fanMemo.get(id) ? {t:fanMemo.get(id)} : heOf(id);
-    el.textContent = c ? c.t : (tlMemo.get(id) || translitHe(el.dataset.en) || el.dataset.en);
+    const id=+el.dataset.tid; const o = nameObjs.get(id);
+    el.textContent = o ? nameOf(o) : el.dataset.en;
   });
 }
 let heT=null, heBusy=false, mtBlockedUntil=+(localStorage.getItem(KEY+".mtblock")||0);
@@ -756,13 +767,14 @@ async function wikiByMal(mals){
   j.results.bindings.forEach(b=>{ const t=(b.hw&&b.hw.value)||(b.he&&b.he.value); if(t && /[\u0590-\u05FF]/.test(t)) out[b.mal.value]=cleanWikiTitle(t); });
   return out;
 }
+function fixMt(src, he){ return /\barc\b/i.test(src) ? he.replace(/(^|\s)(ה?)קשת(?=\s|$|:)/g,"$1$2ארק") : he; }
 async function mt(text, pair){
   if(Date.now()<mtBlockedUntil) return null;
   const r = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${pair||"en|he"}`);
   const j = await r.json();
   const t = j && j.responseData && j.responseData.translatedText || "";
   if(j.quotaFinished || /MYMEMORY WARNING|QUOTA/i.test(t)){ mtBlockedUntil=Date.now()+6*3600e3; try{ localStorage.setItem(KEY+".mtblock",mtBlockedUntil); }catch(e){} return null; }
-  return t ? t.replace(/&#39;/g,"'").replace(/&quot;/g,'"').replace(/&amp;/g,"&").trim() : null;
+  return t ? fixMt(text, t.replace(/&#39;/g,"'").replace(/&quot;/g,'"').replace(/&amp;/g,"&").trim()) : null;
 }
 // מילים קבועות בשמות עונות
 function phraseHe(s){
@@ -816,10 +828,10 @@ async function processHe(){
       const group = rest.slice(i,i+8);
       for(let j=0;j<group.length;j+=4){
         await Promise.all(group.slice(j,j+4).map(async ([id,v])=>{
-          try{ const t = await heTranslate(v.en); if(Date.now()<mtBlockedUntil && !t) return; heCache[id] = t ? {t,src:"mt",en:v.en} : {t:null,src:"none",en:v.en,at:Date.now()}; heWant.delete(id); }catch(e){}
+          try{ const t = v.phrase ? (await mt(v.en).then(x=>x&&/[\u0590-\u05FF]/.test(x)?(/[A-Za-z]/.test(x)?translitHe(x):x):null)) : await heTranslate(v.en); if(Date.now()<mtBlockedUntil && !t) return; heCache[id] = t ? {t,src:"mt",en:v.en} : {t:null,src:"none",en:v.en,at:Date.now()}; heWant.delete(id); }catch(e){}
         }));
       }
-      saveHe(); applyHeNames();
+      fanMemo.clear(); saveHe(); applyHeNames();
     }
     again = heWant.size>0 && Date.now()>=mtBlockedUntil;
   }finally{ heBusy=false; if(again) setTimeout(processHe,3000); }
