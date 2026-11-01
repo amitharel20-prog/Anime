@@ -347,7 +347,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 57;
+const APP_VERSION = 58;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -1138,36 +1138,47 @@ const BROWSE = {
 };
 const browseCache = {};
 let browseTab = "season";
+let browseGenre = "";
+const GENRE_LIST = ["Action","Adventure","Comedy","Drama","Fantasy","Romance","Slice of Life","Sci-Fi","Mystery","Horror","Thriller","Psychological","Supernatural","Sports","Music","Mecha","Mahou Shoujo","Ecchi","Hentai"];
+function genreLabel(g){ return g==="Ecchi" ? "אצ'י (16+)" : g==="Hentai" ? "18+ (הנטאי)" : genreHe(g); }
+function genreOptions(){ return `<option value="">כל הז'אנרים</option>`+GENRE_LIST.filter(g=>g!=="Hentai"||prefs.adult).map(g=>`<option value="${g}" ${g===browseGenre?"selected":""}>${esc(genreLabel(g))}</option>`).join(""); }
+const bKey = k => k+(browseGenre?"|"+browseGenre:"");
 // שמירת תוצאות הגילוי בטלפון, כדי שיופיעו מיד בפתיחה (מתרעננות ברקע כל שעה)
-function storedBrowse(k){ try{ const c=JSON.parse(localStorage.getItem(KEY+".browse."+k+(prefs.adult?".a":""))); return c&&c.data?c:null; }catch(e){ return null; } }
-function storeBrowse(k,data){ try{ localStorage.setItem(KEY+".browse."+k+(prefs.adult?".a":""),JSON.stringify({t:Date.now(),data})); }catch(e){} }
+function storedBrowse(k){ if(browseGenre) return null; try{ const c=JSON.parse(localStorage.getItem(KEY+".browse."+k+(prefs.adult?".a":""))); return c&&c.data?c:null; }catch(e){ return null; } }
+function storeBrowse(k,data){ if(browseGenre) return; try{ localStorage.setItem(KEY+".browse."+k+(prefs.adult?".a":""),JSON.stringify({t:Date.now(),data})); }catch(e){} }
 async function loadBrowse(k){
-  if(browseCache[k]) return browseCache[k];
-  const [args,vars,decl] = BROWSE[k].q();
-  const d = await anilist(`query${decl?`(${decl})`:""}{Page(perPage:40){media(type:ANIME,${adultFilter()}${args}){${MEDIA_FIELDS}}}}`,vars);
+  const ck=bKey(k);
+  if(browseCache[ck]) return browseCache[ck];
+  let [args,vars,decl] = BROWSE[k].q();
+  if(browseGenre){ vars={...vars,g:browseGenre}; decl=(decl?decl+",":"")+"$g:String"; args="genre:$g,"+args; }
+  const adultPart = browseGenre==="Hentai" ? "isAdult:true," : adultFilter();
+  const d = await anilist(`query${decl?`(${decl})`:""}{Page(perPage:40){media(type:ANIME,${adultPart}${args}){${MEDIA_FIELDS}}}}`,vars);
   storeBrowse(k,d.Page.media);
-  return browseCache[k]=d.Page.media;
+  return browseCache[ck]=d.Page.media;
 }
 function renderSearch(){
   setHeader("חיפוש אנימה", false);
   view.innerHTML = `
     <form class="search" id="sf"><input id="q" type="search" placeholder="חפש בעברית או באנגלית" value="${esc(lastSearch.q)}" autocomplete="off" enterkeyhint="search"><button class="btn primary">חפש</button></form>
     <div id="browseBar"></div>
+    <div class="sortrow genrerow"><label for="gsel">ז'אנר</label><select id="gsel">${genreOptions()}</select></div>
     <div id="sr" class="list"></div>`;
   const sr = $("#sr"), bar=$("#browseBar");
+  $("#gsel").onchange = ev=>{ browseGenre=ev.target.value; renderSearch(); };
   const show = res => {
-    sr.innerHTML = res.length ? res.map(resultHTML).join("") : `<div class="empty">לא נמצאו תוצאות. נסה את השם באנגלית או ביפנית.</div>`;
+    if(lastSearch.q && browseGenre) res = res.filter(m=>(m.genres||[]).includes(browseGenre));
+    sr.innerHTML = res.length ? res.map(resultHTML).join("") : `<div class="empty">${lastSearch.q&&browseGenre?"לא נמצאו תוצאות בז'אנר הזה. נסה לבחור \"כל הז'אנרים\".":"לא נמצאו תוצאות. נסה את השם באנגלית או ביפנית."}</div>`;
     bindRows(sr,"search",res);
   };
   const showBrowse = async ()=>{
     bar.innerHTML = `<div class="chips" style="margin-top:12px">${Object.entries(BROWSE).map(([k,b])=>`<button class="chip" data-b="${k}" aria-pressed="${browseTab===k}">${b.label()}</button>`).join("")}</div>`;
     bar.querySelectorAll("[data-b]").forEach(c=>c.onclick=()=>{ browseTab=c.dataset.b; showBrowse(); });
-    const k = browseTab;
-    const stored = !browseCache[k] && storedBrowse(k);
-    if(stored){ show(stored.data); if(Date.now()-stored.t<3600e3){ browseCache[k]=stored.data; return; } }
-    else if(!browseCache[k]) sr.innerHTML=`<div class="empty">טוען…</div>`;
-    const slow = setTimeout(()=>{ if(browseTab===k && !browseCache[k] && !stored) sr.innerHTML=`<div class="empty">AniList איטי כרגע, ממשיך לנסות…</div>`; }, 6000);
-    try{ const res = await loadBrowse(k); if(!lastSearch.q && browseTab===k && current.tab==="search" && !current.detail) show(res); }
+    const k = browseTab, ck=bKey(k), g=browseGenre;
+    const stored = !browseCache[ck] && storedBrowse(k);
+    if(stored){ show(stored.data); if(Date.now()-stored.t<3600e3){ browseCache[ck]=stored.data; return; } }
+    else if(!browseCache[ck]) sr.innerHTML=`<div class="empty">טוען…</div>`;
+    const slow = setTimeout(()=>{ if(browseTab===k && !browseCache[ck] && !stored) sr.innerHTML=`<div class="empty">AniList איטי כרגע, ממשיך לנסות…</div>`; }, 6000);
+    try{ const res = await loadBrowse(k); if(!lastSearch.q && browseTab===k && browseGenre===g && current.tab==="search" && !current.detail) show(res); }
     catch(err){ if(!stored && browseTab===k) { sr.innerHTML=`<div class="msg">לא הצלחתי לטעון: ${esc(err.message)}</div><button class="btn" id="retryB">נסה שוב</button>`; const rb=$("#retryB"); if(rb) rb.onclick=showBrowse; } }
     finally{ clearTimeout(slow); }
   };
@@ -1517,7 +1528,7 @@ function renderSettings(){
   bindSyncCard();
   $("#noBlurT").onchange = ev=>{ prefs.noBlur=ev.target.checked; savePrefs(); document.documentElement.classList.toggle("noblur", prefs.noBlur); toast(prefs.noBlur?"הטשטוש הוסר":"הפוסטרים יוצגו מטושטשים"); };
   $("#adultT").onchange = ev=>{
-    if(!ev.target.checked){ prefs.adult=false; savePrefs(); for(const k in browseCache) delete browseCache[k]; for(const k in seasonCache) delete seasonCache[k]; lastSearch={q:"",results:[]}; toast("אנימות 18+ מוסתרות"); return; }
+    if(!ev.target.checked){ prefs.adult=false; savePrefs(); if(browseGenre==="Hentai") browseGenre=""; for(const k in browseCache) delete browseCache[k]; for(const k in seasonCache) delete seasonCache[k]; lastSearch={q:"",results:[]}; toast("אנימות 18+ מוסתרות"); return; }
     ev.target.checked=false;
     $("#adultConfirm").innerHTML=`<div class="confirm"><span>אני בן 18 ומעלה</span><button class="btn primary" id="adY">אישור</button><button class="btn" id="adN">ביטול</button></div>`;
     $("#adY").onclick=()=>{ prefs.adult=true; savePrefs(); for(const k in browseCache) delete browseCache[k]; for(const k in seasonCache) delete seasonCache[k]; lastSearch={q:"",results:[]}; toast("אנימות 18+ יופיעו בחיפוש"); renderSettings(); };
