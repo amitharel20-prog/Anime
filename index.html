@@ -24,12 +24,18 @@
   --body:"Assistant",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
   color-scheme:light;
 }
-@media (prefers-color-scheme:dark){:root{
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#13142a; --surface:#1d1f3a; --fg:#ecebf3; --muted:#9a9cb8; --line:#2e3157;
   --accent:#8b97ff; --accent-fg:#13142a; --gold:#f0b54a;
   --s-watch:#5fd29c; --s-plan:#8b97ff; --s-done:#c49bf0; --s-drop:#e09a86; --s-hold:#e8c15a;
   color-scheme:dark;
 }}
+:root[data-theme="dark"]{
+  --bg:#13142a; --surface:#1d1f3a; --fg:#ecebf3; --muted:#9a9cb8; --line:#2e3157;
+  --accent:#8b97ff; --accent-fg:#13142a; --gold:#f0b54a;
+  --s-watch:#5fd29c; --s-plan:#8b97ff; --s-done:#c49bf0; --s-drop:#e09a86; --s-hold:#e8c15a;
+  color-scheme:dark;
+}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--fg)}
 body{font-family:var(--body);font-size:16px;line-height:1.5;
@@ -204,6 +210,35 @@ nav.tabs button{font-size:11px}
 .snm{display:flex;flex-direction:column;align-items:center;line-height:1.2}
 .snm small{color:var(--muted);font-size:14px}
 .railsub{font-family:var(--body);font-size:14px;color:var(--muted)}
+.themebtn{margin-inline-start:auto;flex:none;display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700;color:var(--fg)}
+.themebtn svg{width:18px;height:18px}
+header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
+.rmain .t{gap:4px}
+.gtags{display:flex;flex-wrap:wrap;gap:4px}
+.gtags span{font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--bg);border:1px solid var(--line);color:var(--muted)}
+.gtags.big{margin-top:8px}
+.gtags.big span{font-size:13px;padding:3px 10px}
+.pills{display:flex;flex-wrap:wrap;gap:4px}
+.pills:empty{display:none}
+.pill{margin-top:0}
+.prog{display:flex;align-items:center;gap:8px;width:100%;margin-top:2px}
+.prog .bar{flex:1;margin:0;height:6px;border-radius:3px}
+.prog .bar i{background:currentColor}
+.pnum{font-size:12px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.myscore b{display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin:0 auto 2px;border-radius:50%;border:2px dashed var(--line);font-weight:400;color:var(--muted);font-size:20px}
+.myscore.has b{border:0;background:var(--gold);color:#1d1f3a;font-size:22px}
+.side{width:52px}
+.schip{border-color:currentColor}
+.schip .cl{color:var(--fg)}
+.schip[aria-pressed="true"]{background:currentColor;border-color:currentColor}
+.schip[aria-pressed="true"] .cl,.schip[aria-pressed="true"] .n{color:var(--bg);opacity:1}
+.banner{height:150px;margin:-16px calc(-1*max(16px,env(safe-area-inset-left,0px))) 0;background-size:cover;background-position:center;position:relative}
+.banner::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,var(--bg))}
+.hero.over{margin-top:-60px;position:relative}
+.hero.over img{box-shadow:0 6px 18px rgba(0,0,0,.35)}
+.trailer{display:inline-block;margin-top:10px;padding:6px 14px;border-radius:999px;background:#c4302b;color:#fff;font-weight:700;text-decoration:none;font-size:14px}
+.desctools{display:flex;gap:16px;align-items:center}
+.desctools a{text-decoration:none}
 @media (prefers-reduced-motion:no-preference){.rmain,.chip,.btn{transition:transform .1s}.rmain:active{transform:scale(.99)}}
 </style>
 </head>
@@ -211,6 +246,7 @@ nav.tabs button{font-size:11px}
 <header class="top"><div class="wrap">
   <button class="back" id="backBtn" hidden aria-label="חזרה">→</button>
   <h1 id="pageTitle">הרשימה שלי</h1>
+  <button class="themebtn" id="themeBtn" aria-label="מצב תצוגה"></button>
 </div></header>
 
 <main class="wrap" id="view"></main>
@@ -243,6 +279,8 @@ const STATUS = {
   plan:{label:"אצפה בעתיד", cls:"st-plan"}
 };
 const FORMAT = {TV:"סדרה",TV_SHORT:"סדרה קצרה",MOVIE:"סרט",SPECIAL:"ספיישל",OVA:"OVA",ONA:"ONA",MUSIC:"קליפ"};
+const GENRE_HE = {"Action":"אקשן","Adventure":"הרפתקאות","Comedy":"קומדיה","Drama":"דרמה","Ecchi":"אצ'י","Fantasy":"פנטזיה","Horror":"אימה","Mahou Shoujo":"נערות קסם","Mecha":"רובוטים","Music":"מוזיקה","Mystery":"מסתורין","Psychological":"פסיכולוגי","Romance":"רומנטיקה","Sci-Fi":"מדע בדיוני","Slice of Life":"שגרה","Sports":"ספורט","Supernatural":"על־טבעי","Thriller":"מותחן","Hentai":"18+"};
+const genreHe = g => GENRE_HE[g]||g;
 const AIR = {FINISHED:"הסתיימה",RELEASING:"משודרת עכשיו",NOT_YET_RELEASED:"טרם יצאה",CANCELLED:"בוטלה",HIATUS:"בהפסקה"};
 const REL = {SEQUEL:"המשך",PREQUEL:"קודם",SIDE_STORY:"סיפור צד",PARENT:"סדרת אם",SPIN_OFF:"ספין־אוף",ALTERNATIVE:"גרסה אחרת",SUMMARY:"סיכום",OTHER:"קשור"};
 
@@ -253,7 +291,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 18;
+const APP_VERSION = 19;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -328,6 +366,20 @@ function setHeader(title, back){ $("#pageTitle").textContent=title; $("#backBtn"
 function setTab(t){ if(t==="stats") t="list"; document.querySelectorAll("nav.tabs button").forEach(b=>{ if(b.dataset.tab===t) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); }); }
 function poster(src, adult){ return src ? `<img src="${esc(src)}" alt="" loading="lazy"${adult?' class="adultimg"':""}>` : `<div class="ph" aria-hidden="true"></div>`; }
 
+/* ---------- בהיר / כהה ---------- */
+const THEMES = {auto:{label:"אוטומטי",icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>'},
+  light:{label:"בהיר",icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'},
+  dark:{label:"כהה",icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>'}};
+function applyTheme(){
+  const t = THEMES[prefs.theme] ? prefs.theme : "auto";
+  if(t==="auto") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme",t);
+  const b=$("#themeBtn"); b.innerHTML = THEMES[t].icon+`<span>${THEMES[t].label}</span>`;
+  const dark = t==="dark" || (t==="auto" && matchMedia("(prefers-color-scheme: dark)").matches);
+  const meta=document.querySelector('meta[name="theme-color"]'); if(meta) meta.content = dark?"#13142a":"#f3f2ee";
+}
+$("#themeBtn").onclick=()=>{ const order=["auto","light","dark"]; prefs.theme = order[(order.indexOf(prefs.theme||"auto")+1)%3]; savePrefs(); applyTheme(); toast("מצב תצוגה: "+THEMES[prefs.theme].label); };
+applyTheme();
+
 /* ---------- ניווט ---------- */
 let stack = [];
 let current = {tab:"search"};
@@ -386,7 +438,7 @@ function renderList(){
     ${fresh.length&&listFilter!=="new"?`<button class="msg fresh" id="toNew"><b>יצאו ${newTotal} פרקים חדשים</b> ב־${fresh.length===1?esc(fresh[0].title):fresh.length+" אנימות שאתה רואה"} ←</button>`:""}
     <div class="chips" role="group" aria-label="סינון">
       ${fresh.length?`<button class="chip" data-f="new" aria-pressed="${listFilter==="new"}">פרקים חדשים<span class="n">${fresh.length}</span></button>`:""}
-      ${Object.entries(STATUS).map(([k,s])=>`<button class="chip" data-f="${k}" aria-pressed="${listFilter===k}">${s.label}<span class="n">${counts[k]}</span></button>`).join("")}
+      ${Object.entries(STATUS).map(([k,s])=>`<button class="chip schip ${s.cls}" data-f="${k}" aria-pressed="${listFilter===k}"><span class="cl">${s.label}</span><span class="n">${counts[k]}</span></button>`).join("")}
       <button class="chip" data-f="all" aria-pressed="${listFilter==="all"}">הכל<span class="n">${all.length}</span></button>
     </div>
     <div class="sortrow"><label for="sort">מיון</label><select id="sort">${Object.entries(SORTS).map(([k,s])=>`<option value="${k}" ${k===sortKey?"selected":""}>${s.label}</option>`).join("")}</select><button class="linkbtn" id="toStats" style="margin-inline-start:auto">סטטיסטיקות ←</button></div>
@@ -401,18 +453,20 @@ function renderList(){
 function rowHTML(e){
   const w = watchedCount(e), tot = e.episodes, n = newEps(e);
   const sub = [FORMAT[e.format]||e.format, e.year].filter(Boolean).join(" · ");
-  const pr = tot ? `${w}/${tot} פרקים` : (w?`${w} פרקים`:"");
   const canPlus = e.status==="watching" && (!tot || watchedMax(e)<tot);
+  const showPill = e.status && (typeof listFilter==="undefined" || listFilter!==e.status || current.tab!=="list");
+  const pct = tot ? Math.min(100, w/tot*100) : 0;
+  const genres = (e.genres||[]).slice(0,3);
   return `<div class="row"><button class="rmain" data-id="${e.id}">
     ${poster(e.cover, e.adult)}
     <span class="t"><span class="name">${esc(e.title)}</span>
-      <span class="sub">${esc(sub)}${pr?" · "+pr:""}</span>
-      ${e.status?`<span class="pill ${STATUS[e.status].cls}">${STATUS[e.status].label}</span>`:""}
-      ${n?`<span class="pill st-new">${n===1?"פרק חדש":n+" פרקים חדשים"}</span>`:""}
-      ${e.status==="watching"&&tot?`<span class="bar"><i style="width:${Math.min(100,w/tot*100)}%"></i></span>`:""}
+      <span class="sub">${esc(sub)}</span>
+      ${genres.length?`<span class="gtags">${genres.map(g=>`<span>${esc(genreHe(g))}</span>`).join("")}</span>`:""}
+      <span class="pills">${showPill?`<span class="pill ${STATUS[e.status].cls}">${STATUS[e.status].label}</span>`:""}${n?`<span class="pill st-new">${n===1?"פרק חדש":n+" פרקים חדשים"}</span>`:""}</span>
+      ${tot?`<span class="prog"><span class="bar"><i class="${e.status?STATUS[e.status].cls:""}" style="width:${pct}%"></i></span><span class="pnum">${w}/${tot}</span></span>`:(w?`<span class="pnum">${w} פרקים</span>`:"")}
     </span>
-    <span class="myscore">${e.score??"–"}<small>הציון שלי</small></span></button>
-    ${canPlus?`<button class="side plus1" data-plus="${e.id}" aria-label="סמן את הפרק הבא כנצפה">+1<small>פרק</small></button>`:`<button class="side" data-add="${e.id}" aria-label="העבר לרשימה אחרת">⋯<small>רשימה</small></button>`}
+    <span class="myscore ${e.score?"has":""}">${e.score?`<b>${e.score}</b>`:`<b>☆</b>`}<small>${e.score?"הציון שלי":"לא דורג"}</small></span></button>
+    ${canPlus?`<button class="side plus1" data-plus="${e.id}" aria-label="סמן את הפרק הבא כנצפה">+1<small>פרק</small></button>`:`<button class="side" data-add="${e.id}" aria-label="העבר לרשימה אחרת"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg><small>רשימה</small></button>`}
   </div>`;
 }
 function resultHTML(m){
@@ -530,7 +584,7 @@ function renderStats(){
     <h3>לפי סטטוס</h3>
     <div class="statgrid">${counts.map(([l,n,c])=>`<div class="${c}"><b>${n}</b><span>${l}</span></div>`).join("")}</div>
     ${scored.length?`<h3>איך אני מדרג</h3><div class="bars">${dist.map(([n,c])=>`<div class="barrow"><span class="lbl">${n}</span><span class="track"><i style="width:${c/maxD*100}%"></i></span><span class="val">${c||""}</span></div>`).join("")}</div>`:""}
-    ${genres.length?`<h3>ז'אנרים שאני רואה הכי הרבה</h3><div class="bars genres">${genres.map(([name,v])=>`<div class="barrow"><span class="lbl" dir="ltr">${esc(name)}</span><span class="track"><i style="width:${v.n/maxG*100}%"></i></span><span class="val">${v.n}${v.c?` · <em>${(v.s/v.c).toFixed(1)}</em>`:""}</span></div>`).join("")}</div><p class="note">המספר הוא כמה אנימות, ואחריו הציון הממוצע שנתת בז'אנר.</p>`:""}
+    ${genres.length?`<h3>ז'אנרים שאני רואה הכי הרבה</h3><div class="bars genres">${genres.map(([name,v])=>`<div class="barrow"><span class="lbl">${esc(genreHe(name))}</span><span class="track"><i style="width:${v.n/maxG*100}%"></i></span><span class="val">${v.n}${v.c?` · <em>${(v.s/v.c).toFixed(1)}</em>`:""}</span></div>`).join("")}</div><p class="note">המספר הוא כמה אנימות, ואחריו הציון הממוצע שנתת בז'אנר.</p>`:""}
     ${top.length?`<h3>הכי אהבתי</h3><div class="list">${top.map(rowHTML).join("")}</div>`:""}
     <div style="height:16px"></div>`;
   bindRows(view,"stats");
@@ -694,7 +748,7 @@ async function renderDetail(id){
   paint();
   if(!m){
     try{
-      const d = await anilist(`query($id:Int){Media(id:$id){${MEDIA_FIELDS} description(asHtml:false) streamingEpisodes{title} relations{edges{relationType node{id type format title{romaji english} coverImage{medium} seasonYear}}}}}`,{id});
+      const d = await anilist(`query($id:Int){Media(id:$id){${MEDIA_FIELDS} description(asHtml:false) bannerImage season studios(isMain:true){nodes{name}} trailer{id site} streamingEpisodes{title} relations{edges{relationType node{id type format title{romaji english} coverImage{medium} seasonYear}}}}}`,{id});
       m = cacheMedia[id+"full"] = d.Media;
       // עדכון נתונים שהשתנו (למשל פרקים חדשים בסדרה משודרת)
       if(db.items[id]){ const fresh=entryFromMedia(m); Object.assign(db.items[id],{episodes:fresh.episodes,cover:fresh.cover||db.items[id].cover,title:db.items[id].title||fresh.title,genres:fresh.genres,duration:fresh.duration,air:fresh.air,next:fresh.next}); save(false); }
@@ -720,8 +774,13 @@ function detailHTML(id, m){
   const rels = m&&m.relations ? m.relations.edges.filter(x=>x.node.type==="ANIME"&&x.relationType!=="CHARACTER") : [];
   rels.sort((a,b)=>(a.relationType==="PREQUEL"?0:a.relationType==="SEQUEL"?1:2)-(b.relationType==="PREQUEL"?0:b.relationType==="SEQUEL"?1:2));
 
+  const genres = (m&&m.genres)||(base&&base.genres)||e.genres||[];
+  const studio = m&&m.studios&&m.studios.nodes[0] ? m.studios.nodes[0].name : "";
+  const banner = m&&m.bannerImage;
+  const trailer = m&&m.trailer&&m.trailer.site==="youtube" ? "https://www.youtube.com/watch?v="+encodeURIComponent(m.trailer.id) : "";
   view.innerHTML = `
-    <div class="hero">${base&&base.coverImage?`<img src="${esc(base.coverImage.large||base.coverImage.medium)}" alt=""${base.isAdult?' class="adultimg"':""}>`:poster(e.cover, e.adult)}
+    ${banner&&!(base&&base.isAdult)?`<div class="banner" style="background-image:url('${esc(banner)}')"></div>`:""}
+    <div class="hero ${banner?"over":""}">${base&&base.coverImage?`<img src="${esc(base.coverImage.large||base.coverImage.medium)}" alt=""${base.isAdult?' class="adultimg"':""}>`:poster(e.cover, e.adult)}
       <div><h2>${esc(e.title)}</h2>${e.romaji&&e.romaji!==e.title?`<div class="alt">${esc(e.romaji)}</div>`:""}
         <div class="facts">
           ${e.format?`<span>${esc(FORMAT[e.format]||e.format)}</span>`:""}
@@ -730,6 +789,9 @@ function detailHTML(id, m){
           ${base&&base.status?`<span>${AIR[base.status]||""}</span>`:""}
           ${base&&base.averageScore?`<span>AniList <b>${(base.averageScore/10).toFixed(1)}</b></span>`:""}
         </div>
+        ${m&&m.season&&m.seasonYear?`<div class="facts"><span>${SEASON_HE[m.season]} ${m.seasonYear} (${SEASON_MONTHS[m.season]})</span>${studio?`<span>${esc(studio)}</span>`:""}</div>`:(studio?`<div class="facts"><span>${esc(studio)}</span></div>`:"")}
+        ${genres.length?`<div class="gtags big">${genres.map(g=>`<span>${esc(genreHe(g))}</span>`).join("")}</div>`:""}
+        ${trailer?`<a class="trailer" href="${trailer}" target="_blank" rel="noopener">▶ טריילר</a>`:""}
         ${base&&base.nextAiringEpisode?`<div class="facts"><span>פרק ${base.nextAiringEpisode.episode} יוצא ב־<b>${new Date(base.nextAiringEpisode.airingAt*1000).toLocaleDateString("he-IL",{day:"numeric",month:"numeric",weekday:"short"})}</b></span></div>`:""}
       </div></div>
 
@@ -739,7 +801,7 @@ function detailHTML(id, m){
     <h3>הציון שלי</h3>
     <div class="scores" role="group" aria-label="ציון 1 עד 10">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<button data-sc="${n}" aria-pressed="${e.score===n}">${n}</button>`).join("")}</div>
 
-    ${desc?`<h3>תקציר (באנגלית)</h3><p class="desc clamp" id="desc" dir="ltr" style="text-align:left">${esc(desc).replace(/\n+/g,"<br>")}</p><button class="linkbtn" id="more">הצג עוד</button>`:""}
+    ${desc?`<h3>תקציר (באנגלית)</h3><p class="desc clamp" id="desc" dir="ltr" style="text-align:left">${esc(desc).replace(/\n+/g,"<br>")}</p><div class="desctools"><button class="linkbtn" id="more">הצג עוד</button><a class="linkbtn" href="https://translate.google.com/?sl=en&tl=iw&op=translate&text=${encodeURIComponent(desc.slice(0,4500))}" target="_blank" rel="noopener">תרגם לעברית ←</a></div>`:""}
 
     ${rels.length?`<h3>עונות וסדרות קשורות</h3><div class="rel">${rels.map(r=>`<button data-rid="${r.node.id}"><img src="${esc(r.node.coverImage&&r.node.coverImage.medium||"")}" alt=""><em>${REL[r.relationType]||"קשור"}${r.node.seasonYear?" · "+r.node.seasonYear:""}</em><span>${esc(r.node.title.english||r.node.title.romaji)}</span></button>`).join("")}</div>`:""}
 
