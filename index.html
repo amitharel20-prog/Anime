@@ -339,7 +339,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 36;
+const APP_VERSION = 37;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -606,7 +606,7 @@ function renderList(){
 function rowHTML(e){
   const w = watchedCount(e), tot = e.episodes, n = newEps(e);
   const sub = [FORMAT[e.format]||e.format, e.year].filter(Boolean).join(" · ");
-  const canPlus = e.status==="watching" && (!tot || watchedMax(e)<tot);
+  const canPlus = false; // כפתור +1 הוסר לבקשת המשתמש
   const showPill = e.status && (typeof listFilter==="undefined" || listFilter!==e.status || current.tab!=="list" || listQuery);
   const pct = tot ? Math.min(100, w/tot*100) : 0;
   const genres = (e.genres||[]).slice(0,3);
