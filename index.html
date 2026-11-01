@@ -248,6 +248,15 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
+const APP_VERSION = 9;
+// חד־פעמי: אנימות ב"נצפה" בלי אף פרק שסומן כנצפה עוברות ל"בהמתנה"
+if(!db.meta.doneZeroToHold){
+  for(const e of Object.values(db.items)){
+    if(e.status==="done" && !Object.values(e.eps||{}).some(x=>x.w)){ e.status="hold"; e.updated=Date.now(); }
+  }
+  db.meta.doneZeroToHold = true;
+  try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){}
+}
 function save(sync=true){
   try{ localStorage.setItem(KEY, JSON.stringify(db)); }
   catch(e){ toast("השמירה בטלפון נכשלה. כדאי לגבות עכשיו."); }
@@ -783,7 +792,8 @@ function renderSettings(){
       <div class="actions"><button class="btn primary" id="ai">ייבא</button></div></div>
     <div class="card"><h2>ייבוא מ־MyAnimeList</h2><p>באתר MAL: לחץ על התמונה שלך ← Export, ייצא את רשימת האנימה, ופתח את הקובץ שירד (.xml או .gz). אחר כך בחר אותו כאן.</p>
       <div class="actions"><label class="btn primary" for="mf">בחר קובץ מ־MAL</label><input type="file" id="mf" accept=".xml,.gz,text/xml,application/xml,application/gzip" hidden></div></div>
-    <div id="imp"></div>`;
+    <div id="imp"></div>
+    <p class="note" style="text-align:center">גרסה ${APP_VERSION}</p>`;
 
   $("#bk").onclick = ()=>{
     const blob = new Blob([JSON.stringify({app:"anime-tracker",version:1,exported:new Date().toISOString(),...db},null,1)],{type:"application/json"});
@@ -910,8 +920,10 @@ function impStatus(html){ $("#imp") && ($("#imp").innerHTML = `<div class="msg">
 const ALS = {CURRENT:"watching",REPEATING:"watching",PAUSED:"hold",PLANNING:"plan",COMPLETED:"done",DROPPED:"dropped"};
 function applyImported(m, status, score, progress){
   const e = db.items[m.id] || entryFromMedia(m);
+  // "נצפה" בלי אף פרק מסומן עובר ל"בהמתנה"
+  if(status==="done" && !(progress>0)) status = "hold";
   e.status = status; if(score) e.score = Math.round(score);
-  let p = progress || 0; if(status==="done" && e.episodes && !p) p = e.episodes;
+  let p = progress || 0;
   for(let n=1;n<=p;n++) e.eps[n]={...(e.eps[n]||{}),w:true};
   e.updated = Date.now(); db.items[m.id]=e;
 }
