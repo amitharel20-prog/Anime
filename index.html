@@ -319,6 +319,7 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
+<script src="he-names.js"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -344,7 +345,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 40;
+const APP_VERSION = 41;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -693,11 +694,40 @@ let heCache = (()=>{ try{ return JSON.parse(localStorage.getItem(HE_KEY))||{}; }
 function saveHe(){ try{ localStorage.setItem(HE_KEY, JSON.stringify(heCache)); }catch(e){} }
 function isHeLang(){ return prefs.lang==="he"; }
 function enTitle(o){ if(!o) return ""; if(o.title && typeof o.title==="object") return o.title.english||o.title.romaji||o.title.native||""; return o.title||o.titleStr||""; }
-function heOf(id){ const c=heCache[id]; return c&&c.t ? c : null; }
-function nameOf(o){ const en=enTitle(o); if(isHeLang()){ const c=heOf(o.id); if(c) return c.t; } return en; }
+// שמות מאתרי תרגום ישראליים (he-names.js) — המקור המועדף
+const keyN = s => (s||"").toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g,"");
+const FAN = (()=>{ const m=new Map(); for(const [en,he] of Object.entries(window.HE_FAN_NAMES||{})) m.set(keyN(en),he); return m; })();
+const FAN_KEYS = [...FAN.keys()].filter(k=>k.length>=4).sort((a,b)=>b.length-a.length);
+const fanMemo = new Map();
+function fanFor(o){
+  if(!o) return null;
+  if(fanMemo.has(o.id)) return fanMemo.get(o.id);
+  const titles = [enTitle(o), o.romaji||(o.title&&o.title.romaji)||"", o.title&&o.title.english||""].filter(Boolean);
+  let res=null;
+  for(const t of titles){ const k=keyN(t); if(FAN.has(k)){ res=FAN.get(k); break; } }
+  if(!res){
+    for(const t of titles){
+      const k=keyN(t), base=FAN_KEYS.find(b=>k.startsWith(b));
+      if(!base) continue;
+      // מוצאים איפה נגמר שם הבסיס בטקסט המקורי, ומתרגמים את ההמשך (עונה 2, חלק 2...)
+      let i=0, n=0; while(i<t.length && n<base.length){ if(/[a-z0-9]/i.test(t[i].normalize("NFKD")[0]||"")) n++; i++; }
+      const rest = phraseHe(t.slice(i));
+      if(!rest){ res=FAN.get(base); break; }
+      if(!/[A-Za-z]/.test(rest)){ res=FAN.get(base)+" "+rest; break; }
+    }
+  }
+  fanMemo.set(o.id,res); return res;
+}
+function heOf(id){
+  const it=db.items[id]; const f = it && fanFor(it);
+  if(f) return {t:f,src:"fan"};
+  const c=heCache[id]; return c&&c.t ? c : null;
+}
+function nameOf(o){ const en=enTitle(o); if(isHeLang()){ const f=fanFor(o); if(f) return f; const c=heOf(o.id); if(c) return c.t; } return en; }
 const heWant = new Map();
 function wantHe(o){
   if(!o || !o.id) return;
+  if(fanFor(o)) return;
   const c = heCache[o.id];
   if(c && (c.t || (c.at && Date.now()-c.at<3*864e5))) return;
   const mal = o.idMal || (db.items[o.id]&&db.items[o.id].idMal) || null;
@@ -707,7 +737,7 @@ function wantHe(o){
 function tn(o){ if(isHeLang()) wantHe(o); return `<span data-tid="${o.id}" data-en="${esc(enTitle(o))}">${esc(nameOf(o))}</span>`; }
 function applyHeNames(){
   document.querySelectorAll("[data-tid]").forEach(el=>{
-    const c = isHeLang() && heOf(el.dataset.tid); el.textContent = c ? c.t : el.dataset.en;
+    const c = isHeLang() && (fanMemo.get(+el.dataset.tid) ? {t:fanMemo.get(+el.dataset.tid)} : heOf(el.dataset.tid)); el.textContent = c ? c.t : el.dataset.en;
   });
 }
 let heT=null, heBusy=false, mtBlockedUntil=+(localStorage.getItem(KEY+".mtblock")||0);
@@ -731,6 +761,7 @@ async function mt(text, pair){
 // מילים קבועות בשמות עונות
 function phraseHe(s){
   let x = " "+s.trim()+" ";
+  const rom = {II:2,III:3,IV:4,V:5,VI:6}; const mr = s.trim().match(/^(II|III|IV|V|VI)$/); if(mr) return "עונה "+rom[mr[1]];
   x = x.replace(/\bthe final season\b/gi,"העונה האחרונה").replace(/\bfinal season\b/gi,"העונה האחרונה")
        .replace(/\b(\d+)(?:st|nd|rd|th) season\b/gi,"עונה $1").replace(/\bseason (\d+)\b/gi,"עונה $1")
        .replace(/\bpart (\d+)\b/gi,"חלק $1").replace(/\bthe movie\b/gi,"הסרט").replace(/\bmovie\b/gi,"סרט")
@@ -786,6 +817,9 @@ async function processHe(){
 async function hebrewSearchIds(q){
   const ids=new Set(), mals=new Set(); const nq=normQ(q);
   for(const [id,c] of Object.entries(heCache)) if(c.t && normQ(c.t).includes(nq)) ids.add(+id);
+  for(const e of Object.values(db.items)){ const f=fanFor(e); if(f && normQ(f).includes(nq)) ids.add(e.id); }
+  const fanEn=[]; const seenHe=new Set();
+  for(const [en,he] of Object.entries(window.HE_FAN_NAMES||{})) if(normQ(he).includes(nq) && !seenHe.has(he)){ seenHe.add(he); fanEn.push(en); }
   try{
     const s = q.replace(/["\\]/g,"").replace(/[ךםןףץ]$/,"");
     const sp = `SELECT DISTINCT ?mal WHERE { ?i wdt:P4086 ?mal; rdfs:label ?l. FILTER(LANG(?l)="he" && CONTAINS(LCASE(?l), LCASE("${s}"))) } LIMIT 25`;
@@ -793,7 +827,7 @@ async function hebrewSearchIds(q){
     const j = await r.json(); j.results.bindings.forEach(b=>mals.add(+b.mal.value));
   }catch(e){}
   let en=null; try{ en = await mt(q,"he|en"); }catch(e){}
-  return {ids:[...ids], mals:[...mals], en};
+  return {ids:[...ids], mals:[...mals], en, fanEn:fanEn.slice(0,3)};
 }
 
 /* ---------- תאריכי יציאה ---------- */
@@ -1023,6 +1057,10 @@ function renderSearch(){
           const d1 = await anilist(`query($ids:[Int],$mals:[Int]){a:Page(perPage:50){media(id_in:$ids,type:ANIME){${MEDIA_FIELDS}}} b:Page(perPage:50){media(idMal_in:$mals,type:ANIME,${adultFilter()}sort:POPULARITY_DESC){${MEDIA_FIELDS}}}}`,{ids:hs.ids.length?hs.ids:[0],mals:hs.mals.length?hs.mals:[0]});
           add(d1.a.media); add(d1.b.media);
         }
+        for(const fe of hs.fanEn){
+          const d3 = await anilist(`query($s:String){Page(perPage:6){media(search:$s,type:ANIME,${adultFilter()}sort:SEARCH_MATCH){${MEDIA_FIELDS}}}}`,{s:fe});
+          add(d3.Page.media);
+        }
         if(hs.en && !/[\u0590-\u05FF]/.test(hs.en)){
           const d2 = await anilist(`query($s:String){Page(perPage:20){media(search:$s,type:ANIME,${adultFilter()}sort:SEARCH_MATCH){${MEDIA_FIELDS}}}}`,{s:hs.en});
           add(d2.Page.media);
@@ -1180,10 +1218,10 @@ function detailHTML(id, m){
     ${banner&&!(base&&base.isAdult)?`<div class="banner" style="background-image:url('${esc(banner)}')"></div>`:""}
     <div class="hero ${banner?"over":""}">${base&&base.coverImage?`<img src="${esc(base.coverImage.extraLarge||base.coverImage.large||base.coverImage.medium)}" alt=""${base.isAdult?' class="adultimg"':""}>`:poster(e.cover, e.adult)}
       <div><h2>${isHeLang()?tn(e):esc(enTitle(e))}</h2>
-        ${(()=>{ const c=heOf(id); const lines=[];
+        ${(()=>{ const c=(fanFor(e)?{t:fanFor(e),src:"fan"}:heOf(id)); const lines=[];
           if(isHeLang()){ if(c) lines.push(`<div class="alt" dir="ltr">${esc(enTitle(e))}</div>`); }
           else if(c) lines.push(`<div class="alt">${esc(c.t)}</div>`);
-          if(c&&c.src==="mt") lines.push(`<div class="mtnote">השם בעברית תורגם אוטומטית</div>`);
+          if(c&&c.src==="mt" && !fanFor(e)) lines.push(`<div class="mtnote">השם בעברית תורגם אוטומטית</div>`);
           if(e.romaji&&e.romaji!==enTitle(e)) lines.push(`<div class="alt" dir="ltr">${esc(e.romaji)}</div>`);
           const nat = (base&&base.title&&base.title.native)||e.native; if(nat) lines.push(`<div class="alt jp" lang="ja" dir="ltr">${esc(nat)}</div>`);
           wantHe(e); return lines.join(""); })()}
@@ -1309,9 +1347,10 @@ function renderSettings(){
       <label class="fld" style="display:flex;gap:10px;align-items:center"><input type="checkbox" id="adultT" ${prefs.adult?"checked":""} style="width:22px;height:22px"> הצג אנימות 18+ בחיפוש ובעונתי</label>
       <div id="adultConfirm"></div></div>
     ${(()=>{ const ids=Object.values(db.items).filter(e=>e.status).map(e=>e.id);
-      const wiki=ids.filter(id=>heCache[id]&&heCache[id].src==="wiki").length, mtc=ids.filter(id=>heCache[id]&&heCache[id].src==="mt").length;
-      const missing=ids.length-wiki-mtc; const blocked=Date.now()<mtBlockedUntil;
-      return `<div class="card"><h2>שמות בעברית</h2><p>מתוך ${ids.length} האנימות ברשימה שלך: ${wiki} מוויקיפדיה, ${mtc} בתרגום אוטומטי${missing?`, ו־${missing} עדיין באנגלית`:""}.</p>
+      const fan=ids.filter(id=>fanFor(db.items[id])).length;
+      const wiki=ids.filter(id=>!fanFor(db.items[id])&&heCache[id]&&heCache[id].src==="wiki").length, mtc=ids.filter(id=>!fanFor(db.items[id])&&heCache[id]&&heCache[id].src==="mt").length;
+      const missing=ids.length-fan-wiki-mtc; const blocked=Date.now()<mtBlockedUntil;
+      return `<div class="card"><h2>שמות בעברית</h2><p>מתוך ${ids.length} האנימות ברשימה שלך: ${fan} מאתרי תרגום ישראליים, ${wiki} מוויקיפדיה, ${mtc} בתרגום אוטומטי${missing?`, ו־${missing} עדיין באנגלית`:""}.</p>
       ${blocked?`<p class="note">שירות התרגום החינמי הגיע למגבלה היומית. השאר יתורגמו אוטומטית אחרי ${new Date(mtBlockedUntil).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})}.</p>`:(missing?`<p class="note">השמות החסרים ממשיכים להיטען ברקע.</p>`:"")}</div>`; })()}
     <div class="card"><h2>עדכון האפליקציה</h2><p>אם ביקשת שינוי והוא עוד לא מופיע, לוחצים כאן כדי לטעון מיד את הגרסה הכי חדשה. הרשימה שלך לא נמחקת.</p>
       <div class="actions"><button class="btn primary" id="forceUpd">טען את הגרסה החדשה</button></div></div>
