@@ -345,7 +345,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 49;
+const APP_VERSION = 50;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -887,6 +887,7 @@ function jpWord(w){
 const EN_MULTI = [["tion","שן"],["sion","ז'ן"],["ture","צ'ר"],["tch","צ'"],["dge","דג'"],["ght","ט"],["ph","פ"],["sh","ש"],["ch","צ'"],["th","ת'"],["ck","ק"],["qu","קו"],["wh","ו"],
   ["oo","ו"],["ou","או"],["ee","י"],["ea","י"],["ai","יי"],["ay","יי"],["oa","ו"],["au","או"],["aw","או"],["oi","וי"],["oy","וי"]];
 const CONS = "bcdfghjklmnpqrstvwxz";
+const EN_COMMON = {the:"דה",of:"אוף",and:"אנד",in:"אין",a:"א",to:"טו",is:"איז",my:"מיי",you:"יו",your:"יור",i:"איי",me:"מי",for:"פור",with:"וויד",on:"און",at:"את",by:"ביי",from:"פרום",love:"לאב",world:"וורלד",girl:"גירל",girls:"גירלס",boy:"בוי",hero:"הירו",king:"קינג",demon:"דימון",magic:"מג'יק",academy:"אקדמי",life:"לייף",one:"וואן",no:"נו",not:"נוט",be:"בי",are:"אר",it:"איט",season:"עונה",part:"חלק"};
 function enWord(w){
   const s = w.toLowerCase().replace(/[^a-z]/g,"");
   if(!s) return w;
@@ -924,6 +925,7 @@ function translitHe(text){
   return text.split(/(\s+|[:\-–!?.,()~\/]+)/).map(t=>{
     if(!/[A-Za-z]/.test(t)) return t;
     if(/^[A-Z0-9]{2,4}$/.test(t) && !/^[AEIOU]/.test(t) ) return t;   // ראשי תיבות
+    const cw = EN_COMMON[t.toLowerCase()]; if(cw) return cw;
     return jpWord(t) || enWord(t);
   }).join("").replace(/\s+/g," ").trim();
 }
