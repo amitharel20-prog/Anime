@@ -915,7 +915,18 @@ window.TELEVIZIO = [
   "2.5 Dimensional Seduction", "2.5-jigen no Ririsa",
   "Bleach",
   "Wistoria: Wand and Sword", "Tsue to Tsurugi no Wistoria",
-  "Record of Grancrest War", "Grancrest Senki"
+  "Record of Grancrest War", "Grancrest Senki",
+  "Black Clover",
+  "Let This Grieving Soul Retire", "Nageki no Bourei wa Intai shitai",
+  "High School DxD",
+  "Aesthetica of a Rogue Hero", "Hagure Yuusha no Aesthetica",
+  "Death Parade",
+  "Twin Star Exorcists", "Sousei no Onmyouji",
+  "Snow White with the Red Hair", "Akagami no Shirayuki-hime",
+  "Liar, Liar", "Liar Liar",
+  "Chain Chronicle: The Light of Haecceitas", "Chain Chronicle: Haecceitas no Hikari",
+  "SHIMONETA: A Boring World Where the Concept of Dirty Jokes Doesn’t Exist", "Shimoneta to Iu Gainen ga Sonzai Shinai Taikutsu na Sekai",
+  "Steins;Gate"
 ];
 
 // שמות לפי אפליקציית televizio (לבקשת עמית)
@@ -929,5 +940,21 @@ Object.assign(window.HE_FAN_NAMES, {
   "Kingdom": "ממלכה",
   "Farming Life in Another World": "חיי החקלאות שלי בעולם אחר",
   "Isekai Nonbiri Nouka": "חיי החקלאות שלי בעולם אחר",
-  "Kemono Jihen": "תקריות מפלצתיות"
+  "Kemono Jihen": "תקריות מפלצתיות",
+  "Black Clover": "תלתן שחור",
+  "Let This Grieving Soul Retire": "תן לנפש הדואבת הזו לפרוש",
+  "Nageki no Bourei wa Intai shitai": "תן לנפש הדואבת הזו לפרוש",
+  "High School DxD": "תיכון דאבל די",
+  "Record of Grancrest War": "תולדות מלחמת הסמל הקדוש",
+  "Grancrest Senki": "תולדות מלחמת הסמל הקדוש",
+  "Aesthetica of a Rogue Hero": "תורת היופי של גיבורים נוכלים",
+  "Hagure Yuusha no Aesthetica": "תורת היופי של גיבורים נוכלים",
+  "Death Parade": "תהלוכת המוות",
+  "Twin Star Exorcists": "תאומי הכוכבים מגרשי השדים",
+  "Sousei no Onmyouji": "תאומי הכוכבים מגרשי השדים",
+  "Snow White with the Red Hair": "שלגייה בעלת השיער האדום",
+  "Akagami no Shirayuki-hime": "שלגייה בעלת השיער האדום",
+  "Liar, Liar": "שקרן שקרן",
+  "Chain Chronicle: The Light of Haecceitas": "שרשרת כרונית: האור של האסיטאס",
+  "Chain Chronicle: Haecceitas no Hikari": "שרשרת כרונית: האור של האסיטאס"
 });
