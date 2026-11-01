@@ -1124,7 +1124,12 @@ window.TELEVIZIO = [
   "Tantei wa Mou, Shindeiru.",
   "Can a Boy-Girl Friendship Survive?",
   "Danjo no Yuujou wa Seiritsu suru? (Iya, Shinai!!)",
-  "Dog Days"
+  "Dog Days",
+  "A Playthrough of a Certain Dude's VRMMO Life",
+  "Toaru Ossan no VRMMO Katsudouki",
+  "ZatsuTabi: That's Journey",
+  "ZatsuTabi -That's Journey-",
+  "Zatsu Tabi: That's Journey"
 ];
 
 // שמות לפי אפליקציית televizio (לבקשת עמית)
@@ -1290,5 +1295,10 @@ Object.assign(window.HE_FAN_NAMES, {
   "Absolute Duo": "הזוג המוחלט",
   "The Detective Is Already Dead": "הבלשית כבר מתה",
   "Tantei wa Mou, Shindeiru.": "הבלשית כבר מתה",
-  "Dog Days": "דוג דייז ימי כלב"
+  "Dog Days": "דוג דייז ימי כלב",
+  "A Playthrough of a Certain Dude's VRMMO Life": "המשחק של איזה בחור בחיי ה-VRMMO שלו",
+  "Toaru Ossan no VRMMO Katsudouki": "המשחק של איזה בחור בחיי ה-VRMMO שלו",
+  "ZatsuTabi: That's Journey": "טיול אקראי – זה מסע",
+  "ZatsuTabi -That's Journey-": "טיול אקראי – זה מסע",
+  "Zatsu Tabi: That's Journey": "טיול אקראי – זה מסע"
 });
