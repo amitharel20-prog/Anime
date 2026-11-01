@@ -314,7 +314,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 27;
+const APP_VERSION = 28;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -423,6 +423,7 @@ $("#backBtn").onclick = ()=>{ const prev = stack.pop() || {tab:"list"}; current 
 document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{ stack=[]; lockOpen=false; if(listFilter==="locked") listFilter="watching"; go({tab:b.dataset.tab}, false); });
 
 function render(){
+  if(view._guard){ view.removeEventListener("click",view._guard,true); view.removeEventListener("pointerdown",view._guard,true); view._guard=null; }
   setTab(current.tab);
   if(current.detail) return renderDetail(current.detail);
   if(current.tab==="search") return renderSearch();
@@ -437,6 +438,21 @@ function render(){
 const LOCK_ICON = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 let lockOpen = false;
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden") lockOpen=false; });
+function isHidden(e){ return !!(e && e.locked && !lockOpen); }
+// בקשת קוד בלי לחשוף שהאנימה נעולה
+function askPin(cb){
+  if(!prefs.pinHash){ lockOpen=true; cb(); return; }
+  const sh=$("#sheet");
+  sh.innerHTML=`<div class="sheet-bg" data-close></div><div class="sheet-card" role="dialog" aria-label="קוד">
+    <div class="sheet-h"><b>הקלד קוד כדי להמשיך</b><button class="linkbtn" data-close>ביטול</button></div>
+    <div class="lockscreen" style="padding:8px 0 4px"><input type="password" inputmode="numeric" pattern="[0-9]*" id="apIn" autocomplete="off" placeholder="••••" maxlength="12">
+    <button class="btn primary" id="apGo">המשך</button><p class="note" id="apMsg" style="color:#c0392b;min-height:1.2em"></p></div></div>`;
+  sh.hidden=false;
+  sh.querySelectorAll("[data-close]").forEach(b=>b.onclick=closeSheet);
+  const inp=$("#apIn"); setTimeout(()=>inp.focus(),50);
+  const go3=async ()=>{ if(await hashPin(inp.value.trim())===prefs.pinHash){ lockOpen=true; closeSheet(); cb(); } else { $("#apMsg").textContent="קוד שגוי"; inp.value=""; inp.focus(); } };
+  $("#apGo").onclick=go3; inp.onkeydown=ev=>{ if(ev.key==="Enter") go3(); };
+}
 async function hashPin(pin){
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("anime-lock:"+pin));
   return Array.from(new Uint8Array(buf),b=>b.toString(16).padStart(2,"0")).join("");
@@ -576,7 +592,7 @@ function bindRows(root, tab, mediaList){
   });
   root.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{
     const id=+b.dataset.add; const m = mediaList&&mediaList.find(x=>x.id===id); if(m) cacheMedia[id]=m;
-    openListSheet(id);
+    if(isHidden(db.items[id])) askPin(()=>openListSheet(id)); else openListSheet(id);
   });
   root.querySelectorAll("[data-plus]").forEach(b=>b.onclick=()=>{
     const it = db.items[+b.dataset.plus]; if(!it) return;
@@ -873,7 +889,10 @@ function touch(e){ e.updated=Date.now(); save(); }
 
 function detailHTML(id, m){
   const base = m || cacheMedia[id];
-  const e = db.items[id] || (base?entryFromMedia(base):null);
+  // אנימה נעולה: מחוץ לנעול היא מוצגת כאילו אינה ברשימות שלך
+  const hidden = isHidden(db.items[id]);
+  const mineReal = hidden ? null : db.items[id];
+  const e = mineReal || (base?entryFromMedia(base):(hidden?{...db.items[id],status:null,score:null,eps:{},locked:false}:null));
   if(!e){ view.innerHTML=`<div class="empty">טוען…</div>`; return; }
   setHeader(e.title, true);
   const total = e.episodes || (base&&epCount(base)) || 0;
@@ -905,7 +924,7 @@ function detailHTML(id, m){
       </div></div>
 
     <h3>סטטוס</h3>
-    <div class="statusset">${Object.entries(STATUS).map(([k,s])=>`<button class="${s.cls}" data-s="${k}" aria-pressed="${e.status===k}"><span>${s.label}</span></button>`).join("")}<button class="dlock" id="dLock" aria-pressed="${!!(db.items[id]&&db.items[id].locked)}">${LOCK_ICON}<span>${db.items[id]&&db.items[id].locked?"בנעול":"נעול"}</span></button></div>
+    <div class="statusset">${Object.entries(STATUS).map(([k,s])=>`<button class="${s.cls}" data-s="${k}" aria-pressed="${e.status===k}"><span>${s.label}</span></button>`).join("")}<button class="dlock" id="dLock" aria-pressed="${!!(mineReal&&mineReal.locked)}">${LOCK_ICON}<span>${mineReal&&mineReal.locked?"בנעול":"נעול"}</span></button></div>
 
     <h3>הציון שלי</h3>
     <div class="scorebox">
@@ -925,7 +944,7 @@ function detailHTML(id, m){
       return `<div class="ep"><label><input type="checkbox" id="w${n}" data-ep="${n}" ${ep.w?"checked":""}>פרק ${n}</label>
       <span class="ttl" dir="auto">${esc(cleanEpTitle(epTitles[i]))}</span></div>`;}).join("")}</div>`
     :`<p class="desc">מספר הפרקים עוד לא ידוע ב־AniList.</p>`}
-    ${db.items[id]?`<h3>הסרה</h3><div id="rmBox"><button class="btn" id="rm">הסר מהרשימה שלי</button></div>`:""}
+    ${mineReal?`<h3>הסרה</h3><div id="rmBox"><button class="btn" id="rm">הסר מהרשימה שלי</button></div>`:""}
     <div style="height:24px"></div>`;
 
   view.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{
@@ -933,6 +952,15 @@ function detailHTML(id, m){
     if(it.status==="done" && it.episodes && !watchedCount(it)){ for(let n=1;n<=it.episodes;n++){ it.eps[n]={...(it.eps[n]||{}),w:true}; } }
     touch(it); detailHTML(id,m); toast(it.status?`סומן: ${STATUS[it.status].label}`:"הסטטוס הוסר");
   });
+  if(view._guard){ view.removeEventListener("click",view._guard,true); view.removeEventListener("pointerdown",view._guard,true); view._guard=null; }
+  if(hidden){
+    view._guard = ev=>{
+      if(!ev.target.closest(".statusset button,.scorebox,.eps,.eptools,#rmBox")) return;
+      ev.preventDefault(); ev.stopPropagation();
+      if(ev.type==="click") askPin(()=>detailHTML(id,m));
+    };
+    view.addEventListener("click",view._guard,true); view.addEventListener("pointerdown",view._guard,true);
+  }
   $("#dLock").onclick=()=>{
     const it=getOrCreate(id,base); if(!it.status) it.status="done";
     it.locked=!it.locked; touch(it); toast(it.locked?"הועבר לנעול":"הוצא מהנעול"); detailHTML(id,m);
