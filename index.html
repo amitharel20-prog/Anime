@@ -345,7 +345,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 43;
+const APP_VERSION = 44;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -558,7 +558,7 @@ function renderList(){
   // בחיפוש: מחפשים בכל הרשימות (בנעול — רק בתוך הנעול)
   const pool = showLocked ? (lockOpen?lockedItems:[]) : (q ? visible : visible.filter(e=>listFilter==="all"||(listFilter==="new"?newEps(e)>0:e.status===listFilter)));
   const qw = q ? q.split(" ") : [];
-  const items = (q ? pool.filter(e=>{ const t=normQ(e.title+" "+(e.romaji||"")+" "+((heOf(e.id)||{}).t||"")+" "+(fanFor(e)||"")+" "+tlFor(e)); return qw.every(w=>t.includes(w)); }) : pool).sort(SORTS[sortKey].fn);
+  const items = (q ? pool.filter(e=>{ const t=normQ(e.title+" "+(e.romaji||"")+" "+((heOf(e.id)||{}).t||"")+" "+(fanFor(e)||"")+" "+heAlias(fanFor(e))+" "+tlFor(e)); return qw.every(w=>t.includes(w)); }) : pool).sort(SORTS[sortKey].fn);
   const lb = db.meta.lastBackup || 0;
   const needBackup = all.length>=5 && Date.now()-lb > 14*864e5 && !syncCfg();
 
@@ -903,6 +903,7 @@ function translitHe(text){
   }).join("").replace(/\s+/g," ").trim();
 }
 
+function heAlias(he){ if(!he) return ""; const A=window.HE_ALIASES||{}; return Object.entries(A).filter(([k])=>he.startsWith(k)).map(([,v])=>v).join(" "); }
 const tlMemo = new Map();
 function tlFor(o){ if(!tlMemo.has(o.id)) tlMemo.set(o.id, translitHe(enTitle(o))); return tlMemo.get(o.id); }
 
@@ -910,9 +911,9 @@ function tlFor(o){ if(!tlMemo.has(o.id)) tlMemo.set(o.id, translitHe(enTitle(o))
 async function hebrewSearchIds(q){
   const ids=new Set(), mals=new Set(); const nq=normQ(q);
   for(const [id,c] of Object.entries(heCache)) if(c.t && normQ(c.t).includes(nq)) ids.add(+id);
-  for(const e of Object.values(db.items)){ const f=fanFor(e); if(f && normQ(f).includes(nq)) ids.add(e.id); }
+  for(const e of Object.values(db.items)){ const f=fanFor(e); if(f && normQ(f+" "+heAlias(f)).includes(nq)) ids.add(e.id); }
   const fanEn=[]; const seenHe=new Set();
-  for(const [en,he] of Object.entries(window.HE_FAN_NAMES||{})) if(normQ(he).includes(nq) && !seenHe.has(he)){ seenHe.add(he); fanEn.push(en); }
+  for(const [en,he] of Object.entries(window.HE_FAN_NAMES||{})) if(normQ(he+" "+heAlias(he)).includes(nq) && !seenHe.has(he)){ seenHe.add(he); fanEn.push(en); }
   try{
     const s = q.replace(/["\\]/g,"").replace(/[ךםןףץ]$/,"");
     const sp = `SELECT DISTINCT ?mal WHERE { ?i wdt:P4086 ?mal; rdfs:label ?l. FILTER(LANG(?l)="he" && CONTAINS(LCASE(?l), LCASE("${s}"))) } LIMIT 25`;
