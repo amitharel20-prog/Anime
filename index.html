@@ -212,6 +212,9 @@ nav.tabs button{font-size:11px;white-space:nowrap}
 .adultimg{filter:blur(14px) saturate(.6);transform:scale(1.1)}
 html.noblur .adultimg{filter:none;transform:none}
 .r18{color:#c0392b}
+.tvz{display:inline-block;background:#111;color:#FFD400;border:1px solid #FFD400;font-size:11px;font-weight:800;letter-spacing:.3px;padding:1px 7px;border-radius:6px;direction:ltr;line-height:1.5}
+.pimg .tvz{position:absolute;bottom:6px;left:6px}
+.hero .tvz{margin-top:6px}
 .snm{display:flex;flex-direction:column;align-items:center;line-height:1.2}
 .snm small{color:var(--muted);font-size:14px}
 .railsub{font-family:var(--body);font-size:14px;color:var(--muted)}
@@ -347,7 +350,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 60;
+const APP_VERSION = 61;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -625,7 +628,7 @@ function rowHTML(e){
       <span class="sub">${esc(sub)}</span>
       ${genres.length?`<span class="gtags">${genres.map(g=>`<span>${esc(genreHe(g))}</span>`).join("")}</span>`:""}
       ${e.air==="NOT_YET_RELEASED"?`<span class="reldate">${esc(releaseText(e))}</span>`:""}
-      <span class="pills">${showPill?`<span class="pill ${STATUS[e.status].cls}">${STATUS[e.status].label}</span>`:""}${n?`<span class="pill st-new">${n===1?"פרק חדש":n+" פרקים חדשים"}</span>`:""}</span>
+      <span class="pills">${onTvz(e)?TVZ:""}${showPill?`<span class="pill ${STATUS[e.status].cls}">${STATUS[e.status].label}</span>`:""}${n?`<span class="pill st-new">${n===1?"פרק חדש":n+" פרקים חדשים"}</span>`:""}</span>
       ${tot?`<span class="prog"><span class="bar"><i class="${e.status?STATUS[e.status].cls:""}" style="width:${pct}%"></i></span><span class="pnum">${w}/${tot}</span></span>`:(w?`<span class="pnum">${w} פרקים</span>`:"")}
     </span>
     ${e.score ? `<span class="myscore has"><b>${fmtScore(e.score)}</b><small>הציון שלי</small></span>` : "<span></span>"}</button>
@@ -638,7 +641,7 @@ function resultHTML(m){
   const sub = [FORMAT[m.format]||m.format, m.seasonYear, epCount(m)?epCount(m)+" פרקים":null].filter(Boolean).join(" · ");
   return `<div class="row"><button class="rmain" data-id="${m.id}">${poster(m.coverImage&&(m.coverImage.large||m.coverImage.medium), m.isAdult)}
     <span class="t"><span class="name">${tn(m)}</span><span class="sub">${esc(sub)}${m.isAdult?' · <b class="r18">18+</b>':""}</span>
-    ${mine&&mine.status?`<span class="pill ${STATUS[mine.status].cls}">${STATUS[mine.status].label}</span>`:""}</span>
+    ${onTvz(m)?TVZ+" ":""}${mine&&mine.status?`<span class="pill ${STATUS[mine.status].cls}">${STATUS[mine.status].label}</span>`:""}</span>
     <span class="myscore">${m.averageScore?(m.averageScore/10).toFixed(1):"–"}<small>AniList</small></span></button>
     <button class="side ${mine&&mine.status?"addnew":""}" data-add="${m.id}" aria-label="הוסף לרשימה">${mine&&mine.status?"⋯":"+"}<small>${mine&&mine.status?"רשימה":"הוסף"}</small></button></div>`;
 }
@@ -750,6 +753,17 @@ function outsideNames(){
   }
   return out.sort();
 }
+const keyW = s => (s||"").toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g," ").trim();
+const TVZ_KEYS = (window.TELEVIZIO||[]).map(t=>keyW(t)).filter(Boolean);
+const tvzMemo = new Map();
+function onTvz(o){
+  if(!o) return false;
+  if(tvzMemo.has(o.id)) return tvzMemo.get(o.id);
+  const ts=[enTitle(o), o.romaji||(o.title&&o.title.romaji)||"", o.title&&o.title.english||"", typeof o.title==="string"?o.title:""].filter(Boolean).map(keyW);
+  const r = ts.some(k=>TVZ_KEYS.some(b=>k===b || k.startsWith(b+" ")));
+  tvzMemo.set(o.id,r); return r;
+}
+const TVZ = '<span class="tvz">televizio</span>';
 function heOf(id){
   const it=db.items[id]; const f = it && fanFor(it);
   if(f) return {t:f,src:"fan"};
@@ -1228,7 +1242,7 @@ function posterCard(m){
   const score = m.averageScore ? (m.averageScore/10).toFixed(1) : null;
   return `<div class="pc"><button class="pcmain" data-id="${m.id}">
       <span class="pimg">${img?`<img src="${esc(img)}" alt="" loading="lazy"${(m.isAdult||m.adult)?' class="adultimg"':""}>`:""}
-        ${score?`<span class="pscore">★ ${score}</span>`:""}
+        ${score?`<span class="pscore">★ ${score}</span>`:""}${onTvz(m.title?m:{id:m.id,title:m.titleStr})?TVZ:""}
         ${mine&&mine.status?`<span class="pst ${STATUS[mine.status].cls}"><span>${STATUS[mine.status].label}</span></span>`:""}</span>
       <span class="ptitle">${tn(m.title?m:{id:m.id,title:m.titleStr})}</span></button>
     ${mine&&mine.status?"":`<button class="padd" data-add="${m.id}" aria-label="הוסף לרשימה">+</button>`}</div>`;
@@ -1362,7 +1376,7 @@ function detailHTML(id, m){
   view.innerHTML = `
     ${banner&&!(base&&base.isAdult)?`<div class="banner" style="background-image:url('${esc(banner)}')"></div>`:""}
     <div class="hero ${banner?"over":""}">${base&&base.coverImage?`<img src="${esc(base.coverImage.extraLarge||base.coverImage.large||base.coverImage.medium)}" alt=""${base.isAdult?' class="adultimg"':""}>`:poster(e.cover, e.adult)}
-      <div><h2>${isHeLang()?tn(e):esc(enTitle(e))}</h2>
+      <div><h2>${isHeLang()?tn(e):esc(enTitle(e))}</h2>${onTvz(e)||onTvz(base)?`<div>${TVZ}</div>`:""}
         ${(()=>{ const c=(fanFor(e)?{t:fanFor(e),src:"fan"}:heOf(id)); const lines=[];
           if(isHeLang()){ if(c) lines.push(`<div class="alt" dir="ltr">${esc(enTitle(e))}</div>`); }
           else if(c) lines.push(`<div class="alt">${esc(c.t)}</div>`);

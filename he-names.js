@@ -900,3 +900,20 @@ Object.assign(window.HE_FAN_NAMES, {
   "Umamusume: Pretty Derby Season 2": "אומה מוסומה: פריטי דרבי עונה 2",
   "Wistoria: Wand and Sword Season 2": "ויסטוריה: שרביט וחרב עונה 2"
 });
+
+// אנימות שיש באפליקציית televizio של עמית (שם באנגלית או ברומאג'י; גם העונות הבאות נתפסות)
+window.TELEVIZIO = [
+  "Daemons of the Shadow Realm", "Yomi no Tsugai",
+  "Full-Time Magister", "Quanzhi Fashi",
+  "My Hero Academia: Vigilantes", "Vigilante: Boku no Hero Academia Illegals",
+  "The Most Heretical Last Boss Queen: From Villainess to Savior", "Higeki no Genkyou to Naru Saikyou Gedou Last Boss Joou wa Tami no Tame ni Tsukushimasu.",
+  "Kingdom",
+  "Farming Life in Another World", "Isekai Nonbiri Nouka",
+  "Kemono Jihen",
+  "My Happy Marriage", "Watashi no Shiawase na Kekkon",
+  "Witch Hat Atelier", "Tongari Boushi no Atelier",
+  "2.5 Dimensional Seduction", "2.5-jigen no Ririsa",
+  "Bleach",
+  "Wistoria: Wand and Sword", "Tsue to Tsurugi no Wistoria",
+  "Record of Grancrest War", "Grancrest Senki"
+];
