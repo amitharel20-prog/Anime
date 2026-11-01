@@ -256,7 +256,7 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 .lockscreen .btn{min-width:180px}
 #pinMsg{color:#c0392b;min-height:1.2em}
 .lockbar{display:flex;align-items:center;gap:8px;margin-top:12px;color:var(--accent);font-weight:700}
-.lockbar .linkbtn{margin-inline-start:auto}
+
 .lockact{display:flex;align-items:center;justify-content:center;gap:6px}
 @media (prefers-reduced-motion:no-preference){.rmain,.chip,.btn{transition:transform .1s}.rmain:active{transform:scale(.99)}}
 </style>
@@ -311,7 +311,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 25;
+const APP_VERSION = 26;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -512,7 +512,7 @@ function renderList(){
       <button class="chip lockchip" data-f="locked" aria-pressed="${showLocked}">${LOCK_ICON}<span class="cl">נעול</span>${lockOpen?`<span class="n">${lockedItems.length}</span>`:""}</button>
     </div>
     <div class="sortrow"><label for="sort">מיון</label><select id="sort">${Object.entries(SORTS).map(([k,s])=>`<option value="${k}" ${k===sortKey?"selected":""}>${s.label}</option>`).join("")}</select><button class="linkbtn" id="toStats" style="margin-inline-start:auto">סטטיסטיקות ←</button></div>
-    ${showLocked&&!lockOpen ? lockScreenHTML() : `${showLocked?`<div class="lockbar">${LOCK_ICON}<span>רשימה נעולה</span><button class="linkbtn" id="relock">נעל שוב</button></div>`:""}
+    ${showLocked&&!lockOpen ? lockScreenHTML() : `${showLocked?`<div class="lockbar">${LOCK_ICON}<span>רשימה נעולה</span><button class="linkbtn" id="chpin" style="margin-inline-start:auto">שנה קוד</button><button class="linkbtn" id="relock" style="margin-inline-start:12px">נעל שוב</button></div>`:""}
     <div class="list" id="myList">${items.slice(0,listLimit).map(rowHTML).join("") || `<div class="empty">${showLocked?"אין כאן אנימות. כדי להעביר אנימה לכאן, לוחצים על ⋯ לידה ובוחרים 'העבר לנעול'.":"אין כאן כלום עדיין."}</div>`}</div>`}
     ${items.length>listLimit?`<div id="moreRows" class="empty">טוען עוד…</div>`:""}`;
   // טוען את הרשימה בחלקים כשגוללים, כדי שהמסך ייפתח מהר
@@ -530,6 +530,7 @@ function renderList(){
   view.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ listFilter=c.dataset.f; listLimit=LIST_STEP; renderList(); window.scrollTo(0,0); });
   if(showLocked && !lockOpen) bindLockScreen();
   const rl=$("#relock"); if(rl) rl.onclick=()=>{ lockOpen=false; renderList(); };
+  const cp=$("#chpin"); if(cp) cp.onclick=()=>{ prefs.pinHash=""; savePrefs(); lockOpen=false; listFilter="locked"; renderList(); toast("בחר קוד חדש"); };
   bindRows(view,"list");
   const sl=$("#toStats"); if(sl) sl.onclick=()=>go({tab:"stats"});
   $("#sort").onchange=ev=>{ prefs.sort=ev.target.value; savePrefs(); listLimit=LIST_STEP; renderList(); };
