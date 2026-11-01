@@ -263,6 +263,22 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 .statusset .dlock[aria-pressed="true"] span{color:var(--accent-fg)}
 .lsearch{display:flex;align-items:center;gap:8px;margin-bottom:12px}
 .lsearch input{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 12px;font-size:16px}
+.bellbtn{position:relative;flex:none;margin-inline-start:auto;width:40px;height:40px;border:1px solid var(--line);background:var(--surface);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--fg)}
+.bellbtn svg{width:20px;height:20px}
+#bellBadge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:#d64545;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.bellbtn + .themebtn{margin-inline-start:0}
+.nhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.nlist{display:grid;gap:8px}
+.nitem{display:grid;grid-template-columns:44px 1fr;gap:12px;align-items:center;text-align:start;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px;width:100%}
+.nitem img,.nitem .ph{width:44px;height:62px;object-fit:cover;border-radius:6px;background:var(--line)}
+.nitem.unread{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.ntext{display:flex;flex-direction:column;gap:2px;font-weight:600;min-width:0}
+.ntext small{color:var(--muted);font-weight:400;font-size:12px}
+.reldate{font-size:13px;font-weight:700;color:var(--accent)}
+.relbig{margin-top:10px;display:inline-block;padding:6px 12px;border-radius:10px;background:var(--accent);color:var(--accent-fg);font-weight:700;font-size:14px}
+.epdate{display:block;font-size:11px;color:var(--muted)}
+.epdate.future{color:var(--accent);font-weight:700}
+.ep .ttl{white-space:normal}
 @media (prefers-reduced-motion:no-preference){.rmain,.chip,.btn{transition:transform .1s}.rmain:active{transform:scale(.99)}}
 </style>
 </head>
@@ -270,6 +286,7 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 <header class="top"><div class="wrap">
   <button class="back" id="backBtn" hidden aria-label="חזרה">→</button>
   <h1 id="pageTitle">הרשימה שלי</h1>
+  <button class="bellbtn" id="bellBtn" aria-label="התראות"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg><span id="bellBadge" hidden>0</span></button>
   <button class="themebtn" id="themeBtn" aria-label="מצב תצוגה"></button>
 </div></header>
 
@@ -316,7 +333,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 31;
+const APP_VERSION = 32;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -343,6 +360,7 @@ function entryFromMedia(m){
     romaji: m.title.romaji || "", cover: m.coverImage ? (m.coverImage.large||m.coverImage.medium) : "",
     episodes: epCount(m), format:m.format||"", year:m.seasonYear||(m.startDate&&m.startDate.year)||null,
     genres:m.genres||[], duration:m.duration||null, air:m.status||null, adult:!!m.isAdult,
+    start:m.startDate&&m.startDate.year?{y:m.startDate.year,m:m.startDate.month||null,d:m.startDate.day||null}:null,
     next:m.nextAiringEpisode?{ep:m.nextAiringEpisode.episode,at:m.nextAiringEpisode.airingAt}:null,
     status:null, score:null, eps:{}, updated:Date.now()
   };
@@ -371,7 +389,7 @@ function epCount(m){
 function watchedCount(e){ return Object.values(e.eps||{}).filter(x=>x.w).length; }
 
 /* ---------- AniList ---------- */
-const MEDIA_FIELDS = `id idMal isAdult title{romaji english native} coverImage{large medium} episodes format status seasonYear startDate{year} averageScore genres duration nextAiringEpisode{episode airingAt}`;
+const MEDIA_FIELDS = `id idMal isAdult title{romaji english native} coverImage{large medium} episodes format status seasonYear startDate{year month day} averageScore genres duration nextAiringEpisode{episode airingAt}`;
 async function anilist(query, variables, tries=3){
   for(let i=0;i<tries;i++){
     const r = await fetch("https://graphql.anilist.co",{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({query,variables})});
@@ -408,6 +426,7 @@ function applyTheme(){
 }
 $("#themeBtn").onclick=()=>{ const order=["auto","light","dark"]; prefs.theme = order[(order.indexOf(prefs.theme||"auto")+1)%3]; savePrefs(); applyTheme(); toast("מצב תצוגה: "+THEMES[prefs.theme].label); };
 applyTheme();
+$("#bellBtn").onclick=()=>go({tab:current.tab,notifs:true});
 
 /* ---------- ניווט ---------- */
 let stack = [];
@@ -427,6 +446,7 @@ document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{ stack=[]
 function render(){
   if(view._guard){ view.removeEventListener("click",view._guard,true); view.removeEventListener("pointerdown",view._guard,true); view._guard=null; }
   setTab(current.tab);
+  if(current.notifs) return renderNotifs();
   if(current.detail) return renderDetail(current.detail);
   if(current.tab==="search") return renderSearch();
   if(current.tab==="settings") return renderSettings();
@@ -581,6 +601,7 @@ function rowHTML(e){
     <span class="t"><span class="name">${esc(e.title)}</span>
       <span class="sub">${esc(sub)}</span>
       ${genres.length?`<span class="gtags">${genres.map(g=>`<span>${esc(genreHe(g))}</span>`).join("")}</span>`:""}
+      ${e.air==="NOT_YET_RELEASED"?`<span class="reldate">${esc(releaseText(e))}</span>`:""}
       <span class="pills">${showPill?`<span class="pill ${STATUS[e.status].cls}">${STATUS[e.status].label}</span>`:""}${n?`<span class="pill st-new">${n===1?"פרק חדש":n+" פרקים חדשים"}</span>`:""}</span>
       ${tot?`<span class="prog"><span class="bar"><i class="${e.status?STATUS[e.status].cls:""}" style="width:${pct}%"></i></span><span class="pnum">${w}/${tot}</span></span>`:(w?`<span class="pnum">${w} פרקים</span>`:"")}
     </span>
@@ -645,6 +666,91 @@ function openListSheet(id){
 }
 function closeSheet(){ const sh=$("#sheet"); sh.hidden=true; sh.innerHTML=""; }
 
+/* ---------- תאריכי יציאה ---------- */
+const DAY = 864e5;
+// זמן יציאה של הפרק הראשון (אם ידוע), אחרת תאריך ההתחלה
+function releaseInfo(e){
+  if(e.next && e.next.ep===1 && e.next.at) return {t:e.next.at*1000, exact:true};
+  if(e.start && e.start.y){
+    if(e.start.m && e.start.d) return {t:new Date(e.start.y,e.start.m-1,e.start.d).getTime(), exact:true};
+    return {t:null, label: e.start.m ? `${HE_MONTHS[e.start.m-1]} ${e.start.y}` : String(e.start.y)};
+  }
+  return null;
+}
+const HE_MONTHS=["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
+const fmtDay = t => new Date(t).toLocaleDateString("he-IL",{weekday:"short",day:"numeric",month:"numeric",year:"2-digit"});
+function releaseText(e){
+  const r = releaseInfo(e); if(!r) return "תאריך יציאה עוד לא ידוע";
+  if(r.t){ const days=Math.ceil((r.t-Date.now())/DAY); return `יוצא ב־${fmtDay(r.t)}${days>0&&days<=60?` (בעוד ${days===1?"יום":days+" ימים"})`:""}`; }
+  return `יוצא ב־${r.label}`;
+}
+function sawPrequel(e){
+  return (e.prequels||[]).some(pid=>{ const p=db.items[pid]; return p && (p.status==="done"||p.status==="watching"||watchedCount(p)>0); });
+}
+
+/* ---------- התראות ---------- */
+function notifs(){ if(!db.meta.notifs) db.meta.notifs=[]; return db.meta.notifs; }
+function addNotif(key, animeId, text, at){
+  const list = notifs(); if(list.some(n=>n.key===key)) return 0;
+  list.unshift({key, animeId, text, at:at||Date.now(), read:false});
+  if(list.length>100) list.length=100;
+  if(prefs.sysNotif && "Notification" in window && Notification.permission==="granted"){
+    try{ navigator.serviceWorker && navigator.serviceWorker.ready.then(r=>r.showNotification("מעקב אנימה",{body:text,icon:"icon-192.png",tag:key})); }catch(e){}
+  }
+  return 1;
+}
+function buildNotifs(){
+  let added=0; const now=Date.now();
+  for(const e of Object.values(db.items)){
+    if(!e.status || e.locked) continue;
+    // עונה חדשה: ב"אצפה בעתיד", טרם יצאה, וראית את העונה הקודמת — 3 ימים לפני
+    if(e.status==="plan" && e.air==="NOT_YET_RELEASED" && sawPrequel(e)){
+      const r=releaseInfo(e);
+      if(r && r.t && r.t-now<=3*DAY && r.t>now-DAY) added+=addNotif("season:"+e.id, e.id, `העונה החדשה של ${e.title} יוצאת ב־${fmtDay(r.t)}`);
+    }
+    // פרק חדש באנימה שאתה רואה
+    const n=newEps(e);
+    if(n>0){ const latest=aired(e); added+=addNotif(`ep:${e.id}:${latest}`, e.id, n===1?`יצא פרק ${latest} של ${e.title}`:`יצאו ${n} פרקים חדשים של ${e.title} (עד פרק ${latest})`); }
+  }
+  if(added){ save(false); updateBell(); }
+  return added;
+}
+function updateBell(){
+  const c = notifs().filter(n=>!n.read).length, b=$("#bellBadge");
+  if(b){ b.textContent = c>9?"9+":c; b.hidden = !c; }
+}
+function renderNotifs(){
+  setHeader("התראות", true);
+  const list = notifs();
+  view.innerHTML = list.length ? `
+    <div class="nhead"><span class="note">התראות על פרקים חדשים ועל עונות חדשות של אנימות שראית</span><button class="linkbtn" id="nClear">נקה הכל</button></div>
+    <div class="nlist">${list.map((n,i)=>{ const e=db.items[n.animeId];
+      return `<button class="nitem ${n.read?"":"unread"}" data-ni="${i}">${e&&e.cover&&!e.adult?`<img src="${esc(e.cover)}" alt="">`:`<span class="ph"></span>`}
+        <span class="ntext"><span>${esc(n.text)}</span><small>${new Date(n.at).toLocaleDateString("he-IL",{day:"numeric",month:"numeric"})} ${new Date(n.at).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})}</small></span></button>`; }).join("")}</div>
+    ${notifCardHTML()}`
+  : `<div class="empty"><h2>אין התראות</h2><p>כאן יופיעו פרקים חדשים באנימות שאתה רואה, ועונות חדשות של אנימות שראית (3 ימים לפני שהן יוצאות).</p></div>${notifCardHTML()}`;
+  view.querySelectorAll("[data-ni]").forEach(b=>b.onclick=()=>{ const n=list[+b.dataset.ni]; if(db.items[n.animeId]) go({tab:current.tab,detail:n.animeId}); });
+  const nc=$("#nClear"); if(nc) nc.onclick=()=>{ db.meta.notifs=[]; save(false); updateBell(); renderNotifs(); };
+  bindNotifCard();
+  // פתיחת החלונית מסמנת הכל כנקרא
+  let ch=false; list.forEach(n=>{ if(!n.read){ n.read=true; ch=true; } }); if(ch){ save(false); updateBell(); }
+}
+function notifCardHTML(){
+  if(!("Notification" in window)) return "";
+  const on = prefs.sysNotif && Notification.permission==="granted";
+  return `<div class="card" style="margin-top:16px"><h2>התראות בטלפון</h2><p>כשהאפליקציה פתוחה או רצה ברקע, ההתראות יופיעו גם בשורת ההתראות של הטלפון. כשהיא סגורה לגמרי, תראה אותן בפתיחה הבאה.</p>
+    <div class="actions"><button class="btn ${on?"":"primary"}" id="sysN">${on?"כבה התראות בטלפון":"הפעל התראות בטלפון"}</button></div></div>`;
+}
+function bindNotifCard(){
+  const b=$("#sysN"); if(!b) return;
+  b.onclick=async ()=>{
+    if(prefs.sysNotif && Notification.permission==="granted"){ prefs.sysNotif=false; savePrefs(); renderNotifs(); return; }
+    const p = await Notification.requestPermission();
+    if(p==="granted"){ prefs.sysNotif=true; savePrefs(); toast("התראות בטלפון הופעלו"); } else toast("הטלפון לא אישר התראות. אפשר לאשר בהגדרות של Chrome.");
+    renderNotifs();
+  };
+}
+
 /* ---------- רענון פרקים מ־AniList ---------- */
 let refreshing=false;
 async function refreshFromAniList(){
@@ -659,18 +765,20 @@ async function refreshFromAniList(){
     const before = {}; need.forEach(e=>before[e.id]=aired(e));
     for(let i=0;i<need.length;i+=50){
       const ids = need.slice(i,i+50).map(e=>e.id);
-      const d = await anilist(`query($ids:[Int]){Page(perPage:50){media(id_in:$ids,type:ANIME){id episodes status duration genres nextAiringEpisode{episode airingAt}}}}`,{ids});
+      const d = await anilist(`query($ids:[Int]){Page(perPage:50){media(id_in:$ids,type:ANIME){id episodes status duration genres startDate{year month day} nextAiringEpisode{episode airingAt} relations{edges{relationType node{id type}}}}}}`,{ids});
       for(const m of d.Page.media){
         const e = db.items[m.id]; if(!e) continue;
         e.episodes = m.episodes || e.episodes; e.air = m.status; e.duration = m.duration||null; e.genres = m.genres||[];
         e.next = m.nextAiringEpisode?{ep:m.nextAiringEpisode.episode,at:m.nextAiringEpisode.airingAt}:null;
         if(!m.episodes && m.nextAiringEpisode) e.episodes = Math.max(e.episodes||0, m.nextAiringEpisode.episode-1);
+        e.start = m.startDate&&m.startDate.year?{y:m.startDate.year,m:m.startDate.month||null,d:m.startDate.day||null}:null;
+        if(m.relations) e.prequels = m.relations.edges.filter(x=>x.relationType==="PREQUEL"&&x.node.type==="ANIME").map(x=>x.node.id);
       }
       if(i+50<need.length) await sleep(2500);
     }
     save(false);
-    const grew = need.filter(e=>e.status==="watching" && aired(db.items[e.id]||e)>before[e.id] && last);
-    if(grew.length) toast(grew.length===1?`יצא פרק חדש ב־${grew[0].title}`:`יצאו פרקים חדשים ב־${grew.length} אנימות`);
+    const added = buildNotifs();
+    if(added) toast(added===1?"יש התראה חדשה":`יש ${added} התראות חדשות`);
     prefs.lastRefresh=Date.now(); savePrefs();
     if(!current.detail && current.tab==="list") renderList();
   }catch(e){ /* אין חיבור או ש־AniList עמוס; ננסה בפעם הבאה */ }
@@ -886,7 +994,7 @@ async function renderDetail(id){
   paint();
   if(!m){
     try{
-      const d = await anilist(`query($id:Int){Media(id:$id){${MEDIA_FIELDS} description(asHtml:false) bannerImage season studios(isMain:true){nodes{name}} trailer{id site} streamingEpisodes{title} relations{edges{relationType node{id type format title{romaji english} coverImage{medium} seasonYear}}}}}`,{id});
+      const d = await anilist(`query($id:Int){Media(id:$id){${MEDIA_FIELDS} description(asHtml:false) airingSchedule(perPage:150){nodes{episode airingAt}} bannerImage season studios(isMain:true){nodes{name}} trailer{id site} streamingEpisodes{title} relations{edges{relationType node{id type format title{romaji english} coverImage{medium} seasonYear}}}}}`,{id});
       m = cacheMedia[id+"full"] = d.Media;
       // עדכון נתונים שהשתנו (למשל פרקים חדשים בסדרה משודרת)
       if(db.items[id]){ const fresh=entryFromMedia(m); Object.assign(db.items[id],{episodes:fresh.episodes,cover:fresh.cover||db.items[id].cover,title:db.items[id].title||fresh.title,genres:fresh.genres,duration:fresh.duration,air:fresh.air,next:fresh.next}); save(false); }
@@ -911,7 +1019,10 @@ function detailHTML(id, m){
   const total = e.episodes || (base&&epCount(base)) || 0;
   const epTitles = (m&&m.streamingEpisodes||[]).map(s=>s.title);
   const desc = m&&m.description ? m.description.replace(/<br\s*\/?>/gi,"\n").replace(/<[^>]+>/g,"").trim() : "";
-  const showCount = Math.max(total, watchedMax(e));
+  const sched = {}; ((m&&m.airingSchedule&&m.airingSchedule.nodes)||[]).forEach(x=>sched[x.episode]=x.airingAt*1000);
+  const maxSched = Math.max(0,...Object.keys(sched).map(Number));
+  const showCount = Math.max(total, watchedMax(e), maxSched);
+  const relEntry = base ? {...entryFromMedia(base), next:base.nextAiringEpisode?{ep:base.nextAiringEpisode.episode,at:base.nextAiringEpisode.airingAt}:null} : e;
   const rels = m&&m.relations ? m.relations.edges.filter(x=>x.node.type==="ANIME"&&x.relationType!=="CHARACTER") : [];
   rels.sort((a,b)=>(a.relationType==="PREQUEL"?0:a.relationType==="SEQUEL"?1:2)-(b.relationType==="PREQUEL"?0:b.relationType==="SEQUEL"?1:2));
 
@@ -933,6 +1044,7 @@ function detailHTML(id, m){
         ${m&&m.season&&m.seasonYear?`<div class="facts"><span>${SEASON_HE[m.season]} ${m.seasonYear} (${SEASON_MONTHS[m.season]})</span>${studio?`<span>${esc(studio)}</span>`:""}</div>`:(studio?`<div class="facts"><span>${esc(studio)}</span></div>`:"")}
         ${genres.length?`<div class="gtags big">${genres.map(g=>`<span>${esc(genreHe(g))}</span>`).join("")}</div>`:""}
         ${trailer?`<a class="trailer" href="${trailer}" target="_blank" rel="noopener">▶ טריילר</a>`:""}
+        ${base&&base.status==="NOT_YET_RELEASED"?`<div class="relbig">${esc(releaseText(relEntry))}</div>`:""}
         ${base&&base.nextAiringEpisode?`<div class="facts"><span>פרק ${base.nextAiringEpisode.episode} יוצא ב־<b>${new Date(base.nextAiringEpisode.airingAt*1000).toLocaleDateString("he-IL",{day:"numeric",month:"numeric",weekday:"short"})}</b></span></div>`:""}
       </div></div>
 
@@ -955,7 +1067,7 @@ function detailHTML(id, m){
     ${showCount?`<div class="eptools"><button class="btn" id="allW">סמן הכל כנצפה</button><button class="btn" id="noneW">נקה סימונים</button></div>
     <div class="eps">${Array.from({length:showCount},(_,i)=>{const n=i+1, ep=(e.eps||{})[n]||{};
       return `<div class="ep"><label><input type="checkbox" id="w${n}" data-ep="${n}" ${ep.w?"checked":""}>פרק ${n}</label>
-      <span class="ttl" dir="auto">${esc(cleanEpTitle(epTitles[i]))}</span></div>`;}).join("")}</div>`
+      <span class="ttl" dir="auto">${esc(cleanEpTitle(epTitles[i]))}${sched[n]?`<small class="epdate ${sched[n]>Date.now()?"future":""}">${sched[n]>Date.now()?"יוצא ":"שודר "}${fmtDay(sched[n])}${sched[n]>Date.now()?" "+new Date(sched[n]).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"}):""}</small>`:""}</span></div>`;}).join("")}</div>`
     :`<p class="desc">מספר הפרקים עוד לא ידוע ב־AniList.</p>`}
     ${mineReal?`<h3>הסרה</h3><div id="rmBox"><button class="btn" id="rm">הסר מהרשימה שלי</button></div>`:""}
     <div style="height:24px"></div>`;
@@ -1257,6 +1369,7 @@ async function checkForUpdate(){
 checkForUpdate();
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") checkForUpdate(); });
 render();
+buildNotifs(); updateBell();
 setTimeout(()=>{ syncNow(true); }, 600);
 // רענון פרקים ברקע: רק אחרי שהמסך נטען, ולכל היותר פעם בחצי שעה
 setTimeout(()=>{ if(Date.now()-(prefs.lastRefresh||0)>30*60e3) refreshFromAniList(); }, 8000);
