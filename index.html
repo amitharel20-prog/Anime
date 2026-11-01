@@ -301,7 +301,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 22;
+const APP_VERSION = 23;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -401,10 +401,12 @@ let listFilter = "watching";
 let lastSearch = {q:"", results:[]};
 
 function go(state, push=true){
-  if(push) stack.push(current);
+  if(push){ current.scroll = window.scrollY; stack.push(current); }
+  else listLimit = LIST_STEP;
   current = state; render(); window.scrollTo(0,0);
 }
-$("#backBtn").onclick = ()=>{ current = stack.pop() || {tab:"list"}; render(); };
+// חזרה אחורה: חוזרים לאותו מקום בדף
+$("#backBtn").onclick = ()=>{ const prev = stack.pop() || {tab:"list"}; current = prev; render(); requestAnimationFrame(()=>window.scrollTo(0,prev.scroll||0)); };
 document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{ stack=[]; go({tab:b.dataset.tab}, false); });
 
 function render(){
@@ -419,6 +421,8 @@ function render(){
 }
 
 /* ---------- הרשימה שלי ---------- */
+const LIST_STEP = 40;
+let listLimit = LIST_STEP;
 const SORTS = {
   updated:{label:"עודכן לאחרונה", fn:(a,b)=>b.updated-a.updated},
   newEps:{label:"פרקים חדשים קודם", fn:(a,b)=>(newEps(b)>0)-(newEps(a)>0)||b.updated-a.updated},
@@ -456,11 +460,24 @@ function renderList(){
       <button class="chip" data-f="all" aria-pressed="${listFilter==="all"}">הכל<span class="n">${all.length}</span></button>
     </div>
     <div class="sortrow"><label for="sort">מיון</label><select id="sort">${Object.entries(SORTS).map(([k,s])=>`<option value="${k}" ${k===sortKey?"selected":""}>${s.label}</option>`).join("")}</select><button class="linkbtn" id="toStats" style="margin-inline-start:auto">סטטיסטיקות ←</button></div>
-    <div class="list">${items.map(rowHTML).join("") || `<div class="empty">אין כאן כלום עדיין.</div>`}</div>`;
-  view.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ listFilter=c.dataset.f; renderList(); });
+    <div class="list" id="myList">${items.slice(0,listLimit).map(rowHTML).join("") || `<div class="empty">אין כאן כלום עדיין.</div>`}</div>
+    ${items.length>listLimit?`<div id="moreRows" class="empty">טוען עוד…</div>`:""}`;
+  // טוען את הרשימה בחלקים כשגוללים, כדי שהמסך ייפתח מהר
+  const mr=$("#moreRows");
+  if(mr && "IntersectionObserver" in window){
+    const io=new IntersectionObserver(ents=>{
+      if(!ents[0].isIntersecting) return;
+      const from=listLimit; listLimit+=LIST_STEP;
+      $("#myList").insertAdjacentHTML("beforeend", items.slice(from,listLimit).map(rowHTML).join(""));
+      bindRows($("#myList"),"list");
+      if(listLimit>=items.length){ io.disconnect(); mr.remove(); }
+    },{rootMargin:"600px"});
+    io.observe(mr);
+  }
+  view.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ listFilter=c.dataset.f; listLimit=LIST_STEP; renderList(); window.scrollTo(0,0); });
   bindRows(view,"list");
   const sl=$("#toStats"); if(sl) sl.onclick=()=>go({tab:"stats"});
-  $("#sort").onchange=ev=>{ prefs.sort=ev.target.value; savePrefs(); renderList(); };
+  $("#sort").onchange=ev=>{ prefs.sort=ev.target.value; savePrefs(); listLimit=LIST_STEP; renderList(); };
   const tb=$("#toBackup"); if(tb) tb.onclick=()=>go({tab:"settings"},false);
   const tn=$("#toNew"); if(tn) tn.onclick=()=>{ listFilter="new"; renderList(); };
 }
@@ -677,7 +694,7 @@ function renderSearch(){
 function posterCard(m){
   const mine = db.items[m.id];
   const title = m.title ? (m.title.english||m.title.romaji||m.title.native) : m.titleStr;
-  const img = m.coverImage ? (m.coverImage.large||m.coverImage.medium) : m.cover;
+  const img = m.coverImage ? (m.coverImage.medium||m.coverImage.large) : m.cover;
   const score = m.averageScore ? (m.averageScore/10).toFixed(1) : null;
   return `<div class="pc"><button class="pcmain" data-id="${m.id}">
       <span class="pimg">${img?`<img src="${esc(img)}" alt="" loading="lazy"${(m.isAdult||m.adult)?' class="adultimg"':""}>`:""}
@@ -717,8 +734,10 @@ async function renderHome(){
     });
   };
   paint();
-  if(!homeData){
-    try{ homeData = await anilist(`query${HOME_Q}`,{}); for(const [k] of sec) browseCache[k]=browseCache[k]||null; if(current.tab==="home"&&!current.detail) paint(); }
+  let stale = !homeData;
+  if(!homeData){ try{ const c=JSON.parse(localStorage.getItem(KEY+".home")); if(c&&c.data){ homeData=c.data; paint(); stale = Date.now()-c.t>3600e3; } }catch(e){} }
+  if(stale){
+    try{ homeData = await anilist(`query${HOME_Q}`,{}); try{ localStorage.setItem(KEY+".home",JSON.stringify({t:Date.now(),data:homeData})); }catch(e){} if(current.tab==="home"&&!current.detail) paint(); }
     catch(err){ if(current.tab==="home"&&!current.detail) view.insertAdjacentHTML("afterbegin",`<div class="msg">לא הצלחתי לטעון אנימות: ${esc(err.message)}. בדוק חיבור לאינטרנט.</div>`); }
   }
 }
@@ -745,6 +764,8 @@ async function renderSeasonal(){
   $("#sPrev").onclick=()=>step(-1); $("#sNext").onclick=()=>step(1);
   view.querySelectorAll("[data-fmt]").forEach(c=>c.onclick=()=>{ seasonFmt=c.dataset.fmt; renderSeasonal(); });
   try{
+    const skey = KEY+".season."+key+(prefs.adult?".a":"");
+    if(!seasonCache[key]){ try{ const c=JSON.parse(localStorage.getItem(skey)); if(c&&c.data&&Date.now()-c.t<6*3600e3) seasonCache[key]=c.data; }catch(e){} }
     if(!seasonCache[key]){
       let all=[], page=1, more=true;
       while(more && page<=4){
@@ -752,6 +773,7 @@ async function renderSeasonal(){
         all = all.concat(d.Page.media); more = d.Page.pageInfo.hasNextPage; page++;
       }
       seasonCache[key]=all;
+      try{ localStorage.setItem(skey,JSON.stringify({t:Date.now(),data:all})); }catch(e){}
     }
     if(current.tab!=="seasonal"||current.detail||seasonSel.s!==s||seasonSel.y!==y) return;
     const list = seasonCache[key].filter(m=>m.format===seasonFmt);
