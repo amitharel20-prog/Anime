@@ -184,7 +184,10 @@ h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute
 .mono-wrap code{font-size:14px;background:var(--bg);padding:2px 6px;border-radius:6px;word-break:break-all;direction:ltr;unicode-bidi:isolate}
 nav.tabs button{font-size:12px}
 .rail{margin-bottom:22px}
-.railh{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px}
+.railh{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:8px}
+.railh h2{min-width:0}
+.railh .linkbtn{white-space:nowrap;flex:none}
+.railsub{display:block}
 .railh h2{font-family:var(--display);font-weight:400;font-size:21px;margin:0}
 .rails{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x proximity;padding-bottom:6px;margin-inline:calc(-1*max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px));scrollbar-width:none}
 .rails::-webkit-scrollbar{display:none}
@@ -204,7 +207,8 @@ nav.tabs button{font-size:12px}
 @keyframes pulse{50%{opacity:.5}}
 .seasonnav{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .seasonnav b{font-family:var(--display);font-weight:400;font-size:22px}
-nav.tabs button{font-size:11px}
+nav.tabs button{font-size:11px;white-space:nowrap}
+@media (max-width:380px){nav.tabs button{font-size:10px;padding-inline:0}}
 .adultimg{filter:blur(14px) saturate(.6);transform:scale(1.1)}
 .r18{color:#c0392b}
 .snm{display:flex;flex-direction:column;align-items:center;line-height:1.2}
@@ -228,10 +232,11 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 .myscore b{display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin:0 auto 2px;border-radius:50%;border:2px dashed var(--line);font-weight:400;color:var(--muted);font-size:20px}
 .myscore.has b{border:0;background:var(--gold);color:#1d1f3a;font-size:22px}
 .side{width:52px}
-.schip{border-color:currentColor}
+.schip.st-watching{--c:var(--s-watch)} .schip.st-done{--c:var(--s-done)} .schip.st-hold{--c:var(--s-hold)} .schip.st-dropped{--c:var(--s-drop)} .schip.st-plan{--c:var(--s-plan)}
+.schip{border-color:var(--c);color:var(--c)}
 .schip .cl{color:var(--fg)}
-.schip[aria-pressed="true"]{background:currentColor;border-color:currentColor}
-.schip[aria-pressed="true"] .cl,.schip[aria-pressed="true"] .n{color:var(--bg);opacity:1}
+.chip.schip[aria-pressed="true"]{background:var(--c);border-color:var(--c);color:var(--bg)}
+.chip.schip[aria-pressed="true"] .cl,.chip.schip[aria-pressed="true"] .n{color:var(--bg);opacity:1}
 .banner{height:150px;margin:-16px calc(-1*max(16px,env(safe-area-inset-left,0px))) 0;background-size:cover;background-position:center;position:relative}
 .banner::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,var(--bg))}
 .hero.over{margin-top:-60px;position:relative}
@@ -339,7 +344,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 39;
+const APP_VERSION = 40;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -1215,7 +1220,7 @@ function detailHTML(id, m){
     ${showCount?`<div class="eptools"><button class="btn" id="allW">סמן הכל כנצפה</button><button class="btn" id="noneW">נקה סימונים</button></div>
     <div class="eps">${Array.from({length:showCount},(_,i)=>{const n=i+1, ep=(e.eps||{})[n]||{};
       return `<div class="ep"><label><input type="checkbox" id="w${n}" data-ep="${n}" ${ep.w?"checked":""}>פרק ${n}</label>
-      <span class="ttl" dir="auto">${esc(cleanEpTitle(epTitles[i]))}${sched[n]?`<small class="epdate ${sched[n]>Date.now()?"future":""}">${sched[n]>Date.now()?"יוצא ":"שודר "}${fmtDay(sched[n])}${sched[n]>Date.now()?" "+new Date(sched[n]).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"}):""}</small>`:""}</span></div>`;}).join("")}</div>`
+      <span class="ttl" dir="auto">${esc(cleanEpTitle(epTitles[i]))}${sched[n]?`<small class="epdate ${sched[n]>Date.now()?"future":""}">${sched[n]>Date.now()?"יוצא ב":"שודר ב"}${fmtDay(sched[n])}${sched[n]>Date.now()?` בשעה <bdi dir="ltr">${new Date(sched[n]).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})}</bdi>`:""}</small>`:""}</span></div>`;}).join("")}</div>`
     :`<p class="desc">מספר הפרקים עוד לא ידוע ב־AniList.</p>`}
     ${mineReal?`<h3>הסרה</h3><div id="rmBox"><button class="btn" id="rm">הסר מהרשימה שלי</button></div>`:""}
     <div style="height:24px"></div>`;
