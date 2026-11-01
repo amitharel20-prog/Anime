@@ -963,7 +963,8 @@ async function importMAL(file){
 }
 
 /* ---------- הפעלה ---------- */
-if("serviceWorker" in navigator && location.protocol==="https:"){ navigator.serviceWorker.register("sw.js").catch(()=>{}); }
+if("serviceWorker" in navigator && location.protocol==="https:"){ navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>r.update()).catch(()=>{});
+  let reloaded=false; navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(!reloaded){ reloaded=true; location.reload(); } }); }
 render();
 setTimeout(()=>{ syncNow(true).finally(refreshFromAniList); }, 600);
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"){ syncNow(true); if(Date.now()-(prefs.lastRefresh||0)>30*60e3) refreshFromAniList(); } });

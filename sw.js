@@ -13,7 +13,7 @@ self.addEventListener("fetch", e => {
   if (e.request.method !== "GET" || url.origin !== location.origin) return;
   // קודם רשת (כדי לקבל גרסאות חדשות), ואם אין אינטרנט - מהמטמון
   e.respondWith(
-    fetch(e.request).then(r => {
+    fetch(e.request.url, { cache: "no-cache" }).then(r => {
       const copy = r.clone();
       caches.open(CACHE).then(c => c.put(e.request, copy));
       return r;
