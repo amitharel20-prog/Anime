@@ -201,6 +201,9 @@ nav.tabs button{font-size:12px}
 nav.tabs button{font-size:11px}
 .adultimg{filter:blur(14px) saturate(.6);transform:scale(1.1)}
 .r18{color:#c0392b}
+.snm{display:flex;flex-direction:column;align-items:center;line-height:1.2}
+.snm small{color:var(--muted);font-size:14px}
+.railsub{font-family:var(--body);font-size:14px;color:var(--muted)}
 @media (prefers-reduced-motion:no-preference){.rmain,.chip,.btn{transition:transform .1s}.rmain:active{transform:scale(.99)}}
 </style>
 </head>
@@ -250,7 +253,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 17;
+const APP_VERSION = 18;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -536,12 +539,14 @@ function renderStats(){
 /* ---------- חיפוש וגילוי ---------- */
 function curSeason(){
   const d=new Date(), m=d.getMonth();
-  const s = m<=1||m===11?"WINTER":m<=4?"SPRING":m<=7?"SUMMER":"FALL";
-  return {s, y: m===11? d.getFullYear()+1 : d.getFullYear()};
+  // עונות האנימה: חורף ינואר–מרץ, אביב אפריל–יוני, קיץ יולי–ספטמבר, סתיו אוקטובר–דצמבר
+  const s = m<=2?"WINTER":m<=5?"SPRING":m<=8?"SUMMER":"FALL";
+  return {s, y: d.getFullYear()};
 }
 const SEASON_HE = {WINTER:"חורף",SPRING:"אביב",SUMMER:"קיץ",FALL:"סתיו"};
+const SEASON_MONTHS = {WINTER:"ינואר–מרץ",SPRING:"אפריל–יוני",SUMMER:"יולי–ספטמבר",FALL:"אוקטובר–דצמבר"};
 const BROWSE = {
-  season:{label:()=>{const c=curSeason();return `העונה (${SEASON_HE[c.s]} ${c.y})`;}, q:()=>{const c=curSeason();return [`season:$s,seasonYear:$y,sort:POPULARITY_DESC`,{s:c.s,y:c.y},`$s:MediaSeason,$y:Int`];}},
+  season:{label:()=>{const c=curSeason();return `העונה (${SEASON_MONTHS[c.s]})`;}, q:()=>{const c=curSeason();return [`season:$s,seasonYear:$y,sort:POPULARITY_DESC`,{s:c.s,y:c.y},`$s:MediaSeason,$y:Int`];}},
   trending:{label:()=>"חם עכשיו", q:()=>[`sort:TRENDING_DESC`,{},""]},
   top:{label:()=>"המדורגים ביותר", q:()=>[`sort:SCORE_DESC,format_in:[TV,MOVIE,ONA,OVA]`,{},""]},
   popular:{label:()=>"הכי פופולריים", q:()=>[`sort:POPULARITY_DESC`,{},""]},
@@ -620,7 +625,8 @@ async function renderHome(){
     <div class="rails" data-rail="${key}">${items}</div></section>`;
   const sk = Array.from({length:6},()=>`<div class="pc sk"><span class="pimg"></span><span class="ptitle">&nbsp;</span></div>`).join("");
   const mineRail = watching.length ? rail("בצפייה עכשיו","mine",watching.map(e=>posterCard({id:e.id,titleStr:e.title,cover:e.cover})).join(""),"list") : "";
-  const sec = [["season",`העונה הנוכחית`,"season"],["trending","חם עכשיו","trending"],["top","המדורגים ביותר","top"],["popular","הכי פופולריים","popular"],["upcoming","בקרוב","upcoming"]];
+  const cs = curSeason();
+  const sec = [["season",`העונה הנוכחית <small class="railsub">${SEASON_MONTHS[cs.s]} ${cs.y}</small>`,"season"],["trending","חם עכשיו","trending"],["top","המדורגים ביותר","top"],["popular","הכי פופולריים","popular"],["upcoming","בקרוב","upcoming"]];
   const paint = ()=>{
     view.innerHTML = mineRail + (Object.keys(db.items).length?"":`<div class="msg">ברוך הבא! לוחצים על <b>+</b> על פוסטר כדי להוסיף אנימה לאחת הרשימות.</div>`) +
       sec.map(([k,t,more])=>rail(t,k,homeData?homeData[k].media.map(posterCard).join(""):sk,more)).join("");
@@ -653,7 +659,7 @@ async function renderSeasonal(){
   view.innerHTML = `
     <div class="seasonnav">
       <button class="btn" id="sPrev" aria-label="עונה קודמת">→</button>
-      <b>${SEASON_HE[s]} ${y}</b>
+      <span class="snm"><b>${SEASON_HE[s]} ${y}</b><small>${SEASON_MONTHS[s]}</small></span>
       <button class="btn" id="sNext" aria-label="עונה הבאה">←</button>
     </div>
     <div class="chips" style="margin:10px 0">${Object.entries(FMTS).map(([k,l])=>`<button class="chip" data-fmt="${k}" aria-pressed="${seasonFmt===k}">${l}</button>`).join("")}</div>
