@@ -339,7 +339,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 34;
+const APP_VERSION = 35;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -750,24 +750,30 @@ async function processHe(){
   if(heBusy || !heWant.size || !navigator.onLine) return; heBusy=true;
   let again=false;
   try{
-    const batch = [...heWant.entries()].slice(0,60);
-    const mals = batch.filter(([,v])=>v.mal).map(([,v])=>String(v.mal));
-    if(mals.length){
+    // שלב 1: כל השמות מוויקיפדיה בבת אחת (150 בכל בקשה)
+    const withMal = [...heWant.entries()].filter(([,v])=>v.mal);
+    for(let i=0;i<withMal.length;i+=150){
+      const chunk = withMal.slice(i,i+150);
       try{
-        const found = await wikiByMal(mals);
-        for(const [id,v] of batch){ if(v.mal && found[v.mal]){ heCache[id]={t:found[v.mal],src:"wiki",en:v.en}; heWant.delete(id); } }
+        const found = await wikiByMal(chunk.map(([,v])=>String(v.mal)));
+        for(const [id,v] of chunk){ if(found[v.mal]){ heCache[id]={t:found[v.mal],src:"wiki",en:v.en}; heWant.delete(id); } }
       }catch(e){}
     }
     saveHe(); applyHeNames();
-    for(const [id,v] of batch){
-      if(!heWant.has(id)) continue;
+    // שלב 2: תרגום אוטומטי לשאר — 4 במקביל, ומעדכנים את המסך בקבוצות
+    const rest = [...heWant.entries()];
+    for(let i=0;i<rest.length;i+=8){
       if(Date.now()<mtBlockedUntil) break;
-      try{ const t = await heTranslate(v.en); heCache[id] = t ? {t,src:"mt",en:v.en} : {t:null,src:"none",en:v.en}; }catch(e){ break; }
-      heWant.delete(id); applyHeNames(); await sleep(300);
+      const group = rest.slice(i,i+8);
+      for(let j=0;j<group.length;j+=4){
+        await Promise.all(group.slice(j,j+4).map(async ([id,v])=>{
+          try{ const t = await heTranslate(v.en); if(Date.now()<mtBlockedUntil && !t) return; heCache[id] = t ? {t,src:"mt",en:v.en} : {t:null,src:"none",en:v.en}; heWant.delete(id); }catch(e){}
+        }));
+      }
+      saveHe(); applyHeNames();
     }
-    saveHe(); applyHeNames();
     again = heWant.size>0 && Date.now()>=mtBlockedUntil;
-  }finally{ heBusy=false; if(again) setTimeout(processHe,1500); }
+  }finally{ heBusy=false; if(again) setTimeout(processHe,3000); }
 }
 // חיפוש בעברית: שמות שכבר ידועים, ויקיפדיה, ותרגום לאנגלית
 async function hebrewSearchIds(q){
@@ -1511,7 +1517,7 @@ document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==
 render();
 buildNotifs(); updateBell();
 // שמות בעברית לכל הרשימה שלך ברקע, כדי שהחיפוש יעבוד בשתי השפות
-setTimeout(()=>{ Object.values(db.items).forEach(e=>{ if(e.status) wantHe(e); }); }, 5000);
+setTimeout(()=>{ Object.values(db.items).forEach(e=>{ if(e.status) wantHe(e); }); }, 1500);
 setTimeout(()=>{ syncNow(true); }, 600);
 // רענון פרקים ברקע: רק אחרי שהמסך נטען, ולכל היותר פעם בחצי שעה
 setTimeout(()=>{ if(Date.now()-(prefs.lastRefresh||0)>30*60e3) refreshFromAniList(); }, 8000);
