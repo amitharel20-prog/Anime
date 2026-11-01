@@ -345,7 +345,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 48;
+const APP_VERSION = 49;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -724,6 +724,11 @@ function fanFor(o){
   fanMemo.set(o.id,res); return res;
 }
 // תרגום כותרות משנה: אם יש כבר תרגום — משתמשים בו, אחרת לפי הצליל ומבקשים תרגום ברקע
+// שם שכולו מילים יפניות — אין מה לתרגם, כותבים לפי הצליל
+function looksJapanese(text){
+  const ws = (text||"").split(/[\s:\-–!?.,()~\/]+/).filter(w=>/[a-z]/i.test(w));
+  return ws.length>0 && ws.every(w=>jpWord(w)) && ws.some(w=>w.length>3);
+}
 function subtitleHe(s){
   const key = "p:"+keyN(s), c = heCache[key];
   if(c && c.t) return c.t;
@@ -743,7 +748,7 @@ function wantHe(o){
   if(!o || !o.id) return;
   if(fanFor(o)) return;
   const c = heCache[o.id];
-  if(c && (c.t || (c.at && Date.now()-c.at<3*864e5))) return;
+  if(c && (c.t || c.src==="jp" || (c.at && Date.now()-c.at<3*864e5))) return;
   const mal = o.idMal || (db.items[o.id]&&db.items[o.id].idMal) || null;
   heWant.set(o.id, {mal, en:enTitle(o)}); scheduleHe();
 }
@@ -822,7 +827,13 @@ async function processHe(){
     }
     saveHe(); applyHeNames();
     // שלב 2: תרגום אוטומטי לשאר — 4 במקביל, ומעדכנים את המסך בקבוצות
-    const rest = [...heWant.entries()];
+    const rest = [];
+    for(const [id,v] of heWant.entries()){
+      if(!v.phrase && looksJapanese(v.en)){ heCache[id]={t:null,src:"jp",en:v.en}; heWant.delete(id); continue; }
+      rest.push([id,v]);
+    }
+    // קודם אנימות מהרשימה שלך, ואז השאר
+    rest.sort((a,b)=>(db.items[b[0]]?1:0)-(db.items[a[0]]?1:0));
     for(let i=0;i<rest.length;i+=8){
       if(Date.now()<mtBlockedUntil) break;
       const group = rest.slice(i,i+8);
@@ -1460,7 +1471,7 @@ function renderSettings(){
       const wiki=ids.filter(id=>!fanFor(db.items[id])&&heCache[id]&&heCache[id].src==="wiki").length, mtc=ids.filter(id=>!fanFor(db.items[id])&&heCache[id]&&heCache[id].src==="mt").length;
       const missing=ids.length-fan-wiki-mtc; const blocked=Date.now()<mtBlockedUntil;
       return `<div class="card"><h2>שמות בעברית</h2><p>מתוך ${ids.length} האנימות ברשימה שלך: ${fan} מאתרי תרגום ישראליים, ${wiki} מוויקיפדיה, ${mtc} בתרגום אוטומטי${missing?`, ו־${missing} לפי הצליל (עד שיימצא להם תרגום)`:""}.</p>
-      ${missing?`<div class="actions" style="margin-top:8px"><button class="btn" id="copyMissing">העתק את השמות שלפי הצליל</button></div><p class="note">אפשר להדביק אותם בצ'אט עם Claude ולכתוב ליד כל אחד איך תרצה שייקרא.</p>`:""}
+      ${(missing||mtc)?`<div class="actions" style="margin-top:8px"><button class="btn" id="copyMissing">העתק שמות לבדיקה</button></div><p class="note">מעתיק את השמות שתורגמו אוטומטית או לפי הצליל. אפשר להדביק אותם בצ'אט עם Claude ולכתוב ליד כל אחד איך תרצה שייקרא.</p>`:""}
       ${blocked?`<p class="note">שירות התרגום החינמי הגיע למגבלה היומית. השאר יתורגמו אוטומטית אחרי ${new Date(mtBlockedUntil).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})}.</p>`:(missing?`<p class="note">השמות החסרים ממשיכים להיטען ברקע.</p>`:"")}</div>`; })()}
     <div class="card"><h2>עדכון האפליקציה</h2><p>אם ביקשת שינוי והוא עוד לא מופיע, לוחצים כאן כדי לטעון מיד את הגרסה הכי חדשה. הרשימה שלך לא נמחקת.</p>
       <div class="actions"><button class="btn primary" id="forceUpd">טען את הגרסה החדשה</button></div></div>
@@ -1490,8 +1501,8 @@ function renderSettings(){
     $("#adN").onclick=()=>{ $("#adultConfirm").innerHTML=""; };
   };
   const cm=$("#copyMissing"); if(cm) cm.onclick=()=>{
-    const list = Object.values(db.items).filter(e=>e.status && !fanFor(e) && !heOf(e.id))
-      .map(e=>`${enTitle(e)} — ${translitHe(enTitle(e))}`).sort();
+    const list = Object.values(db.items).filter(e=>e.status && !fanFor(e) && (!heOf(e.id) || heOf(e.id).src==="mt"))
+      .map(e=>{ const c=heOf(e.id); return c ? `${enTitle(e)} — ${c.t} (תרגום אוטומטי)` : `${enTitle(e)} — ${translitHe(enTitle(e))} (לפי הצליל)`; }).sort();
     copyText(list.join("\n"), `הועתקו ${list.length} שמות`);
   };
   $("#forceUpd").onclick = async ()=>{
