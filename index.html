@@ -345,7 +345,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 50;
+const APP_VERSION = 51;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -736,6 +736,16 @@ function subtitleHe(s){
   if(/^[a-z]+-hen$/i.test(s.trim()) || !/[a-z]{3,}/i.test(s)) return translitHe(s);
   if(!c && Date.now()>=mtBlockedUntil){ heWant.set(key,{mal:null,en:s,phrase:true}); scheduleHe(); return null; }
   return c ? translitHe(s) : null;
+}
+function outsideNames(){
+  const out=[];
+  for(const [id,c] of Object.entries(heCache)){
+    if(!/^\d+$/.test(id) || !c || !c.en) continue;
+    const it=db.items[id]; if(it && it.status) continue;
+    if(c.src==="wiki" || FAN.has(keyN(c.en)) || FAN_KEYS.some(b=>keyN(c.en).startsWith(b))) continue;
+    out.push(c.src==="mt"&&c.t ? `${c.en} — ${c.t} (תרגום אוטומטי)` : `${c.en} — ${translitHe(c.en)} (לפי הצליל)`);
+  }
+  return out.sort();
 }
 function heOf(id){
   const it=db.items[id]; const f = it && fanFor(it);
@@ -1473,6 +1483,7 @@ function renderSettings(){
       const wiki=ids.filter(id=>!fanFor(db.items[id])&&heCache[id]&&heCache[id].src==="wiki").length, mtc=ids.filter(id=>!fanFor(db.items[id])&&heCache[id]&&heCache[id].src==="mt").length;
       const missing=ids.length-fan-wiki-mtc; const blocked=Date.now()<mtBlockedUntil;
       return `<div class="card"><h2>שמות בעברית</h2><p>מתוך ${ids.length} האנימות ברשימה שלך: ${fan} מאתרי תרגום ישראליים, ${wiki} מוויקיפדיה, ${mtc} בתרגום אוטומטי${missing?`, ו־${missing} לפי הצליל (עד שיימצא להם תרגום)`:""}.</p>
+      ${(()=>{ const n=outsideNames().length; return n?`<p style="margin-top:10px">ועוד ${n} אנימות שנפתחו בחיפוש, בבית או בעונתי (לא ברשימה שלך) קיבלו תרגום אוטומטי או לפי הצליל.</p><div class="actions"><button class="btn" id="copyOutside">העתק שמות מחוץ לרשימה</button></div>`:""; })()}
       ${(missing||mtc)?`<div class="actions" style="margin-top:8px"><button class="btn" id="copyMissing">העתק שמות לבדיקה</button></div><p class="note">מעתיק את השמות שתורגמו אוטומטית או לפי הצליל. אפשר להדביק אותם בצ'אט עם Claude ולכתוב ליד כל אחד איך תרצה שייקרא.</p>`:""}
       ${blocked?`<p class="note">שירות התרגום החינמי הגיע למגבלה היומית. השאר יתורגמו אוטומטית אחרי ${new Date(mtBlockedUntil).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})}.</p>`:(missing?`<p class="note">השמות החסרים ממשיכים להיטען ברקע.</p>`:"")}</div>`; })()}
     <div class="card"><h2>עדכון האפליקציה</h2><p>אם ביקשת שינוי והוא עוד לא מופיע, לוחצים כאן כדי לטעון מיד את הגרסה הכי חדשה. הרשימה שלך לא נמחקת.</p>
@@ -1502,6 +1513,7 @@ function renderSettings(){
     $("#adY").onclick=()=>{ prefs.adult=true; savePrefs(); for(const k in browseCache) delete browseCache[k]; for(const k in seasonCache) delete seasonCache[k]; lastSearch={q:"",results:[]}; toast("אנימות 18+ יופיעו בחיפוש"); renderSettings(); };
     $("#adN").onclick=()=>{ $("#adultConfirm").innerHTML=""; };
   };
+  const co=$("#copyOutside"); if(co) co.onclick=()=>{ const list=outsideNames(); copyText(list.join("\n"), `הועתקו ${list.length} שמות`); };
   const cm=$("#copyMissing"); if(cm) cm.onclick=()=>{
     const list = Object.values(db.items).filter(e=>e.status && !fanFor(e) && (!heOf(e.id) || heOf(e.id).src==="mt"))
       .map(e=>{ const c=heOf(e.id); return c ? `${enTitle(e)} — ${c.t} (תרגום אוטומטי)` : `${enTitle(e)} — ${translitHe(enTitle(e))} (לפי הצליל)`; }).sort();
