@@ -301,7 +301,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 21;
+const APP_VERSION = 22;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -337,12 +337,16 @@ function aired(e){
   if(e.next && e.next.ep) return e.next.ep-1;
   return e.episodes||0;
 }
-// "פרקים חדשים" רק בסדרה שמשודרת עכשיו, ורק אם כבר התחלת לראות אותה
+// "פרקים חדשים": רק פרקים שיצאו ב־3 השבועות האחרונים, בסדרה שמשודרת עכשיו
+const RECENT_DAYS = 21, WEEK = 7*864e5;
 function newEps(e){
-  if(e.status!=="watching" || e.air!=="RELEASING") return 0;
-  const a = aired(e), w = watchedMax(e);
-  if(!w) return 0;
-  return a>w ? a-w : 0;
+  if(e.status!=="watching" || e.air!=="RELEASING" || !e.next || !e.next.at) return 0;
+  const latest = e.next.ep - 1; if(latest<1) return 0;
+  const nextAt = e.next.at*1000, cutoff = Date.now() - RECENT_DAYS*864e5;
+  // פרק j יצא בערך שבוע אחד לפני הפרק שאחריו
+  const firstRecent = e.next.ep - Math.floor((nextAt - cutoff)/WEEK);
+  const from = Math.max(watchedMax(e)+1, firstRecent, 1);
+  return latest>=from ? latest-from+1 : 0;
 }
 function epCount(m){
   if(m.episodes) return m.episodes;
