@@ -267,6 +267,8 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 .bellbtn svg{width:20px;height:20px}
 #bellBadge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:#d64545;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px}
 .bellbtn + .themebtn{margin-inline-start:0}
+.langbtn{flex:none;margin-inline-start:auto;width:40px;height:40px;border:1px solid var(--line);background:var(--surface);border-radius:50%;font-weight:800;font-size:13px;color:var(--fg)}
+.langbtn + .bellbtn{margin-inline-start:0}
 .nhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
 .nlist{display:grid;gap:8px}
 .nitem{display:grid;grid-template-columns:44px 1fr;gap:12px;align-items:center;text-align:start;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px;width:100%}
@@ -279,6 +281,9 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 .epdate{display:block;font-size:11px;color:var(--s-watch);font-weight:700}
 .epdate.future{color:var(--muted);font-weight:400}
 .ep .ttl{white-space:normal}
+.mtnote{font-size:11px;color:var(--muted);font-style:italic}
+.alt.jp{font-size:15px;text-align:right}
+@media (max-width:480px){.themebtn span{display:none}.themebtn{padding:6px 9px}}
 @media (prefers-reduced-motion:no-preference){.rmain,.chip,.btn{transition:transform .1s}.rmain:active{transform:scale(.99)}}
 </style>
 </head>
@@ -286,6 +291,7 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 <header class="top"><div class="wrap">
   <button class="back" id="backBtn" hidden aria-label="חזרה">→</button>
   <h1 id="pageTitle">הרשימה שלי</h1>
+  <button class="langbtn" id="langBtn" aria-label="שפת שמות האנימות"></button>
   <button class="bellbtn" id="bellBtn" aria-label="התראות"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg><span id="bellBadge" hidden>0</span></button>
   <button class="themebtn" id="themeBtn" aria-label="מצב תצוגה"></button>
 </div></header>
@@ -333,7 +339,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 33;
+const APP_VERSION = 34;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -357,7 +363,7 @@ function entryFromMedia(m){
   return {
     id:m.id, idMal:m.idMal||null,
     title: m.title.english || m.title.romaji || m.title.native,
-    romaji: m.title.romaji || "", cover: m.coverImage ? (m.coverImage.large||m.coverImage.medium) : "",
+    romaji: m.title.romaji || "", native: m.title.native || "", cover: m.coverImage ? (m.coverImage.large||m.coverImage.medium) : "",
     episodes: epCount(m), format:m.format||"", year:m.seasonYear||(m.startDate&&m.startDate.year)||null,
     genres:m.genres||[], duration:m.duration||null, air:m.status||null, adult:!!m.isAdult,
     start:m.startDate&&m.startDate.year?{y:m.startDate.year,m:m.startDate.month||null,d:m.startDate.day||null}:null,
@@ -409,7 +415,11 @@ const view = $("#view");
 const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let toastT;
 function toast(t){ const el=$("#toast"); el.textContent=t; el.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>el.hidden=true,2800); }
-function setHeader(title, back){ $("#pageTitle").textContent=title; $("#backBtn").hidden=!back; }
+function setHeader(title, back, o){
+  const t=$("#pageTitle");
+  if(o){ t.dataset.tid=o.id; t.dataset.en=enTitle(o); t.textContent=nameOf(o); } else { delete t.dataset.tid; t.textContent=title; }
+  $("#backBtn").hidden=!back;
+}
 function setTab(t){ if(t==="stats") t="list"; document.querySelectorAll("nav.tabs button").forEach(b=>{ if(b.dataset.tab===t) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); }); }
 function poster(src, adult){ return src ? `<img src="${esc(src)}" alt="" loading="lazy"${adult?' class="adultimg"':""}>` : `<div class="ph" aria-hidden="true"></div>`; }
 
@@ -427,6 +437,9 @@ function applyTheme(){
 $("#themeBtn").onclick=()=>{ const order=["auto","light","dark"]; prefs.theme = order[(order.indexOf(prefs.theme||"auto")+1)%3]; savePrefs(); applyTheme(); toast("מצב תצוגה: "+THEMES[prefs.theme].label); };
 applyTheme();
 $("#bellBtn").onclick=()=>go({tab:current.tab,notifs:true});
+function paintLangBtn(){ $("#langBtn").textContent = isHeLang() ? "עב" : "EN"; }
+paintLangBtn();
+$("#langBtn").onclick=()=>{ prefs.lang = isHeLang() ? "en" : "he"; savePrefs(); paintLangBtn(); render(); toast(isHeLang()?"שמות האנימות בעברית":"Anime names in English"); };
 
 /* ---------- ניווט ---------- */
 let stack = [];
@@ -510,7 +523,8 @@ function bindLockScreen(){
 const LIST_STEP = 40;
 let listLimit = LIST_STEP;
 let listQuery = "";
-const normQ = s => (s||"").toLowerCase().replace(/[^\p{L}\p{N}]+/gu," ").trim();
+// אותיות סופיות (ן ם ך ף ץ) נחשבות כמו הרגילות, כדי ש"טיטאן" ימצא את "הטיטאנים"
+const normQ = s => (s||"").toLowerCase().replace(/[ךםןףץ]/g,c=>({"ך":"כ","ם":"מ","ן":"נ","ף":"פ","ץ":"צ"}[c])).replace(/[^\p{L}\p{N}]+/gu," ").trim();
 const SORTS = {
   updated:{label:"עודכן לאחרונה", fn:(a,b)=>b.updated-a.updated},
   newEps:{label:"פרקים חדשים קודם", fn:(a,b)=>(newEps(b)>0)-(newEps(a)>0)||b.updated-a.updated},
@@ -538,7 +552,7 @@ function renderList(){
   // בחיפוש: מחפשים בכל הרשימות (בנעול — רק בתוך הנעול)
   const pool = showLocked ? (lockOpen?lockedItems:[]) : (q ? visible : visible.filter(e=>listFilter==="all"||(listFilter==="new"?newEps(e)>0:e.status===listFilter)));
   const qw = q ? q.split(" ") : [];
-  const items = (q ? pool.filter(e=>{ const t=normQ(e.title+" "+(e.romaji||"")); return qw.every(w=>t.includes(w)); }) : pool).sort(SORTS[sortKey].fn);
+  const items = (q ? pool.filter(e=>{ const t=normQ(e.title+" "+(e.romaji||"")+" "+((heOf(e.id)||{}).t||"")); return qw.every(w=>t.includes(w)); }) : pool).sort(SORTS[sortKey].fn);
   const lb = db.meta.lastBackup || 0;
   const needBackup = all.length>=5 && Date.now()-lb > 14*864e5 && !syncCfg();
 
@@ -598,7 +612,7 @@ function rowHTML(e){
   const genres = (e.genres||[]).slice(0,3);
   return `<div class="row"><button class="rmain" data-id="${e.id}">
     ${poster(e.cover, e.adult)}
-    <span class="t"><span class="name">${esc(e.title)}</span>
+    <span class="t"><span class="name">${tn(e)}</span>
       <span class="sub">${esc(sub)}</span>
       ${genres.length?`<span class="gtags">${genres.map(g=>`<span>${esc(genreHe(g))}</span>`).join("")}</span>`:""}
       ${e.air==="NOT_YET_RELEASED"?`<span class="reldate">${esc(releaseText(e))}</span>`:""}
@@ -614,7 +628,7 @@ function resultHTML(m){
   const title = m.title.english || m.title.romaji || m.title.native;
   const sub = [FORMAT[m.format]||m.format, m.seasonYear, epCount(m)?epCount(m)+" פרקים":null].filter(Boolean).join(" · ");
   return `<div class="row"><button class="rmain" data-id="${m.id}">${poster(m.coverImage&&(m.coverImage.medium||m.coverImage.large), m.isAdult)}
-    <span class="t"><span class="name">${esc(title)}</span><span class="sub">${esc(sub)}${m.isAdult?' · <b class="r18">18+</b>':""}</span>
+    <span class="t"><span class="name">${tn(m)}</span><span class="sub">${esc(sub)}${m.isAdult?' · <b class="r18">18+</b>':""}</span>
     ${mine&&mine.status?`<span class="pill ${STATUS[mine.status].cls}">${STATUS[mine.status].label}</span>`:""}</span>
     <span class="myscore">${m.averageScore?(m.averageScore/10).toFixed(1):"–"}<small>AniList</small></span></button>
     <button class="side ${mine&&mine.status?"":"addnew"}" data-add="${m.id}" aria-label="הוסף לרשימה">${mine&&mine.status?"⋯":"+"}<small>${mine&&mine.status?"רשימה":"הוסף"}</small></button></div>`;
@@ -643,7 +657,7 @@ function openListSheet(id){
   const title = it ? it.title : (m ? (m.title.english||m.title.romaji) : "");
   const sh = $("#sheet");
   sh.innerHTML = `<div class="sheet-bg" data-close></div><div class="sheet-card" role="dialog" aria-label="הוסף לרשימה">
-    <div class="sheet-h"><b>${esc(title)}</b><button class="linkbtn" data-close>סגור</button></div>
+    <div class="sheet-h"><b>${tn(it||m||{id,title})}</b><button class="linkbtn" data-close>סגור</button></div>
     <div class="sheet-list">${Object.entries(STATUS).map(([k,s])=>`<button class="${s.cls}" data-st="${k}" aria-pressed="${it&&it.status===k}"><span>${s.label}</span>${it&&it.status===k?"<span>✓</span>":""}</button>`).join("")}</div>
     ${it&&it.status?`<button class="btn lockact" id="lockToggle" style="width:100%;margin-top:8px">${LOCK_ICON} ${it.locked?"הוצא מהנעול":"העבר לנעול"}</button>`:""}
     ${it&&it.status?`<button class="btn" data-st="" style="width:100%;margin-top:8px">הסר מהרשימות</button>`:""}
@@ -665,6 +679,109 @@ function openListSheet(id){
   });
 }
 function closeSheet(){ const sh=$("#sheet"); sh.hidden=true; sh.innerHTML=""; }
+
+/* ---------- שמות בעברית ---------- */
+// מקור 1: ויקיפדיה העברית (דרך Wikidata, לפי מספר האנימה ב־MyAnimeList) — שמות אמיתיים
+// מקור 2: תרגום אוטומטי של השם האנגלי, כשאין ערך בוויקיפדיה
+const HE_KEY = KEY+".he";
+let heCache = (()=>{ try{ return JSON.parse(localStorage.getItem(HE_KEY))||{}; }catch(e){ return {}; } })();
+function saveHe(){ try{ localStorage.setItem(HE_KEY, JSON.stringify(heCache)); }catch(e){} }
+function isHeLang(){ return prefs.lang==="he"; }
+function enTitle(o){ if(!o) return ""; if(o.title && typeof o.title==="object") return o.title.english||o.title.romaji||o.title.native||""; return o.title||o.titleStr||""; }
+function heOf(id){ const c=heCache[id]; return c&&c.t ? c : null; }
+function nameOf(o){ const en=enTitle(o); if(isHeLang()){ const c=heOf(o.id); if(c) return c.t; } return en; }
+const heWant = new Map();
+function wantHe(o){
+  if(!o || !o.id || heCache[o.id]) return;
+  const mal = o.idMal || (db.items[o.id]&&db.items[o.id].idMal) || null;
+  heWant.set(o.id, {mal, en:enTitle(o)}); scheduleHe();
+}
+// שם אנימה לתצוגה (מתעדכן לבד כשהתרגום מגיע)
+function tn(o){ if(isHeLang()) wantHe(o); return `<span data-tid="${o.id}" data-en="${esc(enTitle(o))}">${esc(nameOf(o))}</span>`; }
+function applyHeNames(){
+  document.querySelectorAll("[data-tid]").forEach(el=>{
+    const c = isHeLang() && heOf(el.dataset.tid); el.textContent = c ? c.t : el.dataset.en;
+  });
+}
+let heT=null, heBusy=false, mtBlockedUntil=+(localStorage.getItem(KEY+".mtblock")||0);
+function scheduleHe(){ clearTimeout(heT); heT=setTimeout(processHe, 400); }
+const cleanWikiTitle = t => t.replace(/\s*\((?:סדרת[^)]*|סדרה[^)]*|אנימה[^)]*|מנגה[^)]*|סרט[^)]*)\)\s*$/,"").trim();
+async function wikiByMal(mals){
+  const q = `SELECT ?mal ?he ?hw WHERE { VALUES ?mal {${mals.map(m=>`"${m}"`).join(" ")}} ?i wdt:P4086 ?mal. OPTIONAL{?i rdfs:label ?he FILTER(LANG(?he)="he")} OPTIONAL{?a schema:about ?i; schema:isPartOf <https://he.wikipedia.org/>; schema:name ?hw} }`;
+  const r = await fetch("https://query.wikidata.org/sparql?format=json&query="+encodeURIComponent(q),{headers:{Accept:"application/sparql-results+json"}});
+  const j = await r.json(); const out={};
+  j.results.bindings.forEach(b=>{ const t=(b.hw&&b.hw.value)||(b.he&&b.he.value); if(t && /[\u0590-\u05FF]/.test(t)) out[b.mal.value]=cleanWikiTitle(t); });
+  return out;
+}
+async function mt(text, pair){
+  if(Date.now()<mtBlockedUntil) return null;
+  const r = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${pair||"en|he"}`);
+  const j = await r.json();
+  const t = j && j.responseData && j.responseData.translatedText || "";
+  if(j.quotaFinished || /MYMEMORY WARNING|QUOTA/i.test(t)){ mtBlockedUntil=Date.now()+6*3600e3; try{ localStorage.setItem(KEY+".mtblock",mtBlockedUntil); }catch(e){} return null; }
+  return t ? t.replace(/&#39;/g,"'").replace(/&quot;/g,'"').replace(/&amp;/g,"&").trim() : null;
+}
+// מילים קבועות בשמות עונות
+function phraseHe(s){
+  let x = " "+s.trim()+" ";
+  x = x.replace(/\bthe final season\b/gi,"העונה האחרונה").replace(/\bfinal season\b/gi,"העונה האחרונה")
+       .replace(/\b(\d+)(?:st|nd|rd|th) season\b/gi,"עונה $1").replace(/\bseason (\d+)\b/gi,"עונה $1")
+       .replace(/\bpart (\d+)\b/gi,"חלק $1").replace(/\bthe movie\b/gi,"הסרט").replace(/\bmovie\b/gi,"סרט")
+       .replace(/\bspecials?\b/gi,"ספיישל").replace(/\bcour (\d+)\b/gi,"חלק $1");
+  return x.replace(/^[\s:\-–]+|[\s:\-–]+$/g,"").trim();
+}
+async function heTranslate(en){
+  // אם תחילת השם כבר מוכרת מוויקיפדיה (למשל עונה 1), משתמשים בה ומתרגמים רק את השאר
+  let best=null;
+  for(const c of Object.values(heCache)) if(c.src==="wiki" && c.en && c.en.length>=4 && en.toLowerCase().startsWith(c.en.toLowerCase()) && (!best||c.en.length>best.en.length)) best=c;
+  if(best){
+    const rest = en.slice(best.en.length);
+    if(!rest.replace(/[\s:\-–]/g,"")) return best.t;
+    const ph = phraseHe(rest);
+    if(!/[A-Za-z]/.test(ph)) return best.t+" "+ph;
+    const tr = await mt(rest.replace(/^[\s:\-–]+/,"")); return tr ? best.t+": "+tr : null;
+  }
+  const ph = phraseHe(en);
+  if(!/[A-Za-z]/.test(ph)) return ph;
+  const tr = await mt(en);
+  return tr && /[\u0590-\u05FF]/.test(tr) ? tr : null;
+}
+async function processHe(){
+  if(heBusy || !heWant.size || !navigator.onLine) return; heBusy=true;
+  let again=false;
+  try{
+    const batch = [...heWant.entries()].slice(0,60);
+    const mals = batch.filter(([,v])=>v.mal).map(([,v])=>String(v.mal));
+    if(mals.length){
+      try{
+        const found = await wikiByMal(mals);
+        for(const [id,v] of batch){ if(v.mal && found[v.mal]){ heCache[id]={t:found[v.mal],src:"wiki",en:v.en}; heWant.delete(id); } }
+      }catch(e){}
+    }
+    saveHe(); applyHeNames();
+    for(const [id,v] of batch){
+      if(!heWant.has(id)) continue;
+      if(Date.now()<mtBlockedUntil) break;
+      try{ const t = await heTranslate(v.en); heCache[id] = t ? {t,src:"mt",en:v.en} : {t:null,src:"none",en:v.en}; }catch(e){ break; }
+      heWant.delete(id); applyHeNames(); await sleep(300);
+    }
+    saveHe(); applyHeNames();
+    again = heWant.size>0 && Date.now()>=mtBlockedUntil;
+  }finally{ heBusy=false; if(again) setTimeout(processHe,1500); }
+}
+// חיפוש בעברית: שמות שכבר ידועים, ויקיפדיה, ותרגום לאנגלית
+async function hebrewSearchIds(q){
+  const ids=new Set(), mals=new Set(); const nq=normQ(q);
+  for(const [id,c] of Object.entries(heCache)) if(c.t && normQ(c.t).includes(nq)) ids.add(+id);
+  try{
+    const s = q.replace(/["\\]/g,"").replace(/[ךםןףץ]$/,"");
+    const sp = `SELECT DISTINCT ?mal WHERE { ?i wdt:P4086 ?mal; rdfs:label ?l. FILTER(LANG(?l)="he" && CONTAINS(LCASE(?l), LCASE("${s}"))) } LIMIT 25`;
+    const r = await fetch("https://query.wikidata.org/sparql?format=json&query="+encodeURIComponent(sp),{headers:{Accept:"application/sparql-results+json"}});
+    const j = await r.json(); j.results.bindings.forEach(b=>mals.add(+b.mal.value));
+  }catch(e){}
+  let en=null; try{ en = await mt(q,"he|en"); }catch(e){}
+  return {ids:[...ids], mals:[...mals], en};
+}
 
 /* ---------- תאריכי יציאה ---------- */
 const DAY = 864e5;
@@ -853,7 +970,7 @@ async function loadBrowse(k){
 function renderSearch(){
   setHeader("חיפוש אנימה", false);
   view.innerHTML = `
-    <form class="search" id="sf"><input id="q" type="search" placeholder="חפש אנימה, למשל Frieren" value="${esc(lastSearch.q)}" autocomplete="off" enterkeyhint="search"><button class="btn primary">חפש</button></form>
+    <form class="search" id="sf"><input id="q" type="search" placeholder="חפש בעברית או באנגלית" value="${esc(lastSearch.q)}" autocomplete="off" enterkeyhint="search"><button class="btn primary">חפש</button></form>
     <div id="browseBar"></div>
     <div id="sr" class="list"></div>`;
   const sr = $("#sr"), bar=$("#browseBar");
@@ -884,8 +1001,24 @@ function renderSearch(){
     $("#q").blur();
     sr.innerHTML = `<div class="empty">מחפש…</div>`;
     try{
-      const d = await anilist(`query($s:String){Page(perPage:30){media(search:$s,type:ANIME,${adultFilter()}sort:SEARCH_MATCH){${MEDIA_FIELDS}}}}`,{s:q});
-      lastSearch = {q, results:d.Page.media}; renderSearch();
+      let results;
+      if(/[\u0590-\u05FF]/.test(q)){
+        const hs = await hebrewSearchIds(q);
+        const seen=new Set(); results=[];
+        const add = arr=>arr.forEach(m=>{ if(!seen.has(m.id)){ seen.add(m.id); results.push(m); } });
+        if(hs.ids.length||hs.mals.length){
+          const d1 = await anilist(`query($ids:[Int],$mals:[Int]){a:Page(perPage:50){media(id_in:$ids,type:ANIME){${MEDIA_FIELDS}}} b:Page(perPage:50){media(idMal_in:$mals,type:ANIME,${adultFilter()}sort:POPULARITY_DESC){${MEDIA_FIELDS}}}}`,{ids:hs.ids.length?hs.ids:[0],mals:hs.mals.length?hs.mals:[0]});
+          add(d1.a.media); add(d1.b.media);
+        }
+        if(hs.en && !/[\u0590-\u05FF]/.test(hs.en)){
+          const d2 = await anilist(`query($s:String){Page(perPage:20){media(search:$s,type:ANIME,${adultFilter()}sort:SEARCH_MATCH){${MEDIA_FIELDS}}}}`,{s:hs.en});
+          add(d2.Page.media);
+        }
+      } else {
+        const d = await anilist(`query($s:String){Page(perPage:30){media(search:$s,type:ANIME,${adultFilter()}sort:SEARCH_MATCH){${MEDIA_FIELDS}}}}`,{s:q});
+        results = d.Page.media;
+      }
+      lastSearch = {q, results}; renderSearch();
     }catch(err){ sr.innerHTML = `<div class="msg">החיפוש נכשל: ${esc(err.message)}. בדוק חיבור לאינטרנט ונסה שוב.</div>`; }
   };
 }
@@ -901,7 +1034,7 @@ function posterCard(m){
       <span class="pimg">${img?`<img src="${esc(img)}" alt="" loading="lazy"${(m.isAdult||m.adult)?' class="adultimg"':""}>`:""}
         ${score?`<span class="pscore">★ ${score}</span>`:""}
         ${mine&&mine.status?`<span class="pst ${STATUS[mine.status].cls}"><span>${STATUS[mine.status].label}</span></span>`:""}</span>
-      <span class="ptitle">${esc(title)}</span></button>
+      <span class="ptitle">${tn(m.title?m:{id:m.id,title:m.titleStr})}</span></button>
     ${mine&&mine.status?"":`<button class="padd" data-add="${m.id}" aria-label="הוסף לרשימה">+</button>`}</div>`;
 }
 const HOME_Q = (()=>{ const c=curSeason(); const f=`{${MEDIA_FIELDS}}`;
@@ -988,7 +1121,7 @@ async function renderSeasonal(){
 const cacheMedia = {};
 async function renderDetail(id){
   let e = db.items[id];
-  setHeader(e?e.title:"…", true);
+  setHeader(e?e.title:"…", true, e||null);
   let m = cacheMedia[id+"full"];
   const paint = ()=>detailHTML(id, m);
   paint();
@@ -1015,7 +1148,7 @@ function detailHTML(id, m){
   const mineReal = hidden ? null : db.items[id];
   const e = mineReal || (base?entryFromMedia(base):(hidden?{...db.items[id],status:null,score:null,eps:{},locked:false}:null));
   if(!e){ view.innerHTML=`<div class="empty">טוען…</div>`; return; }
-  setHeader(e.title, true);
+  setHeader(e.title, true, e);
   const total = e.episodes || (base&&epCount(base)) || 0;
   const epTitles = (m&&m.streamingEpisodes||[]).map(s=>s.title);
   const desc = m&&m.description ? m.description.replace(/<br\s*\/?>/gi,"\n").replace(/<[^>]+>/g,"").trim() : "";
@@ -1033,7 +1166,14 @@ function detailHTML(id, m){
   view.innerHTML = `
     ${banner&&!(base&&base.isAdult)?`<div class="banner" style="background-image:url('${esc(banner)}')"></div>`:""}
     <div class="hero ${banner?"over":""}">${base&&base.coverImage?`<img src="${esc(base.coverImage.large||base.coverImage.medium)}" alt=""${base.isAdult?' class="adultimg"':""}>`:poster(e.cover, e.adult)}
-      <div><h2>${esc(e.title)}</h2>${e.romaji&&e.romaji!==e.title?`<div class="alt">${esc(e.romaji)}</div>`:""}
+      <div><h2>${isHeLang()?tn(e):esc(enTitle(e))}</h2>
+        ${(()=>{ const c=heOf(id); const lines=[];
+          if(isHeLang()){ if(c) lines.push(`<div class="alt" dir="ltr">${esc(enTitle(e))}</div>`); }
+          else if(c) lines.push(`<div class="alt">${esc(c.t)}</div>`);
+          if(c&&c.src==="mt") lines.push(`<div class="mtnote">השם בעברית תורגם אוטומטית</div>`);
+          if(e.romaji&&e.romaji!==enTitle(e)) lines.push(`<div class="alt" dir="ltr">${esc(e.romaji)}</div>`);
+          const nat = (base&&base.title&&base.title.native)||e.native; if(nat) lines.push(`<div class="alt jp" lang="ja" dir="ltr">${esc(nat)}</div>`);
+          wantHe(e); return lines.join(""); })()}
         <div class="facts">
           ${e.format?`<span>${esc(FORMAT[e.format]||e.format)}</span>`:""}
           ${e.year?`<span>${e.year}</span>`:""}
@@ -1061,7 +1201,7 @@ function detailHTML(id, m){
 
     ${desc?`<h3>תקציר (באנגלית)</h3><p class="desc clamp" id="desc" dir="ltr" style="text-align:left">${esc(desc).replace(/\n+/g,"<br>")}</p><div class="desctools"><button class="linkbtn" id="more">הצג עוד</button><a class="linkbtn" href="https://translate.google.com/?sl=en&tl=iw&op=translate&text=${encodeURIComponent(desc.slice(0,4500))}" target="_blank" rel="noopener">תרגם לעברית ←</a></div>`:""}
 
-    ${rels.length?`<h3>עונות וסדרות קשורות</h3><div class="rel">${rels.map(r=>`<button data-rid="${r.node.id}"><img src="${esc(r.node.coverImage&&r.node.coverImage.medium||"")}" alt=""><em>${REL[r.relationType]||"קשור"}${r.node.seasonYear?" · "+r.node.seasonYear:""}</em><span>${esc(r.node.title.english||r.node.title.romaji)}</span></button>`).join("")}</div>`:""}
+    ${rels.length?`<h3>עונות וסדרות קשורות</h3><div class="rel">${rels.map(r=>`<button data-rid="${r.node.id}"><img src="${esc(r.node.coverImage&&r.node.coverImage.medium||"")}" alt=""><em>${REL[r.relationType]||"קשור"}${r.node.seasonYear?" · "+r.node.seasonYear:""}</em><span>${tn({id:r.node.id,title:r.node.title})}</span></button>`).join("")}</div>`:""}
 
     <h3>פרקים</h3>
     ${showCount?`<div class="eptools"><button class="btn" id="allW">סמן הכל כנצפה</button><button class="btn" id="noneW">נקה סימונים</button></div>
@@ -1370,6 +1510,8 @@ checkForUpdate();
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") checkForUpdate(); });
 render();
 buildNotifs(); updateBell();
+// שמות בעברית לכל הרשימה שלך ברקע, כדי שהחיפוש יעבוד בשתי השפות
+setTimeout(()=>{ Object.values(db.items).forEach(e=>{ if(e.status) wantHe(e); }); }, 5000);
 setTimeout(()=>{ syncNow(true); }, 600);
 // רענון פרקים ברקע: רק אחרי שהמסך נטען, ולכל היותר פעם בחצי שעה
 setTimeout(()=>{ if(Date.now()-(prefs.lastRefresh||0)>30*60e3) refreshFromAniList(); }, 8000);
