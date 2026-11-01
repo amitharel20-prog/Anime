@@ -917,3 +917,17 @@ window.TELEVIZIO = [
   "Wistoria: Wand and Sword", "Tsue to Tsurugi no Wistoria",
   "Record of Grancrest War", "Grancrest Senki"
 ];
+
+// שמות לפי אפליקציית televizio (לבקשת עמית)
+Object.assign(window.HE_FAN_NAMES, {
+  "Daemons of the Shadow Realm": "שדים של עולם הצללים",
+  "Yomi no Tsugai": "שדים של עולם הצללים",
+  "Full-Time Magister": "קוסם במשרה מלאה",
+  "Quanzhi Fashi": "קוסם במשרה מלאה",
+  "My Hero Academia: Vigilantes": "אקדמיית הגיבורים שלי: פורעי חוק",
+  "Vigilante: Boku no Hero Academia Illegals": "אקדמיית הגיבורים שלי: פורעי חוק",
+  "Kingdom": "ממלכה",
+  "Farming Life in Another World": "חיי החקלאות שלי בעולם אחר",
+  "Isekai Nonbiri Nouka": "חיי החקלאות שלי בעולם אחר",
+  "Kemono Jihen": "תקריות מפלצתיות"
+});
