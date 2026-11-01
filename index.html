@@ -252,6 +252,7 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 .sstep{width:44px;height:44px;padding:0;font-size:22px;border-radius:50%}
 #scRange{width:100%;margin:14px 0 2px;accent-color:var(--gold);height:28px}
 #scRange.unset{opacity:.5}
+.scorebox.lk #scRange,.scorebox.lk .sstep{opacity:.35;pointer-events:none}
 .scoreticks{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);padding:0 4px;font-variant-numeric:tabular-nums}
 .scorebox .linkbtn,.scorebox .note{display:block;text-align:center;margin:8px auto 0}
 .lockchip{display:inline-flex;align-items:center;gap:5px}
@@ -346,7 +347,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 56;
+const APP_VERSION = 57;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -1377,11 +1378,12 @@ function detailHTML(id, m){
     <div class="statusset">${Object.entries(STATUS).map(([k,s])=>`<button class="${s.cls}" data-s="${k}" aria-pressed="${e.status===k}"><span>${s.label}</span></button>`).join("")}<button class="dlock" id="dLock" aria-pressed="${!!(mineReal&&mineReal.locked)}">${LOCK_ICON}<span>${mineReal&&mineReal.locked?"בנעול":"נעול"}</span></button></div>
 
     ${`<h3>הציון שלי</h3>
-    <div class="scorebox">
-      <div class="scoreval"><button class="btn sstep" id="scMinus" aria-label="הורד 0.1">−</button><output id="scOut" class="${e.score?"":"none"}">${e.score?fmtScore(e.score):"–"}</output><button class="btn sstep" id="scPlus" aria-label="הוסף 0.1">+</button></div>
-      <input type="range" id="scRange" min="1" max="10" step="0.1" value="${e.score||5}" aria-label="ציון מ־1 עד 10" class="${e.score?"":"unset"}">
+    <div class="scorebox lk" id="scBox">
+      <div class="scoreval"><button class="btn sstep" id="scMinus" aria-label="הורד 0.1" disabled>−</button><output id="scOut" class="${e.score?"":"none"}">${e.score?fmtScore(e.score):"–"}</output><button class="btn sstep" id="scPlus" aria-label="הוסף 0.1" disabled>+</button></div>
+      <input type="range" id="scRange" min="1" max="10" step="0.1" value="${e.score||5}" aria-label="ציון מ־1 עד 10" class="${e.score?"":"unset"}" disabled>
       <div class="scoreticks" aria-hidden="true">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<span>${n}</span>`).join("")}</div>
-      ${e.score?`<button class="linkbtn" id="scClear">נקה ציון</button>`:`<p class="note">גוררים את הפס כדי לדרג. אפשר גם ציון עם נקודה, למשל 8.3</p>`}
+      <div style="text-align:center;margin-top:10px"><button class="btn" id="scEdit">${e.score?"שנה ציון":"דרג"}</button></div>
+      <div class="scmore" hidden>${e.score?`<button class="linkbtn" id="scClear">נקה ציון</button>`:`<p class="note">גוררים את הפס כדי לדרג. אפשר גם ציון עם נקודה, למשל 8.3</p>`}</div>
     </div>`}
 
     ${desc?`<h3>תקציר (באנגלית)</h3><p class="desc clamp" id="desc" dir="ltr" style="text-align:left">${esc(desc).replace(/\n+/g,"<br>")}</p><div class="desctools"><button class="linkbtn" id="more">הצג עוד</button><a class="linkbtn" href="https://translate.google.com/?sl=en&tl=iw&op=translate&text=${encodeURIComponent(desc.slice(0,4500))}" target="_blank" rel="noopener">תרגם לעברית ←</a></div>`:""}
@@ -1422,8 +1424,12 @@ function detailHTML(id, m){
     const it=getOrCreate(id,base); const first=!it.score; it.score=v;
     if(!it.status) it.status="done"; touch(it);
     rng.value=v; rng.classList.remove("unset"); out.textContent=fmtScore(v); out.classList.remove("none");
-    if(first) detailHTML(id,m);
+    if(first){ detailHTML(id,m); const b=$("#scEdit"); if(b) b.click(); }
   };
+  const scE=$("#scEdit"), scBox=$("#scBox"), scMore=scBox.querySelector(".scmore");
+  scE.onclick=()=>{ const open=scBox.classList.toggle("lk")===false;
+    [rng,$("#scMinus"),$("#scPlus")].forEach(x=>x.disabled=!open); scMore.hidden=!open;
+    scE.textContent = open ? "סיום" : (db.items[id]&&db.items[id].score ? "שנה ציון" : "דרג"); };
   rng.oninput=()=>{ out.textContent=fmtScore(+rng.value); out.classList.remove("none"); rng.classList.remove("unset"); };
   rng.onchange=()=>setScore(+rng.value);
   $("#scMinus").onclick=()=>setScore((db.items[id]&&db.items[id].score||+rng.value)-0.1);
