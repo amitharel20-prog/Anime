@@ -1257,7 +1257,15 @@ window.TELEVIZIO = [
   "The Legend of the Legendary Heroes",
   "Densetsu no Yuusha no Densetsu",
   "Love After World Domination",
-  "Koi wa Sekai Seifuku no Ato de"
+  "Koi wa Sekai Seifuku no Ato de",
+  "Kono Aozora ni Yakusoku wo",
+  "Kono Aozora ni Yakusoku wo: Youkoso Tsugumi Ryou e",
+  "Promise to the Blue Sky",
+  "Okusama wa Joshikousei",
+  "Okusama wa Joshi Kousei",
+  "My Wife is a High School Girl",
+  "VTuber Legend: How I Went Viral after Forgetting to Turn Off My Stream",
+  "VTuber Nandaga Haishin Kiri Wasuretara Densetsu ni Natteta"
 ];
 
 // שמות לפי אפליקציית televizio (לבקשת עמית)
@@ -1503,5 +1511,10 @@ Object.assign(window.HE_FAN_NAMES, {
   "The Legend of the Legendary Heroes": "אגדת הגיבורים האגדיים",
   "Densetsu no Yuusha no Densetsu": "אגדת הגיבורים האגדיים",
   "Love After World Domination": "אהבה אחרי שליטה עולמית",
-  "Koi wa Sekai Seifuku no Ato de": "אהבה אחרי שליטה עולמית"
+  "Koi wa Sekai Seifuku no Ato de": "אהבה אחרי שליטה עולמית",
+  "Okusama wa Joshikousei": "אישתי היא תלמידת תיכון",
+  "Okusama wa Joshi Kousei": "אישתי היא תלמידת תיכון",
+  "My Wife is a High School Girl": "אישתי היא תלמידת תיכון",
+  "VTuber Legend: How I Went Viral after Forgetting to Turn Off My Stream": "איך הפכתי לוויראלי לאחר ששכחתי לכבות את הלייב שלי",
+  "VTuber Nandaga Haishin Kiri Wasuretara Densetsu ni Natteta": "איך הפכתי לוויראלי לאחר ששכחתי לכבות את הלייב שלי"
 });
