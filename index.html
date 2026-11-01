@@ -352,7 +352,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 74;
+const APP_VERSION = 75;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -1152,6 +1152,7 @@ function curSeason(){
 const SEASON_HE = {WINTER:"חורף",SPRING:"אביב",SUMMER:"קיץ",FALL:"סתיו"};
 const SEASON_MONTHS = {WINTER:"ינואר–מרץ",SPRING:"אפריל–יוני",SUMMER:"יולי–ספטמבר",FALL:"אוקטובר–דצמבר"};
 const BROWSE = {
+  all:{label:()=>"הכל", q:()=>[`sort:POPULARITY_DESC`,{},""]},
   season:{label:()=>{const c=curSeason();return `העונה (${SEASON_MONTHS[c.s]})`;}, q:()=>{const c=curSeason();return [`season:$s,seasonYear:$y,sort:POPULARITY_DESC`,{s:c.s,y:c.y},`$s:MediaSeason,$y:Int`];}},
   trending:{label:()=>"חם עכשיו", q:()=>[`sort:TRENDING_DESC`,{},""]},
   top:{label:()=>"המדורגים ביותר", q:()=>[`sort:SCORE_DESC,format_in:[TV,MOVIE,ONA,OVA]`,{},""]},
@@ -1191,18 +1192,33 @@ let browseGenre = "";
 const GENRE_LIST = ["Action","Adventure","Comedy","Drama","Fantasy","Romance","Slice of Life","Sci-Fi","Mystery","Horror","Thriller","Psychological","Supernatural","Sports","Music","Mecha","Mahou Shoujo","Ecchi","Hentai"];
 function genreLabel(g){ return genreHe(g); }
 function genreOptions(){ return `<option value="">כל הז'אנרים</option>`+GENRE_LIST.filter(g=>g!=="Hentai"||prefs.adult).map(g=>`<option value="${g}" ${g===browseGenre?"selected":""}>${esc(genreLabel(g))}</option>`).join(""); }
-const bKey = k => k+(browseGenre?"|"+browseGenre:"");
+let browseSort = "";
+const SORT_OPTS = {"":"ברירת מחדל","SCORE_DESC":"דירוג (מהגבוה לנמוך)","POPULARITY_DESC":"פופולריות","START_DATE_DESC":"החדשות ביותר"};
+const bKey = k => k+(browseGenre?"|"+browseGenre:"")+(browseSort?"#"+browseSort:"");
+const browseMore = {};
+function sortList(list){
+  const s=browseSort; if(!s) return list; const a=list.slice();
+  const sd=m=>{ const d=m.startDate||{}; return (d.year||m.seasonYear||0)*10000+(d.month||0)*100+(d.day||0); };
+  if(s==="SCORE_DESC") a.sort((x,y)=>(y.averageScore||0)-(x.averageScore||0));
+  else if(s==="START_DATE_DESC") a.sort((x,y)=>sd(y)-sd(x));
+  return a;
+}
 // שמירת תוצאות הגילוי בטלפון, כדי שיופיעו מיד בפתיחה (מתרעננות ברקע כל שעה)
-function storedBrowse(k){ if(browseGenre || k==="tvz") return null; try{ const c=JSON.parse(localStorage.getItem(KEY+".browse."+k+(prefs.adult?".a":""))); return c&&c.data?c:null; }catch(e){ return null; } }
-function storeBrowse(k,data){ if(browseGenre) return; try{ localStorage.setItem(KEY+".browse."+k+(prefs.adult?".a":""),JSON.stringify({t:Date.now(),data})); }catch(e){} }
-async function loadBrowse(k){
+function storedBrowse(k){ if(browseGenre || browseSort || k==="tvz") return null; try{ const c=JSON.parse(localStorage.getItem(KEY+".browse."+k+(prefs.adult?".a":""))); return c&&c.data?c:null; }catch(e){ return null; } }
+function storeBrowse(k,data){ if(browseGenre || browseSort) return; try{ localStorage.setItem(KEY+".browse."+k+(prefs.adult?".a":""),JSON.stringify({t:Date.now(),data})); }catch(e){} }
+async function loadBrowse(k, more){
   const ck=bKey(k);
-  if(browseCache[ck]) return browseCache[ck];
-  if(k==="tvz"){ const all=await loadTvz(); return browseCache[ck] = browseGenre ? all.filter(m=>(m.genres||[]).includes(browseGenre)) : all; }
+  if(browseCache[ck] && !more) return browseCache[ck];
+  if(k==="tvz"){ const all=await loadTvz(); return browseCache[ck] = sortList(browseGenre ? all.filter(m=>(m.genres||[]).includes(browseGenre)) : all); }
   let [args,vars,decl] = BROWSE[k].q();
+  if(browseSort) args = args.replace(/sort:[A-Z_]+/, "sort:"+browseSort);
+  const page = more ? (browseMore[ck]||{page:1}).page+1 : 1;
+  vars={...vars,pg:page}; decl=(decl?decl+",":"")+"$pg:Int";
   if(browseGenre){ vars={...vars,g:browseGenre}; decl=(decl?decl+",":"")+"$g:String"; args="genre:$g,"+args; }
   const adultPart = browseGenre==="Hentai" ? "isAdult:true," : adultFilter();
-  const d = await anilist(`query${decl?`(${decl})`:""}{Page(perPage:40){media(type:ANIME,${adultPart}${args}){${MEDIA_FIELDS}}}}`,vars);
+  const d = await anilist(`query${decl?`(${decl})`:""}{Page(page:$pg,perPage:40){pageInfo{hasNextPage} media(type:ANIME,${adultPart}${args}){${MEDIA_FIELDS}}}}`,vars);
+  browseMore[ck] = {page, has: !!(d.Page.pageInfo&&d.Page.pageInfo.hasNextPage)};
+  if(more){ const seen=new Set((browseCache[ck]||[]).map(m=>m.id)); return browseCache[ck]=(browseCache[ck]||[]).concat(d.Page.media.filter(m=>!seen.has(m.id))); }
   storeBrowse(k,d.Page.media);
   return browseCache[ck]=d.Page.media;
 }
@@ -1212,11 +1228,14 @@ function renderSearch(){
     <form class="search" id="sf"><input id="q" type="search" placeholder="חפש בעברית או באנגלית" value="${esc(lastSearch.q)}" autocomplete="off" enterkeyhint="search"><button class="btn primary">חפש</button></form>
     <div id="browseBar"></div>
     <div class="sortrow genrerow"><label for="gsel">ז'אנר</label><select id="gsel">${genreOptions()}</select></div>
+    <div class="sortrow"><label for="ssel">מיון</label><select id="ssel">${Object.entries(SORT_OPTS).map(([k,l])=>`<option value="${k}" ${k===browseSort?"selected":""}>${l}</option>`).join("")}</select></div>
     <div id="sr" class="list"></div>`;
   const sr = $("#sr"), bar=$("#browseBar");
   $("#gsel").onchange = ev=>{ browseGenre=ev.target.value; renderSearch(); };
+  $("#ssel").onchange = ev=>{ browseSort=ev.target.value; renderSearch(); };
   const show = res => {
     if(lastSearch.q && browseGenre) res = res.filter(m=>(m.genres||[]).includes(browseGenre));
+    if(lastSearch.q) res = sortList(res);
     sr.innerHTML = res.length ? res.map(resultHTML).join("") : `<div class="empty">${lastSearch.q&&browseGenre?"לא נמצאו תוצאות בז'אנר הזה. נסה לבחור \"כל הז'אנרים\".":"לא נמצאו תוצאות. נסה את השם באנגלית או ביפנית."}</div>`;
     bindRows(sr,"search",res);
   };
@@ -1225,11 +1244,12 @@ function renderSearch(){
     bar.querySelectorAll("[data-b]").forEach(c=>c.onclick=()=>{ browseTab=c.dataset.b; showBrowse(); });
     const k = browseTab, ck=bKey(k), g=browseGenre;
     tvzProgress = k==="tvz" ? (list,pct)=>{ if(browseTab==="tvz" && !lastSearch.q && current.tab==="search" && !current.detail){ show(browseGenre?list.filter(m=>(m.genres||[]).includes(browseGenre)):list); sr.insertAdjacentHTML("afterbegin",`<p class="note">טוען את כל האנימות של televizio… ${pct}%</p>`); } } : null;
+    const showMoreBtn = ()=>{ const bm=browseMore[ck]; if(k!=="tvz" && bm && bm.has && !sr.querySelector("#moreB")){ sr.insertAdjacentHTML("beforeend",`<div style="text-align:center;margin:14px 0"><button class="btn" id="moreB">טען עוד</button></div>`); $("#moreB").onclick=async ev=>{ ev.target.disabled=true; ev.target.textContent="טוען…"; try{ const y=window.scrollY; const r2=await loadBrowse(k,true); if(browseTab===k && browseGenre===g){ show(r2); window.scrollTo(0,y); showMoreBtn(); } }catch(e){ ev.target.disabled=false; ev.target.textContent="נסה שוב"; } }; } };
     const stored = !browseCache[ck] && storedBrowse(k);
-    if(stored){ show(stored.data); if(Date.now()-stored.t<3600e3){ browseCache[ck]=stored.data; return; } }
+    if(stored){ show(stored.data); if(Date.now()-stored.t<3600e3){ browseCache[ck]=stored.data; browseMore[ck]=browseMore[ck]||{page:1,has:true}; showMoreBtn(); return; } }
     else if(!browseCache[ck]) sr.innerHTML=`<div class="empty">טוען…</div>`;
     const slow = setTimeout(()=>{ if(browseTab===k && !browseCache[ck] && !stored) sr.innerHTML=`<div class="empty">AniList איטי כרגע, ממשיך לנסות…</div>`; }, 6000);
-    try{ const res = await loadBrowse(k); if(!lastSearch.q && browseTab===k && browseGenre===g && current.tab==="search" && !current.detail) show(res); }
+    try{ const res = await loadBrowse(k); if(!lastSearch.q && browseTab===k && browseGenre===g && current.tab==="search" && !current.detail){ show(res); showMoreBtn(); } }
     catch(err){ if(!stored && browseTab===k) { sr.innerHTML=`<div class="msg">לא הצלחתי לטעון: ${esc(err.message)}</div><button class="btn" id="retryB">נסה שוב</button>`; const rb=$("#retryB"); if(rb) rb.onclick=showBrowse; } }
     finally{ clearTimeout(slow); }
   };
