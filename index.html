@@ -347,7 +347,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 59;
+const APP_VERSION = 60;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -640,7 +640,7 @@ function resultHTML(m){
     <span class="t"><span class="name">${tn(m)}</span><span class="sub">${esc(sub)}${m.isAdult?' · <b class="r18">18+</b>':""}</span>
     ${mine&&mine.status?`<span class="pill ${STATUS[mine.status].cls}">${STATUS[mine.status].label}</span>`:""}</span>
     <span class="myscore">${m.averageScore?(m.averageScore/10).toFixed(1):"–"}<small>AniList</small></span></button>
-    <button class="side ${mine&&mine.status?"":"addnew"}" data-add="${m.id}" aria-label="הוסף לרשימה">${mine&&mine.status?"⋯":"+"}<small>${mine&&mine.status?"רשימה":"הוסף"}</small></button></div>`;
+    <button class="side ${mine&&mine.status?"addnew":""}" data-add="${m.id}" aria-label="הוסף לרשימה">${mine&&mine.status?"⋯":"+"}<small>${mine&&mine.status?"רשימה":"הוסף"}</small></button></div>`;
 }
 function bindRows(root, tab, mediaList){
   root.querySelectorAll(".rmain,.pcmain").forEach(b=>b.onclick=()=>{
