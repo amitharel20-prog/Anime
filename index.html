@@ -339,7 +339,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 35;
+const APP_VERSION = 36;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -692,7 +692,9 @@ function heOf(id){ const c=heCache[id]; return c&&c.t ? c : null; }
 function nameOf(o){ const en=enTitle(o); if(isHeLang()){ const c=heOf(o.id); if(c) return c.t; } return en; }
 const heWant = new Map();
 function wantHe(o){
-  if(!o || !o.id || heCache[o.id]) return;
+  if(!o || !o.id) return;
+  const c = heCache[o.id];
+  if(c && (c.t || (c.at && Date.now()-c.at<3*864e5))) return;
   const mal = o.idMal || (db.items[o.id]&&db.items[o.id].idMal) || null;
   heWant.set(o.id, {mal, en:enTitle(o)}); scheduleHe();
 }
@@ -767,7 +769,7 @@ async function processHe(){
       const group = rest.slice(i,i+8);
       for(let j=0;j<group.length;j+=4){
         await Promise.all(group.slice(j,j+4).map(async ([id,v])=>{
-          try{ const t = await heTranslate(v.en); if(Date.now()<mtBlockedUntil && !t) return; heCache[id] = t ? {t,src:"mt",en:v.en} : {t:null,src:"none",en:v.en}; heWant.delete(id); }catch(e){}
+          try{ const t = await heTranslate(v.en); if(Date.now()<mtBlockedUntil && !t) return; heCache[id] = t ? {t,src:"mt",en:v.en} : {t:null,src:"none",en:v.en,at:Date.now()}; heWant.delete(id); }catch(e){}
         }));
       }
       saveHe(); applyHeNames();
@@ -1301,6 +1303,11 @@ function renderSettings(){
     <div class="card"><h2>תוכן למבוגרים</h2><p>אנימות עם דירוג גיל רגיל (כולל 13+, 17+ ו־ecchi) כבר מופיעות בחיפוש. כאן אפשר להוסיף גם אנימות שמסומנות ב־AniList כתוכן מיני מפורש (18+). הפוסטרים שלהן מוצגים מטושטשים.</p>
       <label class="fld" style="display:flex;gap:10px;align-items:center"><input type="checkbox" id="adultT" ${prefs.adult?"checked":""} style="width:22px;height:22px"> הצג אנימות 18+ בחיפוש ובעונתי</label>
       <div id="adultConfirm"></div></div>
+    ${(()=>{ const ids=Object.values(db.items).filter(e=>e.status).map(e=>e.id);
+      const wiki=ids.filter(id=>heCache[id]&&heCache[id].src==="wiki").length, mtc=ids.filter(id=>heCache[id]&&heCache[id].src==="mt").length;
+      const missing=ids.length-wiki-mtc; const blocked=Date.now()<mtBlockedUntil;
+      return `<div class="card"><h2>שמות בעברית</h2><p>מתוך ${ids.length} האנימות ברשימה שלך: ${wiki} מוויקיפדיה, ${mtc} בתרגום אוטומטי${missing?`, ו־${missing} עדיין באנגלית`:""}.</p>
+      ${blocked?`<p class="note">שירות התרגום החינמי הגיע למגבלה היומית. השאר יתורגמו אוטומטית אחרי ${new Date(mtBlockedUntil).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})}.</p>`:(missing?`<p class="note">השמות החסרים ממשיכים להיטען ברקע.</p>`:"")}</div>`; })()}
     <div class="card"><h2>עדכון האפליקציה</h2><p>אם ביקשת שינוי והוא עוד לא מופיע, לוחצים כאן כדי לטעון מיד את הגרסה הכי חדשה. הרשימה שלך לא נמחקת.</p>
       <div class="actions"><button class="btn primary" id="forceUpd">טען את הגרסה החדשה</button></div></div>
     <p class="note" style="text-align:center">גרסה ${APP_VERSION}</p>`;
