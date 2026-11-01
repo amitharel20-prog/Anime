@@ -210,6 +210,7 @@ nav.tabs button{font-size:12px}
 nav.tabs button{font-size:11px;white-space:nowrap}
 @media (max-width:380px){nav.tabs button{font-size:10px;padding-inline:0}}
 .adultimg{filter:blur(14px) saturate(.6);transform:scale(1.1)}
+html.noblur .adultimg{filter:none;transform:none}
 .r18{color:#c0392b}
 .snm{display:flex;flex-direction:column;align-items:center;line-height:1.2}
 .snm small{color:var(--muted);font-size:14px}
@@ -345,7 +346,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 55;
+const APP_VERSION = 56;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -442,6 +443,7 @@ function applyTheme(){
 }
 $("#themeBtn").onclick=()=>{ const order=["auto","light","dark"]; prefs.theme = order[(order.indexOf(prefs.theme||"auto")+1)%3]; savePrefs(); applyTheme(); toast("מצב תצוגה: "+THEMES[prefs.theme].label); };
 applyTheme();
+document.documentElement.classList.toggle("noblur", !!prefs.noBlur);
 $("#bellBtn").onclick=()=>go({tab:current.tab,notifs:true});
 function paintLangBtn(){ $("#langBtn").textContent = isHeLang() ? "עב" : "EN"; }
 paintLangBtn();
@@ -1475,8 +1477,9 @@ function renderSettings(){
     <div class="card"><h2>ייבוא מ־MyAnimeList</h2><p>באתר MAL: לחץ על התמונה שלך ← Export, ייצא את רשימת האנימה, ופתח את הקובץ שירד (.xml או .gz). אחר כך בחר אותו כאן.</p>
       <div class="actions"><label class="btn primary" for="mf">בחר קובץ מ־MAL</label><input type="file" id="mf" accept=".xml,.gz,text/xml,application/xml,application/gzip" hidden></div></div>
     <div id="imp"></div>
-    <div class="card"><h2>תוכן למבוגרים</h2><p>אנימות עם דירוג גיל רגיל (כולל 13+, 17+ ו־ecchi) כבר מופיעות בחיפוש. כאן אפשר להוסיף גם אנימות שמסומנות ב־AniList כתוכן מיני מפורש (18+). הפוסטרים שלהן מוצגים מטושטשים.</p>
+    <div class="card"><h2>תוכן למבוגרים</h2><p>אנימות עם דירוג גיל רגיל (כולל 13+, 17+ ו־ecchi) כבר מופיעות בחיפוש. כאן אפשר להוסיף גם אנימות שמסומנות ב־AniList כתוכן מיני מפורש (18+). הפוסטרים שלהן מוצגים מטושטשים, אלא אם תבחר להציג אותם בלי טשטוש.</p>
       <label class="fld" style="display:flex;gap:10px;align-items:center"><input type="checkbox" id="adultT" ${prefs.adult?"checked":""} style="width:22px;height:22px"> הצג אנימות 18+ בחיפוש ובעונתי</label>
+      <label class="fld" style="display:flex;gap:10px;align-items:center;margin-top:8px"><input type="checkbox" id="noBlurT" ${prefs.noBlur?"checked":""} style="width:22px;height:22px"> הצג פוסטרים של 18+ בלי טשטוש</label>
       <div id="adultConfirm"></div></div>
     ${(()=>{ const ids=Object.values(db.items).filter(e=>e.status).map(e=>e.id);
       const fan=ids.filter(id=>fanFor(db.items[id])).length;
@@ -1506,6 +1509,7 @@ function renderSettings(){
     }catch(e){ toast("הקובץ לא נראה כמו גיבוי של האפליקציה"); }
   };
   bindSyncCard();
+  $("#noBlurT").onchange = ev=>{ prefs.noBlur=ev.target.checked; savePrefs(); document.documentElement.classList.toggle("noblur", prefs.noBlur); toast(prefs.noBlur?"הטשטוש הוסר":"הפוסטרים יוצגו מטושטשים"); };
   $("#adultT").onchange = ev=>{
     if(!ev.target.checked){ prefs.adult=false; savePrefs(); for(const k in browseCache) delete browseCache[k]; for(const k in seasonCache) delete seasonCache[k]; lastSearch={q:"",results:[]}; toast("אנימות 18+ מוסתרות"); return; }
     ev.target.checked=false;
