@@ -130,7 +130,7 @@ h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute
 .desc.clamp{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
 .linkbtn{background:none;border:0;color:var(--accent);font-weight:700;padding:4px 0}
 .eps{display:grid;gap:6px}
-.ep{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 10px}
+.ep{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 10px}
 .ep label{display:flex;align-items:center;gap:10px;font-weight:600;font-variant-numeric:tabular-nums}
 .ep input[type=checkbox]{width:22px;height:22px;accent-color:var(--s-watch)}
 .ep select{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:4px 6px}
@@ -248,7 +248,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 11;
+const APP_VERSION = 12;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -738,8 +738,7 @@ function detailHTML(id, m){
     ${showCount?`<div class="eptools"><button class="btn" id="allW">סמן הכל כנצפה</button><button class="btn" id="noneW">נקה סימונים</button></div>
     <div class="eps">${Array.from({length:showCount},(_,i)=>{const n=i+1, ep=(e.eps||{})[n]||{};
       return `<div class="ep"><label><input type="checkbox" id="w${n}" data-ep="${n}" ${ep.w?"checked":""}>פרק ${n}</label>
-      <span class="ttl" dir="auto">${esc(cleanEpTitle(epTitles[i]))}</span>
-      <select id="s${n}" data-eps="${n}" aria-label="ציון לפרק ${n}"><option value="">ציון</option>${[1,2,3,4,5,6,7,8,9,10].map(v=>`<option ${ep.s===v?"selected":""}>${v}</option>`).join("")}</select></div>`;}).join("")}</div>`
+      <span class="ttl" dir="auto">${esc(cleanEpTitle(epTitles[i]))}</span></div>`;}).join("")}</div>`
     :`<p class="desc">מספר הפרקים עוד לא ידוע ב־AniList.</p>`}
     ${db.items[id]?`<h3>הסרה</h3><div id="rmBox"><button class="btn" id="rm">הסר מהרשימה שלי</button></div>`:""}
     <div style="height:24px"></div>`;
@@ -757,12 +756,6 @@ function detailHTML(id, m){
     const it=getOrCreate(id,base); const n=c.dataset.ep;
     it.eps[n]={...(it.eps[n]||{}),w:c.checked}; if(!it.status) it.status="watching";
     const w=watchedCount(it); if(it.episodes && w===it.episodes && it.status==="watching"){ it.status="done"; toast("סיימת את כל הפרקים. עבר לרשימת 'נצפה'"); detailHTML(id,m); }
-    touch(it);
-  });
-  view.querySelectorAll("[data-eps]").forEach(s=>s.onchange=()=>{
-    const it=getOrCreate(id,base); const n=s.dataset.eps;
-    it.eps[n]={...(it.eps[n]||{}),s:s.value?+s.value:null};
-    if(s.value){ it.eps[n].w=true; const cb=$("#w"+n); if(cb) cb.checked=true; if(!it.status) it.status="watching"; }
     touch(it);
   });
   const all=$("#allW"); if(all) all.onclick=()=>{ const it=getOrCreate(id,base); for(let n=1;n<=showCount;n++) it.eps[n]={...(it.eps[n]||{}),w:true}; if(!it.status||it.status==="plan"||it.status==="watching") it.status = it.episodes&&showCount>=it.episodes?"done":"watching"; touch(it); detailHTML(id,m); };
