@@ -11,6 +11,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="מעקב אנימה">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://graphql.anilist.co" crossorigin>
+<link rel="preconnect" href="https://s4.anilist.co">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Secular+One&display=swap">
@@ -97,6 +99,7 @@ main{padding-block:16px}
 .sheet-list button[aria-pressed="true"] span{color:var(--bg)}
 .rmain img,.rmain .ph{width:64px;height:90px;object-fit:cover;border-radius:6px;background:var(--line)}
 .row .t{min-width:0}
+.list>.row{content-visibility:auto;contain-intrinsic-size:auto 128px}
 .row .name{font-weight:700;line-height:1.3;overflow-wrap:anywhere}
 .row .sub{color:var(--muted);font-size:13px}
 .row .myscore{font-family:var(--display);font-size:22px;color:var(--gold);min-width:2.2em;text-align:center;font-variant-numeric:tabular-nums}
@@ -326,7 +329,7 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js"></script>
+<script src="he-names.js?v=76"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -352,7 +355,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 75;
+const APP_VERSION = 76;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -434,7 +437,7 @@ function setHeader(title, back, o){
   $("#backBtn").hidden=!back;
 }
 function setTab(t){ if(t==="stats") t="list"; document.querySelectorAll("nav.tabs button").forEach(b=>{ if(b.dataset.tab===t) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); }); }
-function poster(src, adult){ return src ? `<img src="${esc(src)}" alt="" loading="lazy"${adult?' class="adultimg"':""}>` : `<div class="ph" aria-hidden="true"></div>`; }
+function poster(src, adult){ return src ? `<img src="${esc(src)}" alt="" loading="lazy" decoding="async"${adult?' class="adultimg"':""}>` : `<div class="ph" aria-hidden="true"></div>`; }
 
 /* ---------- בהיר / כהה ---------- */
 const THEMES = {auto:{label:"אוטומטי",icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>'},
@@ -1043,7 +1046,7 @@ function renderNotifs(){
   view.innerHTML = list.length ? `
     <div class="nhead"><span class="note">התראות על פרקים חדשים ועל עונות חדשות של אנימות שראית</span><button class="linkbtn" id="nClear">נקה הכל</button></div>
     <div class="nlist">${list.map((n,i)=>{ const e=db.items[n.animeId];
-      return `<button class="nitem ${n.read?"":"unread"}" data-ni="${i}">${e&&e.cover&&!e.adult?`<img src="${esc(e.cover)}" alt="">`:`<span class="ph"></span>`}
+      return `<button class="nitem ${n.read?"":"unread"}" data-ni="${i}">${e&&e.cover&&!e.adult?`<img src="${esc(e.cover)}" alt="" loading="lazy" decoding="async">`:`<span class="ph"></span>`}
         <span class="ntext"><span>${esc(n.text)}</span><small>${new Date(n.at).toLocaleDateString("he-IL",{day:"numeric",month:"numeric"})} ${new Date(n.at).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})}</small></span></button>`; }).join("")}</div>
     ${notifCardHTML()}`
   : `<div class="empty"><h2>אין התראות</h2><p>כאן יופיעו פרקים חדשים באנימות שאתה רואה, ועונות חדשות של אנימות שראית (3 ימים לפני שהן יוצאות).</p></div>${notifCardHTML()}`;
@@ -1298,7 +1301,7 @@ function posterCard(m){
   const img = m.coverImage ? (m.coverImage.large||m.coverImage.medium) : m.cover;
   const score = m.averageScore ? (m.averageScore/10).toFixed(1) : null;
   return `<div class="pc"><button class="pcmain" data-id="${m.id}">
-      <span class="pimg">${img?`<img src="${esc(img)}" alt="" loading="lazy"${(m.isAdult||m.adult)?' class="adultimg"':""}>`:""}
+      <span class="pimg">${img?`<img src="${esc(img)}" alt="" loading="lazy" decoding="async"${(m.isAdult||m.adult)?' class="adultimg"':""}>`:""}
         ${score?`<span class="pscore">★ ${score}</span>`:""}${onTvz(m.title?m:{id:m.id,title:m.titleStr})?TVZ:""}
         ${mine&&mine.status?`<span class="pst ${STATUS[mine.status].cls}"><span>${STATUS[mine.status].label}</span></span>`:""}</span>
       <span class="ptitle">${tn(m.title?m:{id:m.id,title:m.titleStr})}</span></button>
@@ -1470,7 +1473,7 @@ function detailHTML(id, m){
 
     ${desc?`<h3>תקציר (באנגלית)</h3><p class="desc clamp" id="desc" dir="ltr" style="text-align:left">${esc(desc).replace(/\n+/g,"<br>")}</p><div class="desctools"><button class="linkbtn" id="more">הצג עוד</button><a class="linkbtn" href="https://translate.google.com/?sl=en&tl=iw&op=translate&text=${encodeURIComponent(desc.slice(0,4500))}" target="_blank" rel="noopener">תרגם לעברית ←</a></div>`:""}
 
-    ${rels.length?`<h3>עונות וסדרות קשורות</h3><div class="rel">${rels.map(r=>`<button data-rid="${r.node.id}"><img src="${esc(r.node.coverImage&&(r.node.coverImage.large||r.node.coverImage.medium)||"")}" alt=""><em>${REL[r.relationType]||"קשור"}${r.node.seasonYear?" · "+r.node.seasonYear:""}</em><span>${tn({id:r.node.id,title:r.node.title})}</span></button>`).join("")}</div>`:""}
+    ${rels.length?`<h3>עונות וסדרות קשורות</h3><div class="rel">${rels.map(r=>`<button data-rid="${r.node.id}"><img src="${esc(r.node.coverImage&&(r.node.coverImage.large||r.node.coverImage.medium)||"")}" alt="" loading="lazy" decoding="async"><em>${REL[r.relationType]||"קשור"}${r.node.seasonYear?" · "+r.node.seasonYear:""}</em><span>${tn({id:r.node.id,title:r.node.title})}</span></button>`).join("")}</div>`:""}
 
     <h3>פרקים</h3>
     ${showCount?`<div class="eptools"><button class="btn" id="allW">סמן הכל כנצפה</button><button class="btn" id="noneW">נקה סימונים</button></div>
