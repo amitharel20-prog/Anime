@@ -80,6 +80,8 @@ main{padding-block:16px}
 .rmain .name,.rmain .sub{display:block}
 .rmain .bar{display:block;width:100%}
 .side{border:0;border-inline-start:1px solid var(--line);background:none;width:56px;font-size:20px;font-weight:700;color:var(--accent);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.row.rr{grid-template-columns:auto 1fr}
+.row.rr>.side{order:-1;border-inline-start:0;border-inline-end:1px solid var(--line)}
 .side small{font-size:11px;font-weight:600;color:var(--muted)}
 .side.addnew{background:var(--accent);color:var(--accent-fg)}
 .side.addnew small{color:var(--accent-fg)}
@@ -345,7 +347,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 53;
+const APP_VERSION = 54;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -580,7 +582,7 @@ function renderList(){
       <button class="chip lockchip" data-f="locked" aria-pressed="${showLocked}">${LOCK_ICON}<span class="cl">נעול</span>${lockOpen?`<span class="n">${lockedItems.length}</span>`:""}</button>
       <button class="chip" data-f="all" aria-pressed="${listFilter==="all"}">הכל<span class="n">${all.length}</span></button>
     </div>
-    <div class="sortrow"><label for="sort">מיון</label><select id="sort">${Object.entries(SORTS).map(([k,s])=>`<option value="${k}" ${k===sortKey?"selected":""}>${s.label}</option>`).join("")}</select><button class="linkbtn" id="toStats" style="margin-inline-start:auto">סטטיסטיקות ←</button></div>
+    <div class="sortrow"><label for="sort">מיון</label><select id="sort">${Object.entries(SORTS).map(([k,s])=>`<option value="${k}" ${k===sortKey?"selected":""}>${s.label}</option>`).join("")}</select><button class="linkbtn" id="toStats" style="margin-inline-start:12px">סטטיסטיקות ←</button></div>
     ${showLocked&&!lockOpen ? lockScreenHTML() : `${showLocked?`<div class="lockbar">${LOCK_ICON}<span>רשימה נעולה</span><button class="linkbtn" id="chpin" style="margin-inline-start:auto">שנה קוד</button><button class="linkbtn" id="relock" style="margin-inline-start:12px">נעל שוב</button></div>`:""}
     <div class="list" id="myList">${items.slice(0,listLimit).map(rowHTML).join("") || `<div class="empty">${showLocked?"אין כאן אנימות. כדי להעביר אנימה לכאן, לוחצים על ⋯ לידה ובוחרים 'העבר לנעול'.":"אין כאן כלום עדיין."}</div>`}</div>`}
     ${items.length>listLimit?`<div id="moreRows" class="empty">טוען עוד…</div>`:""}`;
@@ -616,7 +618,7 @@ function rowHTML(e){
   const showPill = e.status && (typeof listFilter==="undefined" || listFilter!==e.status || current.tab!=="list" || listQuery);
   const pct = tot ? Math.min(100, w/tot*100) : 0;
   const genres = (e.genres||[]).slice(0,3);
-  return `<div class="row"><button class="rmain" data-id="${e.id}">
+  return `<div class="row rr"><button class="rmain" data-id="${e.id}">
     ${poster(e.cover, e.adult)}
     <span class="t"><span class="name">${tn(e)}</span>
       <span class="sub">${esc(sub)}</span>
