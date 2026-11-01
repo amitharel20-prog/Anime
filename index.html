@@ -316,7 +316,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 30;
+const APP_VERSION = 31;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -584,7 +584,7 @@ function rowHTML(e){
       <span class="pills">${showPill?`<span class="pill ${STATUS[e.status].cls}">${STATUS[e.status].label}</span>`:""}${n?`<span class="pill st-new">${n===1?"פרק חדש":n+" פרקים חדשים"}</span>`:""}</span>
       ${tot?`<span class="prog"><span class="bar"><i class="${e.status?STATUS[e.status].cls:""}" style="width:${pct}%"></i></span><span class="pnum">${w}/${tot}</span></span>`:(w?`<span class="pnum">${w} פרקים</span>`:"")}
     </span>
-    ${e.score||e.status==="done"||e.status==="dropped" ? `<span class="myscore ${e.score?"has":""}">${e.score?`<b>${fmtScore(e.score)}</b>`:`<b>☆</b>`}<small>${e.score?"הציון שלי":"לא דורג"}</small></span>` : "<span></span>"}</button>
+    ${e.score ? `<span class="myscore has"><b>${fmtScore(e.score)}</b><small>הציון שלי</small></span>` : "<span></span>"}</button>
     ${canPlus?`<button class="side plus1" data-plus="${e.id}" aria-label="סמן את הפרק הבא כנצפה">+1<small>פרק</small></button>`:`<button class="side" data-add="${e.id}" aria-label="העבר לרשימה אחרת"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg><small>רשימה</small></button>`}
   </div>`;
 }
@@ -939,7 +939,7 @@ function detailHTML(id, m){
     <h3>סטטוס</h3>
     <div class="statusset">${Object.entries(STATUS).map(([k,s])=>`<button class="${s.cls}" data-s="${k}" aria-pressed="${e.status===k}"><span>${s.label}</span></button>`).join("")}<button class="dlock" id="dLock" aria-pressed="${!!(mineReal&&mineReal.locked)}">${LOCK_ICON}<span>${mineReal&&mineReal.locked?"בנעול":"נעול"}</span></button></div>
 
-    ${!(e.score||e.status==="done"||e.status==="dropped") ? "" : `<h3>הציון שלי</h3>
+    ${`<h3>הציון שלי</h3>
     <div class="scorebox">
       <div class="scoreval"><button class="btn sstep" id="scMinus" aria-label="הורד 0.1">−</button><output id="scOut" class="${e.score?"":"none"}">${e.score?fmtScore(e.score):"–"}</output><button class="btn sstep" id="scPlus" aria-label="הוסף 0.1">+</button></div>
       <input type="range" id="scRange" min="1" max="10" step="0.1" value="${e.score||5}" aria-label="ציון מ־1 עד 10" class="${e.score?"":"unset"}">
