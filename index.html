@@ -350,7 +350,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 64;
+const APP_VERSION = 65;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -754,13 +754,14 @@ function outsideNames(){
   return out.sort();
 }
 const keyW = s => (s||"").toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g," ").trim();
-const TVZ_KEYS = (window.TELEVIZIO||[]).map(t=>keyW(t)).filter(Boolean);
+const TVZ_KEYS = (window.TELEVIZIO||[]).filter(t=>t[0]!=="=").map(t=>keyW(t)).filter(Boolean);
+const TVZ_EXACT = new Set((window.TELEVIZIO||[]).filter(t=>t[0]==="=").map(t=>keyW(t.slice(1))));
 const tvzMemo = new Map();
 function onTvz(o){
   if(!o) return false;
   if(tvzMemo.has(o.id)) return tvzMemo.get(o.id);
   const ts=[enTitle(o), o.romaji||(o.title&&o.title.romaji)||"", o.title&&o.title.english||"", typeof o.title==="string"?o.title:""].filter(Boolean).map(keyW);
-  const r = ts.some(k=>TVZ_KEYS.some(b=>k===b || k.startsWith(b+" ")));
+  const r = ts.some(k=>TVZ_EXACT.has(k) || TVZ_KEYS.some(b=>k===b || k.startsWith(b+" ")));
   tvzMemo.set(o.id,r); return r;
 }
 const TVZ = '<span class="tvz">televizio</span>';

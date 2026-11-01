@@ -938,7 +938,19 @@ window.TELEVIZIO = [
   "Black Bullet",
   "World Break: Aria of Curse for a Holy Swordsman", "Seiken Tsukai no World Break",
   "Freezing",
-  "Kill la Kill"
+  "Kill la Kill",
+  "Undefeated Bahamut Chronicle", "Saijaku Muhai no Bahamut",
+  "GOBLIN SLAYER", "Goblin Slayer",
+  "Kämpfer", "Kampfer",
+  "Devils' Line", "Devils Line",
+  "Kaiju No. 8", "Kaijuu 8-gou",
+  "The Testament of Sister New Devil", "Shinmai Maou no Testament",
+  "Mashiroiro Symphony: The Color of Lovers", "Mashiroiro Symphony",
+  "Fairy Tail",
+  "=K", "K: Return of Kings", "K: Seven Stories",
+  "The Fruit of Evolution: Before I Knew It, My Life Had It Made", "Shinka no Mi: Shiranai Uchi ni Kachigumi Jinsei",
+  "The Fruit of Grisaia", "Grisaia no Kajitsu",
+  "Prison School", "Kangoku Gakuen"
 ];
 
 // שמות לפי אפליקציית televizio (לבקשת עמית)
@@ -980,5 +992,23 @@ Object.assign(window.HE_FAN_NAMES, {
   "World Break: Aria of Curse for a Holy Swordsman": "קללת האריה: העולם השבור",
   "Seiken Tsukai no World Break": "קללת האריה: העולם השבור",
   "Freezing": "קיפאון",
-  "Kill la Kill": "קיל לה קיל"
+  "Kill la Kill": "קיל לה קיל",
+  "Undefeated Bahamut Chronicle": "קורות בהאמות הבלתי מנוצח",
+  "Saijaku Muhai no Bahamut": "קורות בהאמות הבלתי מנוצח",
+  "Kämpfer": "קאמפר",
+  "Kampfer": "קאמפר",
+  "Devils' Line": "קו השדים",
+  "Devils Line": "קו השדים",
+  "The Testament of Sister New Devil": "שבועת אחות השטן",
+  "Shinmai Maou no Testament": "שבועת אחות השטן",
+  "Mashiroiro Symphony: The Color of Lovers": "צבע האוהבים",
+  "Mashiroiro Symphony": "צבע האוהבים",
+  "Fairy Tail": "פיירי טייל",
+  "K": "פרויקט קיי",
+  "The Fruit of Evolution: Before I Knew It, My Life Had It Made": "פרי האבולוציה",
+  "Shinka no Mi: Shiranai Uchi ni Kachigumi Jinsei": "פרי האבולוציה",
+  "The Fruit of Grisaia": "פרי גריסאיה",
+  "Grisaia no Kajitsu": "פרי גריסאיה",
+  "Prison School": "פריזון סקול",
+  "Kangoku Gakuen": "פריזון סקול"
 });
