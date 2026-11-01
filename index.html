@@ -53,7 +53,7 @@ h1{font-family:var(--display);font-weight:400;font-size:24px;margin:0;line-heigh
 
 nav.tabs{position:fixed;inset:auto 0 0;z-index:6;background:var(--surface);border-top:1px solid var(--line);
   padding-bottom:env(safe-area-inset-bottom,0px)}
-nav.tabs .wrap{display:grid;grid-template-columns:repeat(4,1fr)}
+nav.tabs .wrap{display:grid;grid-template-columns:repeat(5,1fr)}
 nav.tabs button{background:none;border:0;padding:10px 4px 12px;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--muted);font-size:13px;font-weight:600}
 nav.tabs button svg{width:24px;height:24px}
 nav.tabs button[aria-current="page"]{color:var(--accent)}
@@ -177,6 +177,28 @@ h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute
 .steps li{min-width:0}
 .mono-wrap code{font-size:14px;background:var(--bg);padding:2px 6px;border-radius:6px;word-break:break-all;direction:ltr;unicode-bidi:isolate}
 nav.tabs button{font-size:12px}
+.rail{margin-bottom:22px}
+.railh{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px}
+.railh h2{font-family:var(--display);font-weight:400;font-size:21px;margin:0}
+.rails{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x proximity;padding-bottom:6px;margin-inline:calc(-1*max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px));scrollbar-width:none}
+.rails::-webkit-scrollbar{display:none}
+.rails .pc{flex:none;width:118px;scroll-snap-align:start}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px 10px}
+@media (min-width:560px){.grid{grid-template-columns:repeat(4,1fr)}}
+.pc{position:relative;min-width:0}
+.pcmain{display:block;width:100%;background:none;border:0;padding:0;text-align:start}
+.pimg{position:relative;display:block;aspect-ratio:2/3;border-radius:8px;overflow:hidden;background:var(--line)}
+.pimg img{width:100%;height:100%;object-fit:cover}
+.pscore{position:absolute;top:6px;left:6px;background:rgba(10,10,25,.75);color:#ffd27a;font-size:12px;font-weight:700;padding:1px 6px;border-radius:6px;direction:ltr}
+.pst{position:absolute;bottom:0;inset-inline:0;background:currentColor;font-size:12px;font-weight:700;text-align:center;padding:2px 0}
+.pst span{color:var(--bg)}
+.ptitle{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:13px;font-weight:600;line-height:1.3;margin-top:6px}
+.padd{position:absolute;top:6px;right:6px;width:32px;height:32px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-fg);font-size:20px;font-weight:700;line-height:1;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.sk .pimg{animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.5}}
+.seasonnav{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.seasonnav b{font-family:var(--display);font-weight:400;font-size:22px}
+nav.tabs button{font-size:11px}
 @media (prefers-reduced-motion:no-preference){.rmain,.chip,.btn{transition:transform .1s}.rmain:active{transform:scale(.99)}}
 </style>
 </head>
@@ -189,12 +211,14 @@ nav.tabs button{font-size:12px}
 <main class="wrap" id="view"></main>
 
 <nav class="tabs" aria-label="ניווט"><div class="wrap">
-  <button data-tab="list" aria-current="page">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>הרשימה שלי</button>
+  <button data-tab="home" aria-current="page">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>בית</button>
+  <button data-tab="seasonal">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>עונתי</button>
   <button data-tab="search">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>חיפוש</button>
-  <button data-tab="stats">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>סטטיסטיקות</button>
+  <button data-tab="list">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>הרשימה שלי</button>
   <button data-tab="settings">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>הגדרות</button>
 </div></nav>
@@ -284,12 +308,12 @@ const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">
 let toastT;
 function toast(t){ const el=$("#toast"); el.textContent=t; el.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>el.hidden=true,2800); }
 function setHeader(title, back){ $("#pageTitle").textContent=title; $("#backBtn").hidden=!back; }
-function setTab(t){ document.querySelectorAll("nav.tabs button").forEach(b=>{ if(b.dataset.tab===t) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); }); }
+function setTab(t){ if(t==="stats") t="list"; document.querySelectorAll("nav.tabs button").forEach(b=>{ if(b.dataset.tab===t) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); }); }
 function poster(src, alt){ return src ? `<img src="${esc(src)}" alt="" loading="lazy">` : `<div class="ph" aria-hidden="true"></div>`; }
 
 /* ---------- ניווט ---------- */
 let stack = [];
-let current = {tab:"list"};
+let current = {tab:"home"};
 let listFilter = "watching";
 let lastSearch = {q:"", results:[]};
 
@@ -306,6 +330,8 @@ function render(){
   if(current.tab==="search") return renderSearch();
   if(current.tab==="settings") return renderSettings();
   if(current.tab==="stats") return renderStats();
+  if(current.tab==="home") return renderHome();
+  if(current.tab==="seasonal") return renderSeasonal();
   renderList();
 }
 
@@ -346,10 +372,11 @@ function renderList(){
       ${Object.entries(STATUS).map(([k,s])=>`<button class="chip" data-f="${k}" aria-pressed="${listFilter===k}">${s.label}<span class="n">${counts[k]}</span></button>`).join("")}
       <button class="chip" data-f="all" aria-pressed="${listFilter==="all"}">הכל<span class="n">${all.length}</span></button>
     </div>
-    <div class="sortrow"><label for="sort">מיון</label><select id="sort">${Object.entries(SORTS).map(([k,s])=>`<option value="${k}" ${k===sortKey?"selected":""}>${s.label}</option>`).join("")}</select></div>
+    <div class="sortrow"><label for="sort">מיון</label><select id="sort">${Object.entries(SORTS).map(([k,s])=>`<option value="${k}" ${k===sortKey?"selected":""}>${s.label}</option>`).join("")}</select><button class="linkbtn" id="toStats" style="margin-inline-start:auto">סטטיסטיקות ←</button></div>
     <div class="list">${items.map(rowHTML).join("") || `<div class="empty">אין כאן כלום עדיין.</div>`}</div>`;
   view.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ listFilter=c.dataset.f; renderList(); });
   bindRows(view,"list");
+  const sl=$("#toStats"); if(sl) sl.onclick=()=>go({tab:"stats"});
   $("#sort").onchange=ev=>{ prefs.sort=ev.target.value; savePrefs(); renderList(); };
   const tb=$("#toBackup"); if(tb) tb.onclick=()=>go({tab:"settings"},false);
   const tn=$("#toNew"); if(tn) tn.onclick=()=>{ listFilter="new"; renderList(); };
@@ -382,7 +409,7 @@ function resultHTML(m){
     <button class="side ${mine&&mine.status?"":"addnew"}" data-add="${m.id}" aria-label="הוסף לרשימה">${mine&&mine.status?"⋯":"+"}<small>${mine&&mine.status?"רשימה":"הוסף"}</small></button></div>`;
 }
 function bindRows(root, tab, mediaList){
-  root.querySelectorAll(".rmain").forEach(b=>b.onclick=()=>{
+  root.querySelectorAll(".rmain,.pcmain").forEach(b=>b.onclick=()=>{
     const id=+b.dataset.id; const m = mediaList&&mediaList.find(x=>x.id===id); if(m) cacheMedia[id]=m;
     go({tab, detail:id});
   });
@@ -547,6 +574,94 @@ function renderSearch(){
       lastSearch = {q, results:d.Page.media}; renderSearch();
     }catch(err){ sr.innerHTML = `<div class="msg">החיפוש נכשל: ${esc(err.message)}. בדוק חיבור לאינטרנט ונסה שוב.</div>`; }
   };
+}
+
+
+/* ---------- בית (כמו MAL) ---------- */
+function posterCard(m){
+  const mine = db.items[m.id];
+  const title = m.title ? (m.title.english||m.title.romaji||m.title.native) : m.titleStr;
+  const img = m.coverImage ? (m.coverImage.large||m.coverImage.medium) : m.cover;
+  const score = m.averageScore ? (m.averageScore/10).toFixed(1) : null;
+  return `<div class="pc"><button class="pcmain" data-id="${m.id}">
+      <span class="pimg">${img?`<img src="${esc(img)}" alt="" loading="lazy">`:""}
+        ${score?`<span class="pscore">★ ${score}</span>`:""}
+        ${mine&&mine.status?`<span class="pst ${STATUS[mine.status].cls}"><span>${STATUS[mine.status].label}</span></span>`:""}</span>
+      <span class="ptitle">${esc(title)}</span></button>
+    ${mine&&mine.status?"":`<button class="padd" data-add="${m.id}" aria-label="הוסף לרשימה">+</button>`}</div>`;
+}
+const HOME_Q = (()=>{ const c=curSeason(); const f=`{${MEDIA_FIELDS}}`;
+  return `{
+  season:Page(perPage:15){media(type:ANIME,isAdult:false,season:${c.s},seasonYear:${c.y},sort:POPULARITY_DESC)${f}}
+  trending:Page(perPage:15){media(type:ANIME,isAdult:false,sort:TRENDING_DESC)${f}}
+  top:Page(perPage:15){media(type:ANIME,isAdult:false,sort:SCORE_DESC,format_in:[TV,MOVIE,ONA,OVA])${f}}
+  popular:Page(perPage:15){media(type:ANIME,isAdult:false,sort:POPULARITY_DESC)${f}}
+  upcoming:Page(perPage:15){media(type:ANIME,isAdult:false,status:NOT_YET_RELEASED,sort:POPULARITY_DESC)${f}}
+}`; })();
+let homeData = null;
+async function renderHome(){
+  setHeader("אנימה", false);
+  const watching = Object.values(db.items).filter(e=>e.status==="watching").sort((a,b)=>(newEps(b)>0)-(newEps(a)>0)||b.updated-a.updated);
+  const rail = (title, key, items, more) => `<section class="rail"><div class="railh"><h2>${title}</h2>${more?`<button class="linkbtn" data-more="${more}">הכל ←</button>`:""}</div>
+    <div class="rails" data-rail="${key}">${items}</div></section>`;
+  const sk = Array.from({length:6},()=>`<div class="pc sk"><span class="pimg"></span><span class="ptitle">&nbsp;</span></div>`).join("");
+  const mineRail = watching.length ? rail("בצפייה עכשיו","mine",watching.map(e=>posterCard({id:e.id,titleStr:e.title,cover:e.cover})).join(""),"list") : "";
+  const sec = [["season",`העונה הנוכחית`,"season"],["trending","חם עכשיו","trending"],["top","המדורגים ביותר","top"],["popular","הכי פופולריים","popular"],["upcoming","בקרוב","upcoming"]];
+  const paint = ()=>{
+    view.innerHTML = mineRail + (Object.keys(db.items).length?"":`<div class="msg">ברוך הבא! לוחצים על <b>+</b> על פוסטר כדי להוסיף אנימה לאחת הרשימות.</div>`) +
+      sec.map(([k,t,more])=>rail(t,k,homeData?homeData[k].media.map(posterCard).join(""):sk,more)).join("");
+    const all = homeData ? sec.flatMap(([k])=>homeData[k].media) : [];
+    bindRows(view,"home",all);
+    view.querySelectorAll("[data-more]").forEach(b=>b.onclick=()=>{
+      const k=b.dataset.more;
+      if(k==="list"){ listFilter="watching"; go({tab:"list"},false); return; }
+      if(k==="season"){ go({tab:"seasonal"},false); return; }
+      browseTab=k; lastSearch={q:"",results:[]}; go({tab:"search"},false);
+    });
+  };
+  paint();
+  if(!homeData){
+    try{ homeData = await anilist(`query${HOME_Q}`,{}); for(const [k] of sec) browseCache[k]=browseCache[k]||null; if(current.tab==="home"&&!current.detail) paint(); }
+    catch(err){ if(current.tab==="home"&&!current.detail) view.insertAdjacentHTML("afterbegin",`<div class="msg">לא הצלחתי לטעון אנימות: ${esc(err.message)}. בדוק חיבור לאינטרנט.</div>`); }
+  }
+}
+
+/* ---------- עונתי ---------- */
+const SEASONS = ["WINTER","SPRING","SUMMER","FALL"];
+let seasonSel = null, seasonFmt = "TV";
+const seasonCache = {};
+async function renderSeasonal(){
+  if(!seasonSel) seasonSel = curSeason();
+  const {s,y} = seasonSel;
+  setHeader("אנימה עונתית", false);
+  const key = `${s}-${y}`;
+  const FMTS = {TV:"סדרות",TV_SHORT:"קצרות",MOVIE:"סרטים",ONA:"ONA",OVA:"OVA",SPECIAL:"ספיישלים"};
+  view.innerHTML = `
+    <div class="seasonnav">
+      <button class="btn" id="sPrev" aria-label="עונה קודמת">→</button>
+      <b>${SEASON_HE[s]} ${y}</b>
+      <button class="btn" id="sNext" aria-label="עונה הבאה">←</button>
+    </div>
+    <div class="chips" style="margin:10px 0">${Object.entries(FMTS).map(([k,l])=>`<button class="chip" data-fmt="${k}" aria-pressed="${seasonFmt===k}">${l}</button>`).join("")}</div>
+    <div class="grid" id="sg">${Array.from({length:9},()=>`<div class="pc sk"><span class="pimg"></span><span class="ptitle">&nbsp;</span></div>`).join("")}</div>`;
+  const step = d=>{ let i=SEASONS.indexOf(s)+d, yy=y; if(i<0){i=3;yy--;} if(i>3){i=0;yy++;} seasonSel={s:SEASONS[i],y:yy}; renderSeasonal(); };
+  $("#sPrev").onclick=()=>step(-1); $("#sNext").onclick=()=>step(1);
+  view.querySelectorAll("[data-fmt]").forEach(c=>c.onclick=()=>{ seasonFmt=c.dataset.fmt; renderSeasonal(); });
+  try{
+    if(!seasonCache[key]){
+      let all=[], page=1, more=true;
+      while(more && page<=4){
+        const d = await anilist(`query($s:MediaSeason,$y:Int,$p:Int){Page(page:$p,perPage:50){pageInfo{hasNextPage} media(type:ANIME,isAdult:false,season:$s,seasonYear:$y,sort:POPULARITY_DESC){${MEDIA_FIELDS}}}}`,{s,y,p:page});
+        all = all.concat(d.Page.media); more = d.Page.pageInfo.hasNextPage; page++;
+      }
+      seasonCache[key]=all;
+    }
+    if(current.tab!=="seasonal"||current.detail||seasonSel.s!==s||seasonSel.y!==y) return;
+    const list = seasonCache[key].filter(m=>m.format===seasonFmt);
+    const sg=$("#sg");
+    sg.innerHTML = list.length ? list.map(posterCard).join("") : `<div class="empty" style="grid-column:1/-1">אין כאן אנימות בעונה הזו.</div>`;
+    bindRows(sg,"seasonal",seasonCache[key]);
+  }catch(err){ const sg=$("#sg"); if(sg) sg.innerHTML=`<div class="msg" style="grid-column:1/-1">לא הצלחתי לטעון: ${esc(err.message)}</div>`; }
 }
 
 /* ---------- מסך אנימה ---------- */
