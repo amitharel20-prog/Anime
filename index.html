@@ -596,7 +596,10 @@ function renderSettings(){
 
 /* ---------- סנכרון בין מכשירים (Supabase) ---------- */
 const SYNC_KEY = KEY+".sync";
-function syncCfg(){ try{ const c=JSON.parse(localStorage.getItem(SYNC_KEY)); return c&&c.url&&c.key&&c.code?c:null; }catch(e){ return null; } }
+// שרת הסנכרון של האפליקציה. זה מפתח ציבורי (publishable), מותר שיהיה בקוד.
+const SB_URL = "https://mbhfyvhdqlpfmeluurit.supabase.co";
+const SB_KEY = "sb_publishable_OAfLNA1oN0f5Fyzcd_uNuw_0FWcWYtf";
+function syncCfg(){ try{ const c=JSON.parse(localStorage.getItem(SYNC_KEY)); if(!c||!c.code) return null; return {...c,url:SB_URL,key:SB_KEY}; }catch(e){ return null; } }
 function setSyncCfg(c){ try{ c?localStorage.setItem(SYNC_KEY,JSON.stringify(c)):localStorage.removeItem(SYNC_KEY); }catch(e){} }
 let syncT, syncing=false, syncState="";
 function scheduleSync(){ if(!syncCfg()) return; clearTimeout(syncT); syncT=setTimeout(()=>syncNow(true),3000); }
@@ -647,27 +650,7 @@ async function syncNow(silent){
 }
 function updSyncLine(){ const el=$("#syncLine"); if(el) el.textContent=syncState||""; }
 function newCode(){ const a=new Uint8Array(20); crypto.getRandomValues(a); return Array.from(a,b=>"abcdefghjkmnpqrstuvwxyz23456789"[b%31]).join("").replace(/(.{5})(?!$)/g,"$1-"); }
-const SYNC_SQL = `create table if not exists anime_sync (
-  code text primary key,
-  data jsonb not null,
-  updated_at timestamptz default now()
-);
-alter table anime_sync enable row level security;
 
-create or replace function get_list(p_code text) returns jsonb
-language sql security definer set search_path = public as $$
-  select data from anime_sync where code = p_code
-$$;
-
-create or replace function save_list(p_code text, p_data jsonb) returns void
-language plpgsql security definer set search_path = public as $$
-begin
-  if length(p_code) < 20 then raise exception 'code too short'; end if;
-  insert into anime_sync(code, data, updated_at) values (p_code, p_data, now())
-  on conflict (code) do update set data = excluded.data, updated_at = now();
-end $$;
-
-grant execute on function get_list(text), save_list(text, jsonb) to anon;`;
 
 function syncCardHTML(){
   const c = syncCfg();
@@ -677,19 +660,12 @@ function syncCardHTML(){
     <p id="syncLine" class="note">${esc(syncState)}</p>
     <div class="actions"><button class="btn primary" id="syncGo">סנכרן עכשיו</button><button class="btn" id="copyCode">העתק קוד</button><button class="btn" id="syncOff">נתק</button></div></div>`;
   return `<div class="card"><h2>סנכרון בין מכשירים</h2>
-    <p>כדי לראות את אותה רשימה בטלפון ובמחשב. דורש חשבון חינמי ב־Supabase, והגדרה של פעם אחת.</p>
-    <details><summary>איך מגדירים (5 דקות)</summary>
-      <ol class="steps">
-        <li>נרשמים ב־supabase.com ויוצרים פרויקט חדש (New project). הסיסמה שם לא נכנסת לכאן.</li>
-        <li>בתפריט נכנסים ל־<b>SQL Editor</b>, מדביקים את הקוד הזה ולוחצים <b>Run</b>:
-          <pre dir="ltr" id="sqlBox">${esc(SYNC_SQL)}</pre><button class="btn" id="copySql">העתק את הקוד</button></li>
-        <li>נכנסים ל־<b>Project Settings ← API Keys</b> (או לכפתור Connect), ומעתיקים לכאן את כתובת הפרויקט ואת ה־<b>Publishable key</b> (או anon key). את ה־secret / service_role לא מעתיקים לעולם.</li>
-        <li>במכשיר הראשון לוחצים "צור קוד חדש". במכשיר השני מדביקים את אותו קוד.</li>
-      </ol></details>
-    <label class="fld">כתובת הפרויקט<input type="text" id="sbUrl" dir="ltr" placeholder="https://xxxx.supabase.co" autocomplete="off"></label>
-    <label class="fld">Publishable / anon key<input type="text" id="sbKey" dir="ltr" placeholder="sb_publishable_…" autocomplete="off"></label>
-    <label class="fld">קוד סנכרון<input type="text" id="sbCode" dir="ltr" placeholder="לחץ על צור קוד חדש" autocomplete="off"></label>
-    <div class="actions"><button class="btn" id="genCode">צור קוד חדש</button><button class="btn primary" id="syncOn">התחבר</button></div>
+    <p>שומר את הרשימה גם בשרת, כדי שתהיה זהה בטלפון, במחשב ובכל מכשיר אחר.</p>
+    <p><b>במכשיר הראשון:</b> לוחצים "הפעל סנכרון". האפליקציה יוצרת קוד אישי.</p>
+    <div class="actions" style="margin-bottom:14px"><button class="btn primary" id="genOn">הפעל סנכרון</button></div>
+    <p><b>במכשיר נוסף:</b> מדביקים את הקוד מהמכשיר הראשון.</p>
+    <input type="text" id="sbCode" dir="ltr" placeholder="xxxxx-xxxxx-xxxxx-xxxxx" autocomplete="off">
+    <div class="actions"><button class="btn" id="syncOn">התחבר עם קוד</button></div>
     <p class="note">הקוד הוא כמו סיסמה לרשימה: מי שיש לו אותו יכול לראות ולשנות אותה.</p>
     <p id="syncLine" class="note">${esc(syncState)}</p></div>`;
 }
@@ -704,18 +680,17 @@ function bindSyncCard(){
     $("#syncOff").onclick=()=>{ setSyncCfg(null); syncState=""; toast("הסנכרון נותק. הרשימה נשארת בטלפון."); renderSettings(); };
     return;
   }
-  $("#copySql").onclick=()=>copyText(SYNC_SQL,"הקוד הועתק");
-  $("#genCode").onclick=()=>{ $("#sbCode").value=newCode(); };
-  $("#syncOn").onclick=async ()=>{
-    let url=$("#sbUrl").value.trim(), key=$("#sbKey").value.trim(), code=$("#sbCode").value.trim();
-    if(!/^https:\/\/.+/.test(url)) return toast("הכתובת צריכה להתחיל ב־https://");
-    if(!key) return toast("חסר המפתח");
-    if(/service_role|sb_secret_/.test(key)) return toast("זה המפתח הסודי! תעתיק את ה־Publishable / anon key");
-    if(code.length<20) return toast("הקוד קצר מדי. לחץ 'צור קוד חדש'");
-    setSyncCfg({url,key,code});
+  const connect = async code=>{
+    setSyncCfg({code});
     await syncNow(false);
     if(syncState.startsWith("הסנכרון נכשל")){ const msg=syncState; setSyncCfg(null); renderSettings(); syncState=msg; updSyncLine(); }
-    else renderSettings();
+    else { toast("הסנכרון פעיל"); renderSettings(); }
+  };
+  $("#genOn").onclick=()=>connect(newCode());
+  $("#syncOn").onclick=()=>{
+    const code=$("#sbCode").value.trim();
+    if(code.length<20) return toast("הקוד קצר מדי. העתק אותו שוב מהמכשיר הראשון");
+    connect(code);
   };
 }
 
