@@ -24,6 +24,8 @@ window.HE_FAN_NAMES = {
   "Kage no Jitsuryokusha ni Naritakute!": "העליון שבצללים",
   "Alya Sometimes Hides Her Feelings in Russian": "אליה לפעמים מסתירה את רגשותיה ברוסית",
   "Tokidoki Bosotto Russia-go de Dereru Tonari no Alya-san": "אליה לפעמים מסתירה את רגשותיה ברוסית",
+  "Tokidoki Bosotto Roshia-go de Dereru Tonari no Alya-san": "אליה לפעמים מסתירה את רגשותיה ברוסית",
+  "Tokidoki Bosotto Rossiya-go de Dereru Tonari no Alya-san": "אליה לפעמים מסתירה את רגשותיה ברוסית",
   "Demon Slayer: Kimetsu no Yaiba": "קוטל השדים",
   "Demon Slayer": "קוטל השדים",
   "Kimetsu no Yaiba": "קוטל השדים",

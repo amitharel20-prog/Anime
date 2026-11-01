@@ -1,5 +1,5 @@
 // שומר את קבצי האפליקציה כדי שתיפתח גם בלי אינטרנט. מידע מ-AniList לא נשמר כאן.
-const CACHE = "anime-tracker-v46";
+const CACHE = "anime-tracker-v47";
 const SHELL = ["./", "index.html", "he-names.js", "manifest.webmanifest", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", e => {
