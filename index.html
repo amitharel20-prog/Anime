@@ -345,7 +345,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 41;
+const APP_VERSION = 42;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -704,7 +704,9 @@ function fanFor(o){
   if(fanMemo.has(o.id)) return fanMemo.get(o.id);
   const titles = [enTitle(o), o.romaji||(o.title&&o.title.romaji)||"", o.title&&o.title.english||""].filter(Boolean);
   let res=null;
-  for(const t of titles){ const k=keyN(t); if(FAN.has(k)){ res=FAN.get(k); break; } }
+  const mal = o.idMal || (db.items[o.id]&&db.items[o.id].idMal);
+  if(mal && window.HE_BY_MAL && window.HE_BY_MAL[mal]) res = window.HE_BY_MAL[mal];
+  if(!res) for(const t of titles){ const k=keyN(t); if(FAN.has(k)){ res=FAN.get(k); break; } }
   if(!res){
     for(const t of titles){
       const k=keyN(t), base=FAN_KEYS.find(b=>k.startsWith(b));
@@ -760,6 +762,10 @@ async function mt(text, pair){
 }
 // מילים קבועות בשמות עונות
 function phraseHe(s){
+  s = s.replace(/^[\s!?.,:;\-–~]+/,"").replace(/[\s~\-–]+$/,"");
+  if(/^\d+$/.test(s.trim())) return "עונה "+s.trim();
+  const ord = {first:1,second:2,third:3,fourth:4,fifth:5,sixth:6};
+  s = s.replace(/\b(first|second|third|fourth|fifth|sixth) season\b/gi,(m,w)=>"season "+ord[w.toLowerCase()]);
   let x = " "+s.trim()+" ";
   const rom = {II:2,III:3,IV:4,V:5,VI:6}; const mr = s.trim().match(/^(II|III|IV|V|VI)$/); if(mr) return "עונה "+rom[mr[1]];
   x = x.replace(/\bthe final season\b/gi,"העונה האחרונה").replace(/\bfinal season\b/gi,"העונה האחרונה")
