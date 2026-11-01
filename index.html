@@ -248,13 +248,13 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 10;
-// חד־פעמי: אנימות ב"נצפה" בלי אף פרק שסומן כנצפה עוברות ל"בהמתנה"
-if(!db.meta.doneZeroToHold){
+const APP_VERSION = 11;
+// חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
+if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
-    if(e.status==="done" && !Object.values(e.eps||{}).some(x=>x.w)){ e.status="hold"; e.updated=Date.now(); }
+    if((e.status==="done"||e.status==="watching") && !Object.values(e.eps||{}).some(x=>x.w)){ e.status="hold"; e.updated=Date.now(); }
   }
-  db.meta.doneZeroToHold = true;
+  db.meta.zeroToHold2 = true;
   try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){}
 }
 function save(sync=true){
@@ -923,7 +923,7 @@ const ALS = {CURRENT:"watching",REPEATING:"watching",PAUSED:"hold",PLANNING:"pla
 function applyImported(m, status, score, progress){
   const e = db.items[m.id] || entryFromMedia(m);
   // "נצפה" בלי אף פרק מסומן עובר ל"בהמתנה"
-  if(status==="done" && !(progress>0)) status = "hold";
+  if((status==="done"||status==="watching") && !(progress>0)) status = "hold";
   e.status = status; if(score) e.score = Math.round(score);
   // ההתקדמות מהייבוא קובעת אילו פרקים סומנו (ציוני פרקים נשמרים)
   const p = progress || 0;
