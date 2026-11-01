@@ -248,7 +248,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 12;
+const APP_VERSION = 13;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -753,8 +753,17 @@ function detailHTML(id, m){
     if(!it.status) it.status="done"; touch(it); detailHTML(id,m);
   });
   view.querySelectorAll("[data-ep]").forEach(c=>c.onchange=()=>{
-    const it=getOrCreate(id,base); const n=c.dataset.ep;
-    it.eps[n]={...(it.eps[n]||{}),w:c.checked}; if(!it.status) it.status="watching";
+    const it=getOrCreate(id,base); const n=+c.dataset.ep;
+    if(c.checked){
+      // מסמן גם את כל הפרקים שבין הפרק האחרון שסומן לבין הפרק הזה
+      const from = watchedMax(it)+1;
+      for(let k=Math.min(from,n);k<=n;k++){ it.eps[k]={...(it.eps[k]||{}),w:true}; const cb=$("#w"+k); if(cb) cb.checked=true; }
+      if(n-from>=1) toast(`סומנו פרקים ${from}–${n}`);
+      if(!it.status||it.status==="plan"||it.status==="hold") it.status="watching";
+    } else {
+      it.eps[n]={...(it.eps[n]||{}),w:false};
+      if(!it.status) it.status="watching";
+    }
     const w=watchedCount(it); if(it.episodes && w===it.episodes && it.status==="watching"){ it.status="done"; toast("סיימת את כל הפרקים. עבר לרשימת 'נצפה'"); detailHTML(id,m); }
     touch(it);
   });
