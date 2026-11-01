@@ -291,7 +291,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 19;
+const APP_VERSION = 20;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -346,7 +346,7 @@ const MEDIA_FIELDS = `id idMal isAdult title{romaji english native} coverImage{l
 async function anilist(query, variables, tries=3){
   for(let i=0;i<tries;i++){
     const r = await fetch("https://graphql.anilist.co",{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({query,variables})});
-    if(r.status===429){ const wait=(+r.headers.get("Retry-After")||30)*1000; await sleep(wait); continue; }
+    if(r.status===429){ const wait=Math.min(15,(+r.headers.get("Retry-After")||5))*1000; await sleep(wait); continue; }
     const j = await r.json();
     if(j.errors){ throw new Error(j.errors[0].message); }
     return j.data;
@@ -542,7 +542,7 @@ async function refreshFromAniList(){
         e.next = m.nextAiringEpisode?{ep:m.nextAiringEpisode.episode,at:m.nextAiringEpisode.airingAt}:null;
         if(!m.episodes && m.nextAiringEpisode) e.episodes = Math.max(e.episodes||0, m.nextAiringEpisode.episode-1);
       }
-      if(i+50<need.length) await sleep(800);
+      if(i+50<need.length) await sleep(2500);
     }
     save(false);
     const grew = need.filter(e=>e.status==="watching" && aired(db.items[e.id]||e)>before[e.id] && last);
@@ -608,10 +608,14 @@ const BROWSE = {
 };
 const browseCache = {};
 let browseTab = "season";
+// שמירת תוצאות הגילוי בטלפון, כדי שיופיעו מיד בפתיחה (מתרעננות ברקע כל שעה)
+function storedBrowse(k){ try{ const c=JSON.parse(localStorage.getItem(KEY+".browse."+k+(prefs.adult?".a":""))); return c&&c.data?c:null; }catch(e){ return null; } }
+function storeBrowse(k,data){ try{ localStorage.setItem(KEY+".browse."+k+(prefs.adult?".a":""),JSON.stringify({t:Date.now(),data})); }catch(e){} }
 async function loadBrowse(k){
   if(browseCache[k]) return browseCache[k];
   const [args,vars,decl] = BROWSE[k].q();
   const d = await anilist(`query${decl?`(${decl})`:""}{Page(perPage:40){media(type:ANIME,${adultFilter()}${args}){${MEDIA_FIELDS}}}}`,vars);
+  storeBrowse(k,d.Page.media);
   return browseCache[k]=d.Page.media;
 }
 function renderSearch(){
@@ -628,9 +632,14 @@ function renderSearch(){
   const showBrowse = async ()=>{
     bar.innerHTML = `<div class="chips" style="margin-top:12px">${Object.entries(BROWSE).map(([k,b])=>`<button class="chip" data-b="${k}" aria-pressed="${browseTab===k}">${b.label()}</button>`).join("")}</div>`;
     bar.querySelectorAll("[data-b]").forEach(c=>c.onclick=()=>{ browseTab=c.dataset.b; showBrowse(); });
-    if(!browseCache[browseTab]) sr.innerHTML=`<div class="empty">טוען…</div>`;
-    try{ const res = await loadBrowse(browseTab); if(!lastSearch.q) show(res); }
-    catch(err){ sr.innerHTML=`<div class="msg">לא הצלחתי לטעון: ${esc(err.message)}. בדוק חיבור לאינטרנט.</div>`; }
+    const k = browseTab;
+    const stored = !browseCache[k] && storedBrowse(k);
+    if(stored){ show(stored.data); if(Date.now()-stored.t<3600e3){ browseCache[k]=stored.data; return; } }
+    else if(!browseCache[k]) sr.innerHTML=`<div class="empty">טוען…</div>`;
+    const slow = setTimeout(()=>{ if(browseTab===k && !browseCache[k] && !stored) sr.innerHTML=`<div class="empty">AniList איטי כרגע, ממשיך לנסות…</div>`; }, 6000);
+    try{ const res = await loadBrowse(k); if(!lastSearch.q && browseTab===k && current.tab==="search" && !current.detail) show(res); }
+    catch(err){ if(!stored && browseTab===k) { sr.innerHTML=`<div class="msg">לא הצלחתי לטעון: ${esc(err.message)}</div><button class="btn" id="retryB">נסה שוב</button>`; const rb=$("#retryB"); if(rb) rb.onclick=showBrowse; } }
+    finally{ clearTimeout(slow); }
   };
   if(lastSearch.q){
     bar.innerHTML = `<button class="linkbtn" id="clearQ" style="margin-top:8px">← חזרה לגילוי אנימות</button>`;
@@ -1087,7 +1096,9 @@ async function checkForUpdate(){
 checkForUpdate();
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") checkForUpdate(); });
 render();
-setTimeout(()=>{ syncNow(true).finally(refreshFromAniList); }, 600);
+setTimeout(()=>{ syncNow(true); }, 600);
+// רענון פרקים ברקע: רק אחרי שהמסך נטען, ולכל היותר פעם בחצי שעה
+setTimeout(()=>{ if(Date.now()-(prefs.lastRefresh||0)>30*60e3) refreshFromAniList(); }, 8000);
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"){ syncNow(true); if(Date.now()-(prefs.lastRefresh||0)>30*60e3) refreshFromAniList(); } });
 </script>
 </body>
