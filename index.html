@@ -339,7 +339,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 37;
+const APP_VERSION = 38;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -443,7 +443,7 @@ $("#langBtn").onclick=()=>{ prefs.lang = isHeLang() ? "en" : "he"; savePrefs(); 
 
 /* ---------- ניווט ---------- */
 let stack = [];
-let current = {tab:"search"};
+let current = {tab:"home"};
 let listFilter = "watching";
 let lastSearch = {q:"", results:[]};
 
