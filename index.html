@@ -339,7 +339,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 38;
+const APP_VERSION = 39;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -395,7 +395,7 @@ function epCount(m){
 function watchedCount(e){ return Object.values(e.eps||{}).filter(x=>x.w).length; }
 
 /* ---------- AniList ---------- */
-const MEDIA_FIELDS = `id idMal isAdult title{romaji english native} coverImage{large medium} episodes format status seasonYear startDate{year month day} averageScore genres duration nextAiringEpisode{episode airingAt}`;
+const MEDIA_FIELDS = `id idMal isAdult title{romaji english native} coverImage{extraLarge large medium} episodes format status seasonYear startDate{year month day} averageScore genres duration nextAiringEpisode{episode airingAt}`;
 async function anilist(query, variables, tries=3){
   for(let i=0;i<tries;i++){
     const r = await fetch("https://graphql.anilist.co",{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({query,variables})});
@@ -627,7 +627,7 @@ function resultHTML(m){
   const mine0 = db.items[m.id]; const mine = mine0&&!mine0.locked ? mine0 : null;
   const title = m.title.english || m.title.romaji || m.title.native;
   const sub = [FORMAT[m.format]||m.format, m.seasonYear, epCount(m)?epCount(m)+" פרקים":null].filter(Boolean).join(" · ");
-  return `<div class="row"><button class="rmain" data-id="${m.id}">${poster(m.coverImage&&(m.coverImage.medium||m.coverImage.large), m.isAdult)}
+  return `<div class="row"><button class="rmain" data-id="${m.id}">${poster(m.coverImage&&(m.coverImage.large||m.coverImage.medium), m.isAdult)}
     <span class="t"><span class="name">${tn(m)}</span><span class="sub">${esc(sub)}${m.isAdult?' · <b class="r18">18+</b>':""}</span>
     ${mine&&mine.status?`<span class="pill ${STATUS[mine.status].cls}">${STATUS[mine.status].label}</span>`:""}</span>
     <span class="myscore">${m.averageScore?(m.averageScore/10).toFixed(1):"–"}<small>AniList</small></span></button>
@@ -1036,7 +1036,7 @@ function renderSearch(){
 function posterCard(m){
   const mine0 = db.items[m.id]; const mine = mine0&&!mine0.locked ? mine0 : null;
   const title = m.title ? (m.title.english||m.title.romaji||m.title.native) : m.titleStr;
-  const img = m.coverImage ? (m.coverImage.medium||m.coverImage.large) : m.cover;
+  const img = m.coverImage ? (m.coverImage.large||m.coverImage.medium) : m.cover;
   const score = m.averageScore ? (m.averageScore/10).toFixed(1) : null;
   return `<div class="pc"><button class="pcmain" data-id="${m.id}">
       <span class="pimg">${img?`<img src="${esc(img)}" alt="" loading="lazy"${(m.isAdult||m.adult)?' class="adultimg"':""}>`:""}
@@ -1135,7 +1135,7 @@ async function renderDetail(id){
   paint();
   if(!m){
     try{
-      const d = await anilist(`query($id:Int){Media(id:$id){${MEDIA_FIELDS} description(asHtml:false) airingSchedule(perPage:150){nodes{episode airingAt}} bannerImage season studios(isMain:true){nodes{name}} trailer{id site} streamingEpisodes{title} relations{edges{relationType node{id type format title{romaji english} coverImage{medium} seasonYear}}}}}`,{id});
+      const d = await anilist(`query($id:Int){Media(id:$id){${MEDIA_FIELDS} description(asHtml:false) airingSchedule(perPage:150){nodes{episode airingAt}} bannerImage season studios(isMain:true){nodes{name}} trailer{id site} streamingEpisodes{title} relations{edges{relationType node{id type format title{romaji english} coverImage{large medium} seasonYear}}}}}`,{id});
       m = cacheMedia[id+"full"] = d.Media;
       // עדכון נתונים שהשתנו (למשל פרקים חדשים בסדרה משודרת)
       if(db.items[id]){ const fresh=entryFromMedia(m); Object.assign(db.items[id],{episodes:fresh.episodes,cover:fresh.cover||db.items[id].cover,title:db.items[id].title||fresh.title,genres:fresh.genres,duration:fresh.duration,air:fresh.air,next:fresh.next}); save(false); }
@@ -1173,7 +1173,7 @@ function detailHTML(id, m){
   const trailer = m&&m.trailer&&m.trailer.site==="youtube" ? "https://www.youtube.com/watch?v="+encodeURIComponent(m.trailer.id) : "";
   view.innerHTML = `
     ${banner&&!(base&&base.isAdult)?`<div class="banner" style="background-image:url('${esc(banner)}')"></div>`:""}
-    <div class="hero ${banner?"over":""}">${base&&base.coverImage?`<img src="${esc(base.coverImage.large||base.coverImage.medium)}" alt=""${base.isAdult?' class="adultimg"':""}>`:poster(e.cover, e.adult)}
+    <div class="hero ${banner?"over":""}">${base&&base.coverImage?`<img src="${esc(base.coverImage.extraLarge||base.coverImage.large||base.coverImage.medium)}" alt=""${base.isAdult?' class="adultimg"':""}>`:poster(e.cover, e.adult)}
       <div><h2>${isHeLang()?tn(e):esc(enTitle(e))}</h2>
         ${(()=>{ const c=heOf(id); const lines=[];
           if(isHeLang()){ if(c) lines.push(`<div class="alt" dir="ltr">${esc(enTitle(e))}</div>`); }
@@ -1209,7 +1209,7 @@ function detailHTML(id, m){
 
     ${desc?`<h3>תקציר (באנגלית)</h3><p class="desc clamp" id="desc" dir="ltr" style="text-align:left">${esc(desc).replace(/\n+/g,"<br>")}</p><div class="desctools"><button class="linkbtn" id="more">הצג עוד</button><a class="linkbtn" href="https://translate.google.com/?sl=en&tl=iw&op=translate&text=${encodeURIComponent(desc.slice(0,4500))}" target="_blank" rel="noopener">תרגם לעברית ←</a></div>`:""}
 
-    ${rels.length?`<h3>עונות וסדרות קשורות</h3><div class="rel">${rels.map(r=>`<button data-rid="${r.node.id}"><img src="${esc(r.node.coverImage&&r.node.coverImage.medium||"")}" alt=""><em>${REL[r.relationType]||"קשור"}${r.node.seasonYear?" · "+r.node.seasonYear:""}</em><span>${tn({id:r.node.id,title:r.node.title})}</span></button>`).join("")}</div>`:""}
+    ${rels.length?`<h3>עונות וסדרות קשורות</h3><div class="rel">${rels.map(r=>`<button data-rid="${r.node.id}"><img src="${esc(r.node.coverImage&&(r.node.coverImage.large||r.node.coverImage.medium)||"")}" alt=""><em>${REL[r.relationType]||"קשור"}${r.node.seasonYear?" · "+r.node.seasonYear:""}</em><span>${tn({id:r.node.id,title:r.node.title})}</span></button>`).join("")}</div>`:""}
 
     <h3>פרקים</h3>
     ${showCount?`<div class="eptools"><button class="btn" id="allW">סמן הכל כנצפה</button><button class="btn" id="noneW">נקה סימונים</button></div>
