@@ -258,6 +258,9 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 .lockbar{display:flex;align-items:center;gap:8px;margin-top:12px;color:var(--accent);font-weight:700}
 
 .lockact{display:flex;align-items:center;justify-content:center;gap:6px}
+.dlock{display:flex;align-items:center;justify-content:center;gap:6px;border:1px dashed var(--accent);background:var(--surface);border-radius:10px;padding:10px 2px;font-weight:700;font-size:14px;color:var(--accent)}
+.statusset .dlock[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);border-style:solid;color:var(--accent-fg)}
+.statusset .dlock[aria-pressed="true"] span{color:var(--accent-fg)}
 @media (prefers-reduced-motion:no-preference){.rmain,.chip,.btn{transition:transform .1s}.rmain:active{transform:scale(.99)}}
 </style>
 </head>
@@ -311,7 +314,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 26;
+const APP_VERSION = 27;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -508,8 +511,8 @@ function renderList(){
     <div class="chips" role="group" aria-label="סינון">
       ${fresh.length?`<button class="chip" data-f="new" aria-pressed="${listFilter==="new"}">פרקים חדשים<span class="n">${fresh.length}</span></button>`:""}
       ${Object.entries(STATUS).map(([k,s])=>`<button class="chip schip ${s.cls}" data-f="${k}" aria-pressed="${listFilter===k}"><span class="cl">${s.label}</span><span class="n">${counts[k]}</span></button>`).join("")}
-      <button class="chip" data-f="all" aria-pressed="${listFilter==="all"}">הכל<span class="n">${all.length}</span></button>
       <button class="chip lockchip" data-f="locked" aria-pressed="${showLocked}">${LOCK_ICON}<span class="cl">נעול</span>${lockOpen?`<span class="n">${lockedItems.length}</span>`:""}</button>
+      <button class="chip" data-f="all" aria-pressed="${listFilter==="all"}">הכל<span class="n">${all.length}</span></button>
     </div>
     <div class="sortrow"><label for="sort">מיון</label><select id="sort">${Object.entries(SORTS).map(([k,s])=>`<option value="${k}" ${k===sortKey?"selected":""}>${s.label}</option>`).join("")}</select><button class="linkbtn" id="toStats" style="margin-inline-start:auto">סטטיסטיקות ←</button></div>
     ${showLocked&&!lockOpen ? lockScreenHTML() : `${showLocked?`<div class="lockbar">${LOCK_ICON}<span>רשימה נעולה</span><button class="linkbtn" id="chpin" style="margin-inline-start:auto">שנה קוד</button><button class="linkbtn" id="relock" style="margin-inline-start:12px">נעל שוב</button></div>`:""}
@@ -902,7 +905,7 @@ function detailHTML(id, m){
       </div></div>
 
     <h3>סטטוס</h3>
-    <div class="statusset">${Object.entries(STATUS).map(([k,s])=>`<button class="${s.cls}" data-s="${k}" aria-pressed="${e.status===k}"><span>${s.label}</span></button>`).join("")}</div>
+    <div class="statusset">${Object.entries(STATUS).map(([k,s])=>`<button class="${s.cls}" data-s="${k}" aria-pressed="${e.status===k}"><span>${s.label}</span></button>`).join("")}<button class="dlock" id="dLock" aria-pressed="${!!(db.items[id]&&db.items[id].locked)}">${LOCK_ICON}<span>${db.items[id]&&db.items[id].locked?"בנעול":"נעול"}</span></button></div>
 
     <h3>הציון שלי</h3>
     <div class="scorebox">
@@ -930,6 +933,10 @@ function detailHTML(id, m){
     if(it.status==="done" && it.episodes && !watchedCount(it)){ for(let n=1;n<=it.episodes;n++){ it.eps[n]={...(it.eps[n]||{}),w:true}; } }
     touch(it); detailHTML(id,m); toast(it.status?`סומן: ${STATUS[it.status].label}`:"הסטטוס הוסר");
   });
+  $("#dLock").onclick=()=>{
+    const it=getOrCreate(id,base); if(!it.status) it.status="done";
+    it.locked=!it.locked; touch(it); toast(it.locked?"הועבר לנעול":"הוצא מהנעול"); detailHTML(id,m);
+  };
   const rng=$("#scRange"), out=$("#scOut");
   const setScore = v=>{
     v = Math.round(Math.min(10,Math.max(1,v))*10)/10;
