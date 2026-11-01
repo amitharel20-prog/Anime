@@ -352,7 +352,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 68;
+const APP_VERSION = 69;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -1083,9 +1083,11 @@ async function refreshFromAniList(){
     const before = {}; need.forEach(e=>before[e.id]=aired(e));
     for(let i=0;i<need.length;i+=50){
       const ids = need.slice(i,i+50).map(e=>e.id);
-      const d = await anilist(`query($ids:[Int]){Page(perPage:50){media(id_in:$ids,type:ANIME){id episodes status duration genres startDate{year month day} nextAiringEpisode{episode airingAt} relations{edges{relationType node{id type}}}}}}`,{ids});
+      const d = await anilist(`query($ids:[Int]){Page(perPage:50){media(id_in:$ids,type:ANIME){id episodes status duration genres coverImage{large medium} title{english romaji} startDate{year month day} nextAiringEpisode{episode airingAt} relations{edges{relationType node{id type}}}}}}`,{ids});
       for(const m of d.Page.media){
         const e = db.items[m.id]; if(!e) continue;
+        if(!e.cover && m.coverImage) e.cover = m.coverImage.large||m.coverImage.medium;
+        if(!e.title && m.title) e.title = m.title.english||m.title.romaji;
         e.episodes = m.episodes || e.episodes; e.air = m.status; e.duration = m.duration||null; e.genres = m.genres||[];
         e.next = m.nextAiringEpisode?{ep:m.nextAiringEpisode.episode,at:m.nextAiringEpisode.airingAt}:null;
         if(!m.episodes && m.nextAiringEpisode) e.episodes = Math.max(e.episodes||0, m.nextAiringEpisode.episode-1);
