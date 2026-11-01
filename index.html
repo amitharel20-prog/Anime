@@ -248,7 +248,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 15;
+const APP_VERSION = 16;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -756,8 +756,10 @@ function detailHTML(id, m){
     const it=getOrCreate(id,base); const n=+c.dataset.ep;
     if(c.checked){
       // מסמן גם את כל הפרקים שבין הפרק האחרון שסומן לבין הפרק הזה
-      const from = watchedMax(it)+1;
-      for(let k=Math.min(from,n);k<=n;k++){ it.eps[k]={...(it.eps[k]||{}),w:true}; const cb=$("#w"+k); if(cb) cb.checked=true; }
+      // מחפש את הפרק המסומן האחרון שלפני הפרק הזה, וממלא את כל מה שביניהם
+      let last = n-1; while(last>=1 && !(it.eps[last]&&it.eps[last].w)) last--;
+      const from = last+1;
+      for(let k=from;k<=n;k++){ it.eps[k]={...(it.eps[k]||{}),w:true}; const cb=$("#w"+k); if(cb) cb.checked=true; }
       if(n-from>=1) toast(`סומנו פרקים ${from}–${n}`);
       if(!it.status||it.status==="plan"||it.status==="hold") it.status="watching";
     } else {
