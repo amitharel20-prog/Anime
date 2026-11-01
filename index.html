@@ -248,7 +248,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 14;
+const APP_VERSION = 15;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -991,6 +991,18 @@ async function importMAL(file){
 /* ---------- הפעלה ---------- */
 if("serviceWorker" in navigator && location.protocol==="https:"){ navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>r.update()).catch(()=>{});
   let reloaded=false; navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(!reloaded){ reloaded=true; location.reload(); } }); }
+// בדיקת גרסה חדשה בכל פתיחה: עוקף את הזיכרון של GitHub (כ־10 דקות)
+async function checkForUpdate(){
+  try{
+    const r = await fetch("version.json?t="+Date.now(),{cache:"no-store"});
+    const v = (await r.json()).v;
+    if(v>APP_VERSION && new URLSearchParams(location.search).get("v")!==String(v)){
+      location.replace(location.pathname+"?v="+v);
+    }
+  }catch(e){}
+}
+checkForUpdate();
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") checkForUpdate(); });
 render();
 setTimeout(()=>{ syncNow(true).finally(refreshFromAniList); }, 600);
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"){ syncNow(true); if(Date.now()-(prefs.lastRefresh||0)>30*60e3) refreshFromAniList(); } });
