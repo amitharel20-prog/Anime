@@ -334,7 +334,7 @@ const STATUS = {
   plan:{label:"אצפה בעתיד", cls:"st-plan"}
 };
 const FORMAT = {TV:"סדרה",TV_SHORT:"סדרה קצרה",MOVIE:"סרט",SPECIAL:"ספיישל",OVA:"OVA",ONA:"ONA",MUSIC:"קליפ"};
-const GENRE_HE = {"Action":"אקשן","Adventure":"הרפתקאות","Comedy":"קומדיה","Drama":"דרמה","Ecchi":"אצ'י","Fantasy":"פנטזיה","Horror":"אימה","Mahou Shoujo":"נערות קסם","Mecha":"רובוטים","Music":"מוזיקה","Mystery":"מסתורין","Psychological":"פסיכולוגי","Romance":"רומנטיקה","Sci-Fi":"מדע בדיוני","Slice of Life":"שגרה","Sports":"ספורט","Supernatural":"על־טבעי","Thriller":"מותחן","Hentai":"18+"};
+const GENRE_HE = {"Action":"אקשן","Adventure":"הרפתקאות","Comedy":"קומדיה","Drama":"דרמה","Ecchi":"16+","Fantasy":"פנטזיה","Horror":"אימה","Mahou Shoujo":"נערות קסם","Mecha":"רובוטים","Music":"מוזיקה","Mystery":"מסתורין","Psychological":"פסיכולוגי","Romance":"רומנטיקה","Sci-Fi":"מדע בדיוני","Slice of Life":"שגרה","Sports":"ספורט","Supernatural":"על־טבעי","Thriller":"מותחן","Hentai":"18+"};
 const genreHe = g => GENRE_HE[g]||g;
 const fmtScore = v => Number.isInteger(v) ? String(v) : v.toFixed(1);
 const AIR = {FINISHED:"הסתיימה",RELEASING:"משודרת עכשיו",NOT_YET_RELEASED:"טרם יצאה",CANCELLED:"בוטלה",HIATUS:"בהפסקה"};
@@ -347,7 +347,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 58;
+const APP_VERSION = 59;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -1140,7 +1140,7 @@ const browseCache = {};
 let browseTab = "season";
 let browseGenre = "";
 const GENRE_LIST = ["Action","Adventure","Comedy","Drama","Fantasy","Romance","Slice of Life","Sci-Fi","Mystery","Horror","Thriller","Psychological","Supernatural","Sports","Music","Mecha","Mahou Shoujo","Ecchi","Hentai"];
-function genreLabel(g){ return g==="Ecchi" ? "אצ'י (16+)" : g==="Hentai" ? "18+ (הנטאי)" : genreHe(g); }
+function genreLabel(g){ return genreHe(g); }
 function genreOptions(){ return `<option value="">כל הז'אנרים</option>`+GENRE_LIST.filter(g=>g!=="Hentai"||prefs.adult).map(g=>`<option value="${g}" ${g===browseGenre?"selected":""}>${esc(genreLabel(g))}</option>`).join(""); }
 const bKey = k => k+(browseGenre?"|"+browseGenre:"");
 // שמירת תוצאות הגילוי בטלפון, כדי שיופיעו מיד בפתיחה (מתרעננות ברקע כל שעה)
@@ -1494,7 +1494,7 @@ function renderSettings(){
     <div class="card"><h2>ייבוא מ־MyAnimeList</h2><p>באתר MAL: לחץ על התמונה שלך ← Export, ייצא את רשימת האנימה, ופתח את הקובץ שירד (.xml או .gz). אחר כך בחר אותו כאן.</p>
       <div class="actions"><label class="btn primary" for="mf">בחר קובץ מ־MAL</label><input type="file" id="mf" accept=".xml,.gz,text/xml,application/xml,application/gzip" hidden></div></div>
     <div id="imp"></div>
-    <div class="card"><h2>תוכן למבוגרים</h2><p>אנימות עם דירוג גיל רגיל (כולל 13+, 17+ ו־ecchi) כבר מופיעות בחיפוש. כאן אפשר להוסיף גם אנימות שמסומנות ב־AniList כתוכן מיני מפורש (18+). הפוסטרים שלהן מוצגים מטושטשים, אלא אם תבחר להציג אותם בלי טשטוש.</p>
+    <div class="card"><h2>תוכן למבוגרים</h2><p>אנימות עם דירוג גיל רגיל (כולל 13+, 17+ ו־16+) כבר מופיעות בחיפוש. כאן אפשר להוסיף גם אנימות שמסומנות ב־AniList כתוכן מיני מפורש (18+). הפוסטרים שלהן מוצגים מטושטשים, אלא אם תבחר להציג אותם בלי טשטוש.</p>
       <label class="fld" style="display:flex;gap:10px;align-items:center"><input type="checkbox" id="adultT" ${prefs.adult?"checked":""} style="width:22px;height:22px"> הצג אנימות 18+ בחיפוש ובעונתי</label>
       <label class="fld" style="display:flex;gap:10px;align-items:center;margin-top:8px"><input type="checkbox" id="noBlurT" ${prefs.noBlur?"checked":""} style="width:22px;height:22px"> הצג פוסטרים של 18+ בלי טשטוש</label>
       <div id="adultConfirm"></div></div>
