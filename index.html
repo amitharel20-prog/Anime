@@ -261,6 +261,8 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 .dlock{display:flex;align-items:center;justify-content:center;gap:6px;border:1px dashed var(--accent);background:var(--surface);border-radius:10px;padding:10px 2px;font-weight:700;font-size:14px;color:var(--accent)}
 .statusset .dlock[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);border-style:solid;color:var(--accent-fg)}
 .statusset .dlock[aria-pressed="true"] span{color:var(--accent-fg)}
+.lsearch{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.lsearch input{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 12px;font-size:16px}
 @media (prefers-reduced-motion:no-preference){.rmain,.chip,.btn{transition:transform .1s}.rmain:active{transform:scale(.99)}}
 </style>
 </head>
@@ -314,7 +316,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 28;
+const APP_VERSION = 29;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -487,6 +489,8 @@ function bindLockScreen(){
 /* ---------- הרשימה שלי ---------- */
 const LIST_STEP = 40;
 let listLimit = LIST_STEP;
+let listQuery = "";
+const normQ = s => (s||"").toLowerCase().replace(/[^\p{L}\p{N}]+/gu," ").trim();
 const SORTS = {
   updated:{label:"עודכן לאחרונה", fn:(a,b)=>b.updated-a.updated},
   newEps:{label:"פרקים חדשים קודם", fn:(a,b)=>(newEps(b)>0)-(newEps(a)>0)||b.updated-a.updated},
@@ -510,7 +514,11 @@ function renderList(){
   const showLocked = listFilter==="locked";
   // הנעול נשאר פתוח רק כל עוד נמצאים בו (או בדף של אנימה שנפתחה ממנו)
   if(!showLocked) lockOpen = false;
-  const items = (showLocked ? (lockOpen?lockedItems:[]) : visible.filter(e=>listFilter==="all"||(listFilter==="new"?newEps(e)>0:e.status===listFilter))).sort(SORTS[sortKey].fn);
+  const q = normQ(listQuery);
+  // בחיפוש: מחפשים בכל הרשימות (בנעול — רק בתוך הנעול)
+  const pool = showLocked ? (lockOpen?lockedItems:[]) : (q ? visible : visible.filter(e=>listFilter==="all"||(listFilter==="new"?newEps(e)>0:e.status===listFilter)));
+  const qw = q ? q.split(" ") : [];
+  const items = (q ? pool.filter(e=>{ const t=normQ(e.title+" "+(e.romaji||"")); return qw.every(w=>t.includes(w)); }) : pool).sort(SORTS[sortKey].fn);
   const lb = db.meta.lastBackup || 0;
   const needBackup = all.length>=5 && Date.now()-lb > 14*864e5 && !syncCfg();
 
@@ -524,6 +532,8 @@ function renderList(){
   view.innerHTML = `
     ${needBackup?`<div class="msg warn">עבר זמן מאז הגיבוי האחרון. <button class="linkbtn" id="toBackup">לגבות עכשיו</button></div>`:""}
     ${fresh.length&&listFilter!=="new"?`<button class="msg fresh" id="toNew"><b>יצאו ${newTotal} פרקים חדשים</b> ב־${fresh.length===1?esc(fresh[0].title):fresh.length+" אנימות שאתה רואה"} ←</button>`:""}
+    <div class="lsearch"><input type="search" id="lq" placeholder="חפש ברשימה שלי…" value="${esc(listQuery)}" autocomplete="off" enterkeyhint="search"></div>
+    ${q&&!(showLocked&&!lockOpen)?`<p class="note">נמצאו ${items.length} ${showLocked?"בנעול":"בכל הרשימות"}</p>`:""}
     <div class="chips" role="group" aria-label="סינון">
       ${fresh.length?`<button class="chip" data-f="new" aria-pressed="${listFilter==="new"}">פרקים חדשים<span class="n">${fresh.length}</span></button>`:""}
       ${Object.entries(STATUS).map(([k,s])=>`<button class="chip schip ${s.cls}" data-f="${k}" aria-pressed="${listFilter===k}"><span class="cl">${s.label}</span><span class="n">${counts[k]}</span></button>`).join("")}
@@ -547,6 +557,9 @@ function renderList(){
     io.observe(mr);
   }
   view.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ listFilter=c.dataset.f; listLimit=LIST_STEP; renderList(); window.scrollTo(0,0); });
+  const lq=$("#lq");
+  lq.oninput=()=>{ listQuery=lq.value; listLimit=LIST_STEP; renderList(); const n=$("#lq"); n.focus(); n.setSelectionRange(n.value.length,n.value.length); };
+  const lqx=$("#lqx"); if(lqx) lqx.onclick=()=>{ listQuery=""; renderList(); };
   if(showLocked && !lockOpen) bindLockScreen();
   const rl=$("#relock"); if(rl) rl.onclick=()=>{ lockOpen=false; renderList(); };
   const cp=$("#chpin"); if(cp) cp.onclick=()=>{ prefs.pinHash=""; savePrefs(); lockOpen=false; listFilter="locked"; renderList(); toast("בחר קוד חדש"); };
@@ -560,7 +573,7 @@ function rowHTML(e){
   const w = watchedCount(e), tot = e.episodes, n = newEps(e);
   const sub = [FORMAT[e.format]||e.format, e.year].filter(Boolean).join(" · ");
   const canPlus = e.status==="watching" && (!tot || watchedMax(e)<tot);
-  const showPill = e.status && (typeof listFilter==="undefined" || listFilter!==e.status || current.tab!=="list");
+  const showPill = e.status && (typeof listFilter==="undefined" || listFilter!==e.status || current.tab!=="list" || listQuery);
   const pct = tot ? Math.min(100, w/tot*100) : 0;
   const genres = (e.genres||[]).slice(0,3);
   return `<div class="row"><button class="rmain" data-id="${e.id}">
