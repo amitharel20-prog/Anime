@@ -53,7 +53,7 @@ h1{font-family:var(--display);font-weight:400;font-size:24px;margin:0;line-heigh
 
 nav.tabs{position:fixed;inset:auto 0 0;z-index:6;background:var(--surface);border-top:1px solid var(--line);
   padding-bottom:env(safe-area-inset-bottom,0px)}
-nav.tabs .wrap{display:grid;grid-template-columns:repeat(3,1fr)}
+nav.tabs .wrap{display:grid;grid-template-columns:repeat(4,1fr)}
 nav.tabs button{background:none;border:0;padding:10px 4px 12px;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--muted);font-size:13px;font-weight:600}
 nav.tabs button svg{width:24px;height:24px}
 nav.tabs button[aria-current="page"]{color:var(--accent)}
@@ -129,6 +129,34 @@ h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute
 .card input[type=text]{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;margin-bottom:10px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 18px;border-radius:999px;font-weight:600;z-index:20;max-width:90vw;text-align:center}
 .confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.st-new{color:var(--gold);margin-inline-start:6px}
+.msg.fresh{display:block;width:100%;text-align:start;border-color:var(--gold);cursor:pointer}
+.sortrow{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:14px;color:var(--muted)}
+.sortrow select{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 8px}
+.bigstats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.bigstats div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;color:var(--muted);font-size:14px}
+.bigstats b{display:block;font-family:var(--display);font-weight:400;font-size:30px;line-height:1.1;color:var(--fg);font-variant-numeric:tabular-nums}
+.statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}
+.statgrid div{border:1px solid currentColor;border-radius:10px;padding:8px 2px;font-size:13px;font-weight:700}
+.statgrid b{display:block;font-family:var(--display);font-weight:400;font-size:22px}
+.bars{display:grid;gap:6px}
+.barrow{display:grid;grid-template-columns:2.2em 1fr auto;gap:8px;align-items:center;font-size:14px;font-variant-numeric:tabular-nums}
+.genres .barrow{grid-template-columns:7.5em 1fr auto}
+.barrow .lbl{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.barrow .track{height:12px;background:var(--line);border-radius:6px;overflow:hidden}
+.barrow .track i{display:block;height:100%;background:var(--accent);border-radius:6px}
+.barrow .val{color:var(--muted);min-width:2em}
+.barrow .val em{font-style:normal;color:var(--gold);font-weight:700}
+.note{color:var(--muted);font-size:13px;margin:6px 0}
+.fld{display:block;font-size:14px;font-weight:600;margin-bottom:4px}
+.fld input{display:block;margin-top:4px}
+.card pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:11px;overflow-x:auto;max-height:180px;white-space:pre}
+.card details{margin-bottom:12px}
+.card summary{cursor:pointer;font-weight:700;color:var(--accent);padding:4px 0}
+.steps{padding-inline-start:20px;margin:8px 0;font-size:14px;display:grid;gap:8px}
+.steps li{min-width:0}
+.mono-wrap code{font-size:14px;background:var(--bg);padding:2px 6px;border-radius:6px;word-break:break-all;direction:ltr;unicode-bidi:isolate}
+nav.tabs button{font-size:12px}
 @media (prefers-reduced-motion:no-preference){.row,.chip,.btn{transition:transform .1s}.row:active{transform:scale(.99)}}
 </style>
 </head>
@@ -145,8 +173,10 @@ h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>הרשימה שלי</button>
   <button data-tab="search">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>חיפוש</button>
+  <button data-tab="stats">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>סטטיסטיקות</button>
   <button data-tab="settings">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>גיבוי וייבוא</button>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>הגדרות</button>
 </div></nav>
 
 <div class="toast" id="toast" hidden role="status"></div>
@@ -170,10 +200,16 @@ function load(){
   return {items:{}, meta:{}};
 }
 let db = load();
-function save(){
+if(!db.meta) db.meta={};
+if(!db.meta.deleted) db.meta.deleted={};
+function save(sync=true){
   try{ localStorage.setItem(KEY, JSON.stringify(db)); }
   catch(e){ toast("השמירה בטלפון נכשלה. כדאי לגבות עכשיו."); }
+  if(sync) scheduleSync();
 }
+function removeItem(id){ delete db.items[id]; db.meta.deleted[id]=Date.now(); save(); }
+const prefs = (()=>{ try{ return JSON.parse(localStorage.getItem(KEY+".prefs"))||{}; }catch(e){ return {}; } })();
+function savePrefs(){ try{ localStorage.setItem(KEY+".prefs", JSON.stringify(prefs)); }catch(e){} }
 // בקשה מהדפדפן לא למחוק את הנתונים
 try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
 
@@ -183,8 +219,20 @@ function entryFromMedia(m){
     title: m.title.english || m.title.romaji || m.title.native,
     romaji: m.title.romaji || "", cover: m.coverImage ? (m.coverImage.large||m.coverImage.medium) : "",
     episodes: epCount(m), format:m.format||"", year:m.seasonYear||(m.startDate&&m.startDate.year)||null,
+    genres:m.genres||[], duration:m.duration||null, air:m.status||null,
+    next:m.nextAiringEpisode?{ep:m.nextAiringEpisode.episode,at:m.nextAiringEpisode.airingAt}:null,
     status:null, score:null, eps:{}, updated:Date.now()
   };
+}
+// כמה פרקים כבר יצאו בפועל
+function aired(e){
+  if(e.next && e.next.ep) return e.next.ep-1;
+  return e.episodes||0;
+}
+function newEps(e){
+  if(e.status!=="watching") return 0;
+  const a = aired(e), w = watchedMax(e);
+  return a>w ? a-w : 0;
 }
 function epCount(m){
   if(m.episodes) return m.episodes;
@@ -194,7 +242,7 @@ function epCount(m){
 function watchedCount(e){ return Object.values(e.eps||{}).filter(x=>x.w).length; }
 
 /* ---------- AniList ---------- */
-const MEDIA_FIELDS = `id idMal title{romaji english native} coverImage{large medium} episodes format status seasonYear startDate{year} averageScore genres nextAiringEpisode{episode airingAt}`;
+const MEDIA_FIELDS = `id idMal title{romaji english native} coverImage{large medium} episodes format status seasonYear startDate{year} averageScore genres duration nextAiringEpisode{episode airingAt}`;
 async function anilist(query, variables, tries=3){
   for(let i=0;i<tries;i++){
     const r = await fetch("https://graphql.anilist.co",{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({query,variables})});
@@ -235,21 +283,31 @@ function render(){
   if(current.detail) return renderDetail(current.detail);
   if(current.tab==="search") return renderSearch();
   if(current.tab==="settings") return renderSettings();
+  if(current.tab==="stats") return renderStats();
   renderList();
 }
 
 /* ---------- הרשימה שלי ---------- */
+const SORTS = {
+  updated:{label:"עודכן לאחרונה", fn:(a,b)=>b.updated-a.updated},
+  newEps:{label:"פרקים חדשים קודם", fn:(a,b)=>(newEps(b)>0)-(newEps(a)>0)||b.updated-a.updated},
+  score:{label:"הציון שלי", fn:(a,b)=>(b.score||0)-(a.score||0)||a.title.localeCompare(b.title)},
+  name:{label:"שם (א־ת)", fn:(a,b)=>a.title.localeCompare(b.title)},
+  year:{label:"שנה (חדש קודם)", fn:(a,b)=>(b.year||0)-(a.year||0)},
+  progress:{label:"התקדמות", fn:(a,b)=>prog(b)-prog(a)}
+};
+function prog(e){ return e.episodes ? watchedCount(e)/e.episodes : 0; }
 function renderList(){
   setHeader("הרשימה שלי", false);
   const all = Object.values(db.items).filter(e=>e.status);
   const counts = {}; Object.keys(STATUS).forEach(k=>counts[k]=all.filter(e=>e.status===k).length);
-  if(!counts[listFilter] && listFilter!=="all") listFilter = counts.watching?"watching":"all";
-  const scored = all.filter(e=>e.score);
-  const avg = scored.length ? (scored.reduce((a,e)=>a+e.score,0)/scored.length).toFixed(1) : "–";
-  const eps = all.reduce((a,e)=>a+watchedCount(e),0);
-  const items = all.filter(e=>listFilter==="all"||e.status===listFilter).sort((a,b)=>b.updated-a.updated);
+  const fresh = all.filter(e=>newEps(e)>0);
+  if(listFilter==="new" && !fresh.length) listFilter="watching";
+  if(!counts[listFilter] && listFilter!=="all" && listFilter!=="new") listFilter = counts.watching?"watching":"all";
+  const sortKey = SORTS[prefs.sort] ? prefs.sort : "newEps";
+  const items = all.filter(e=>listFilter==="all"||(listFilter==="new"?newEps(e)>0:e.status===listFilter)).sort(SORTS[sortKey].fn);
   const lb = db.meta.lastBackup || 0;
-  const needBackup = all.length>=5 && Date.now()-lb > 14*864e5;
+  const needBackup = all.length>=5 && Date.now()-lb > 14*864e5 && !syncCfg();
 
   if(!all.length){
     view.innerHTML = `<div class="empty"><h2>הרשימה ריקה</h2><p>חפש אנימה וסמן אותה, או ייבא רשימה קיימת מ־AniList או MyAnimeList.</p>
@@ -257,31 +315,106 @@ function renderList(){
     $("#gs").onclick=()=>go({tab:"search"},false); $("#gi").onclick=()=>go({tab:"settings"},false);
     return;
   }
+  const newTotal = fresh.reduce((a,e)=>a+newEps(e),0);
   view.innerHTML = `
     ${needBackup?`<div class="msg warn">עבר זמן מאז הגיבוי האחרון. <button class="linkbtn" id="toBackup">לגבות עכשיו</button></div>`:""}
-    <div class="stats"><div><b>${all.length}</b>אנימות</div><div><b>${eps}</b>פרקים שראיתי</div><div><b>${avg}</b>ציון ממוצע</div></div>
+    ${fresh.length&&listFilter!=="new"?`<button class="msg fresh" id="toNew"><b>יצאו ${newTotal} פרקים חדשים</b> ב־${fresh.length===1?esc(fresh[0].title):fresh.length+" אנימות שאתה רואה"} ←</button>`:""}
     <div class="chips" role="group" aria-label="סינון">
+      ${fresh.length?`<button class="chip" data-f="new" aria-pressed="${listFilter==="new"}">פרקים חדשים<span class="n">${fresh.length}</span></button>`:""}
       ${Object.entries(STATUS).map(([k,s])=>`<button class="chip" data-f="${k}" aria-pressed="${listFilter===k}">${s.label}<span class="n">${counts[k]}</span></button>`).join("")}
       <button class="chip" data-f="all" aria-pressed="${listFilter==="all"}">הכל<span class="n">${all.length}</span></button>
     </div>
+    <div class="sortrow"><label for="sort">מיון</label><select id="sort">${Object.entries(SORTS).map(([k,s])=>`<option value="${k}" ${k===sortKey?"selected":""}>${s.label}</option>`).join("")}</select></div>
     <div class="list">${items.map(rowHTML).join("") || `<div class="empty">אין כאן כלום עדיין.</div>`}</div>`;
   view.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ listFilter=c.dataset.f; renderList(); });
   view.querySelectorAll(".row").forEach(r=>r.onclick=()=>go({tab:"list",detail:+r.dataset.id}));
+  $("#sort").onchange=ev=>{ prefs.sort=ev.target.value; savePrefs(); renderList(); };
   const tb=$("#toBackup"); if(tb) tb.onclick=()=>go({tab:"settings"},false);
+  const tn=$("#toNew"); if(tn) tn.onclick=()=>{ listFilter="new"; renderList(); };
 }
 function rowHTML(e){
-  const w = watchedCount(e), tot = e.episodes;
+  const w = watchedCount(e), tot = e.episodes, n = newEps(e);
   const sub = [FORMAT[e.format]||e.format, e.year].filter(Boolean).join(" · ");
-  const prog = tot ? `${w}/${tot} פרקים` : (w?`${w} פרקים`:"");
+  const pr = tot ? `${w}/${tot} פרקים` : (w?`${w} פרקים`:"");
   return `<button class="row" data-id="${e.id}">
     ${poster(e.cover)}
     <div class="t"><div class="name">${esc(e.title)}</div>
-      <div class="sub">${esc(sub)}${prog?" · "+prog:""}</div>
+      <div class="sub">${esc(sub)}${pr?" · "+pr:""}</div>
       ${e.status?`<span class="pill ${STATUS[e.status].cls}">${STATUS[e.status].label}</span>`:""}
+      ${n?`<span class="pill st-new">${n===1?"פרק חדש":n+" פרקים חדשים"}</span>`:""}
       ${e.status==="watching"&&tot?`<div class="bar"><i style="width:${Math.min(100,w/tot*100)}%"></i></div>`:""}
     </div>
     <div class="myscore">${e.score??"–"}<small>הציון שלי</small></div>
   </button>`;
+}
+
+/* ---------- רענון פרקים מ־AniList ---------- */
+let refreshing=false;
+async function refreshFromAniList(){
+  if(refreshing || !navigator.onLine) return; refreshing=true;
+  try{
+    const last = prefs.lastRefresh||0;
+    const all = Object.values(db.items).filter(e=>e.status);
+    // סדרות פעילות כל פעם; השאר רק אם חסר להן מידע (ז'אנרים / אורך פרק)
+    const need = all.filter(e=>e.status==="watching"||e.status==="plan"&&e.air!=="FINISHED"||e.duration===undefined||!e.genres)
+                    .sort((a,b)=>(b.status==="watching")-(a.status==="watching")).slice(0,300);
+    if(!need.length) return;
+    const before = {}; need.forEach(e=>before[e.id]=aired(e));
+    for(let i=0;i<need.length;i+=50){
+      const ids = need.slice(i,i+50).map(e=>e.id);
+      const d = await anilist(`query($ids:[Int]){Page(perPage:50){media(id_in:$ids,type:ANIME){id episodes status duration genres nextAiringEpisode{episode airingAt}}}}`,{ids});
+      for(const m of d.Page.media){
+        const e = db.items[m.id]; if(!e) continue;
+        e.episodes = m.episodes || e.episodes; e.air = m.status; e.duration = m.duration||null; e.genres = m.genres||[];
+        e.next = m.nextAiringEpisode?{ep:m.nextAiringEpisode.episode,at:m.nextAiringEpisode.airingAt}:null;
+        if(!m.episodes && m.nextAiringEpisode) e.episodes = Math.max(e.episodes||0, m.nextAiringEpisode.episode-1);
+      }
+      if(i+50<need.length) await sleep(800);
+    }
+    save(false);
+    const grew = need.filter(e=>e.status==="watching" && aired(db.items[e.id]||e)>before[e.id] && last);
+    if(grew.length) toast(grew.length===1?`יצא פרק חדש ב־${grew[0].title}`:`יצאו פרקים חדשים ב־${grew.length} אנימות`);
+    prefs.lastRefresh=Date.now(); savePrefs();
+    if(!current.detail && current.tab==="list") renderList();
+  }catch(e){ /* אין חיבור או ש־AniList עמוס; ננסה בפעם הבאה */ }
+  finally{ refreshing=false; }
+}
+
+/* ---------- סטטיסטיקות ---------- */
+function renderStats(){
+  setHeader("סטטיסטיקות", false);
+  const all = Object.values(db.items).filter(e=>e.status);
+  if(!all.length){ view.innerHTML=`<div class="empty"><h2>אין עדיין נתונים</h2><p>כשתסמן אנימות ופרקים, כאן יופיעו שעות הצפייה, הז'אנרים האהובים והציונים שלך.</p></div>`; return; }
+  const epsW = all.reduce((a,e)=>a+watchedCount(e),0);
+  const minutes = all.reduce((a,e)=>a+watchedCount(e)*(e.duration||24),0);
+  const hours = Math.round(minutes/60);
+  const days = (minutes/1440).toFixed(1);
+  const scored = all.filter(e=>e.score);
+  const avg = scored.length?(scored.reduce((a,e)=>a+e.score,0)/scored.length).toFixed(1):"–";
+  const counts = Object.entries(STATUS).map(([k,s])=>[s.label,all.filter(e=>e.status===k).length,s.cls]);
+  const dist = [10,9,8,7,6,5,4,3,2,1].map(n=>[n,scored.filter(e=>e.score===n).length]);
+  const maxD = Math.max(1,...dist.map(x=>x[1]));
+  const g = {};
+  all.filter(e=>e.status==="done"||e.status==="watching").forEach(e=>(e.genres||[]).forEach(x=>{ g[x]=g[x]||{n:0,s:0,c:0}; g[x].n++; if(e.score){g[x].s+=e.score; g[x].c++;} }));
+  const genres = Object.entries(g).sort((a,b)=>b[1].n-a[1].n).slice(0,8);
+  const maxG = Math.max(1,...genres.map(x=>x[1].n));
+  const top = scored.slice().sort((a,b)=>b.score-a.score||b.updated-a.updated).slice(0,5);
+  const missingDur = all.some(e=>watchedCount(e)&&!e.duration);
+  view.innerHTML = `
+    <div class="bigstats">
+      <div><b>${hours.toLocaleString("he-IL")}</b>שעות צפייה</div>
+      <div><b>${days}</b>ימים רצופים</div>
+      <div><b>${epsW.toLocaleString("he-IL")}</b>פרקים</div>
+      <div><b>${avg}</b>ציון ממוצע</div>
+    </div>
+    ${missingDur?`<p class="note">חלק מהאנימות עוד מתעדכנות מ־AniList, אז לפעמים החישוב מניח 24 דקות לפרק.</p>`:""}
+    <h3>לפי סטטוס</h3>
+    <div class="statgrid">${counts.map(([l,n,c])=>`<div class="${c}"><b>${n}</b><span>${l}</span></div>`).join("")}</div>
+    ${scored.length?`<h3>איך אני מדרג</h3><div class="bars">${dist.map(([n,c])=>`<div class="barrow"><span class="lbl">${n}</span><span class="track"><i style="width:${c/maxD*100}%"></i></span><span class="val">${c||""}</span></div>`).join("")}</div>`:""}
+    ${genres.length?`<h3>ז'אנרים שאני רואה הכי הרבה</h3><div class="bars genres">${genres.map(([name,v])=>`<div class="barrow"><span class="lbl" dir="ltr">${esc(name)}</span><span class="track"><i style="width:${v.n/maxG*100}%"></i></span><span class="val">${v.n}${v.c?` · <em>${(v.s/v.c).toFixed(1)}</em>`:""}</span></div>`).join("")}</div><p class="note">המספר הוא כמה אנימות, ואחריו הציון הממוצע שנתת בז'אנר.</p>`:""}
+    ${top.length?`<h3>הכי אהבתי</h3><div class="list">${top.map(rowHTML).join("")}</div>`:""}
+    <div style="height:16px"></div>`;
+  view.querySelectorAll(".row").forEach(r=>r.onclick=()=>go({tab:"stats",detail:+r.dataset.id}));
 }
 
 /* ---------- חיפוש ---------- */
@@ -332,7 +465,7 @@ async function renderDetail(id){
       const d = await anilist(`query($id:Int){Media(id:$id){${MEDIA_FIELDS} description(asHtml:false) streamingEpisodes{title} relations{edges{relationType node{id type format title{romaji english} coverImage{medium} seasonYear}}}}}`,{id});
       m = cacheMedia[id+"full"] = d.Media;
       // עדכון נתונים שהשתנו (למשל פרקים חדשים בסדרה משודרת)
-      if(db.items[id]){ const fresh=entryFromMedia(m); Object.assign(db.items[id],{episodes:fresh.episodes,cover:fresh.cover||db.items[id].cover,title:db.items[id].title||fresh.title}); save(); }
+      if(db.items[id]){ const fresh=entryFromMedia(m); Object.assign(db.items[id],{episodes:fresh.episodes,cover:fresh.cover||db.items[id].cover,title:db.items[id].title||fresh.title,genres:fresh.genres,duration:fresh.duration,air:fresh.air,next:fresh.next}); save(false); }
       if(current.detail===id) paint();
     }catch(err){ if(current.detail===id && !db.items[id]) view.innerHTML=`<div class="msg">לא הצלחתי לטעון: ${esc(err.message)}</div>`; }
   }
@@ -415,7 +548,7 @@ function detailHTML(id, m){
   view.querySelectorAll("[data-rid]").forEach(b=>b.onclick=()=>go({tab:current.tab,detail:+b.dataset.rid}));
   const rm=$("#rm"); if(rm) rm.onclick=()=>{
     $("#rmBox").innerHTML=`<div class="confirm"><span>להסיר כולל הציונים?</span><button class="btn primary" id="rmY">כן, הסר</button><button class="btn" id="rmN">ביטול</button></div>`;
-    $("#rmY").onclick=()=>{ delete db.items[id]; save(); toast("הוסר מהרשימה"); detailHTML(id,m); };
+    $("#rmY").onclick=()=>{ removeItem(id); toast("הוסר מהרשימה"); detailHTML(id,m); };
     $("#rmN").onclick=()=>detailHTML(id,m);
   };
 }
@@ -424,10 +557,11 @@ function cleanEpTitle(t){ return t ? t.replace(/^Episode\s*\d+\s*[-:–]\s*/i,""
 
 /* ---------- גיבוי וייבוא ---------- */
 function renderSettings(){
-  setHeader("גיבוי וייבוא", false);
+  setHeader("הגדרות", false);
   const n = Object.keys(db.items).length;
   const lb = db.meta.lastBackup ? new Date(db.meta.lastBackup).toLocaleDateString("he-IL") : "עוד לא גיבית";
   view.innerHTML = `
+    ${syncCardHTML()}
     <div class="card"><h2>גיבוי</h2><p>שומר קובץ עם כל ${n} האנימות, הסטטוסים והציונים. שמור אותו בדרייב או שלח לעצמך. גיבוי אחרון: ${lb}.</p>
       <div class="actions"><button class="btn primary" id="bk">הורד קובץ גיבוי</button></div></div>
     <div class="card"><h2>שחזור</h2><p>טוען קובץ גיבוי. אנימות שכבר ברשימה יתעדכנו לפי הקובץ, ושאר הרשימה נשארת.</p>
@@ -450,12 +584,139 @@ function renderSettings(){
     const f=ev.target.files[0]; if(!f) return;
     try{
       const d = JSON.parse(await f.text()); if(!d.items) throw new Error();
-      let c=0; for(const [k,v] of Object.entries(d.items)){ db.items[k]=v; c++; }
+      let c=0; for(const [k,v] of Object.entries(d.items)){ v.updated=Date.now(); db.items[k]=v; delete db.meta.deleted[k]; c++; }
       save(); toast(`שוחזרו ${c} אנימות`); renderSettings();
     }catch(e){ toast("הקובץ לא נראה כמו גיבוי של האפליקציה"); }
   };
+  bindSyncCard();
   $("#ai").onclick = ()=>importAniList($("#au").value.trim());
   $("#mf").onchange = ev=>{ const f=ev.target.files[0]; if(f) importMAL(f); };
+}
+
+
+/* ---------- סנכרון בין מכשירים (Supabase) ---------- */
+const SYNC_KEY = KEY+".sync";
+function syncCfg(){ try{ const c=JSON.parse(localStorage.getItem(SYNC_KEY)); return c&&c.url&&c.key&&c.code?c:null; }catch(e){ return null; } }
+function setSyncCfg(c){ try{ c?localStorage.setItem(SYNC_KEY,JSON.stringify(c)):localStorage.removeItem(SYNC_KEY); }catch(e){} }
+let syncT, syncing=false, syncState="";
+function scheduleSync(){ if(!syncCfg()) return; clearTimeout(syncT); syncT=setTimeout(()=>syncNow(true),3000); }
+async function rpc(c, fn, body){
+  const headers = {"Content-Type":"application/json","apikey":c.key};
+  if(c.key.startsWith("eyJ")) headers.Authorization = "Bearer "+c.key;
+  const r = await fetch(c.url.replace(/\/+$/,"")+"/rest/v1/rpc/"+fn,{method:"POST",headers,body:JSON.stringify(body)});
+  const t = await r.text();
+  if(!r.ok){
+    let msg = t; try{ msg = JSON.parse(t).message||t; }catch(e){}
+    if(r.status===404) msg = "לא מצאתי את הטבלה בשרת. ודא שהרצת את קוד ה־SQL ב־Supabase.";
+    if(r.status===401) msg = "המפתח לא מתאים. העתק שוב את ה־Publishable key (או anon key).";
+    throw new Error(msg);
+  }
+  return t ? JSON.parse(t) : null;
+}
+function mergeRemote(r){
+  if(!r) return 0;
+  let changed = 0;
+  const rd = r.deleted||{};
+  for(const [id,ts] of Object.entries(rd)){
+    if(!db.meta.deleted[id] || ts>db.meta.deleted[id]) db.meta.deleted[id]=ts;
+    if(db.items[id] && (db.items[id].updated||0)<=ts){ delete db.items[id]; changed++; }
+  }
+  for(const [id,it] of Object.entries(r.items||{})){
+    const local = db.items[id], del = db.meta.deleted[id];
+    if(del && del>=(it.updated||0)) continue;
+    if(!local || (it.updated||0)>(local.updated||0)){ db.items[id]=it; changed++; }
+  }
+  return changed;
+}
+async function syncNow(silent){
+  const c = syncCfg(); if(!c || syncing) return; syncing=true;
+  syncState="מסנכרן…"; updSyncLine();
+  try{
+    const remote = await rpc(c,"get_list",{p_code:c.code});
+    const changed = mergeRemote(remote);
+    save(false);
+    await rpc(c,"save_list",{p_code:c.code,p_data:{items:db.items,deleted:db.meta.deleted}});
+    c.last=Date.now(); setSyncCfg(c);
+    syncState=`סונכרן ${new Date().toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})}`;
+    if(changed && !silent) toast(`התקבלו ${changed} עדכונים מהמכשיר השני`);
+    if(changed && !current.detail) render();
+  }catch(err){
+    syncState="הסנכרון נכשל: "+err.message;
+    if(!silent) toast("הסנכרון נכשל");
+  }finally{ syncing=false; updSyncLine(); }
+}
+function updSyncLine(){ const el=$("#syncLine"); if(el) el.textContent=syncState||""; }
+function newCode(){ const a=new Uint8Array(20); crypto.getRandomValues(a); return Array.from(a,b=>"abcdefghjkmnpqrstuvwxyz23456789"[b%31]).join("").replace(/(.{5})(?!$)/g,"$1-"); }
+const SYNC_SQL = `create table if not exists anime_sync (
+  code text primary key,
+  data jsonb not null,
+  updated_at timestamptz default now()
+);
+alter table anime_sync enable row level security;
+
+create or replace function get_list(p_code text) returns jsonb
+language sql security definer set search_path = public as $$
+  select data from anime_sync where code = p_code
+$$;
+
+create or replace function save_list(p_code text, p_data jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if length(p_code) < 20 then raise exception 'code too short'; end if;
+  insert into anime_sync(code, data, updated_at) values (p_code, p_data, now())
+  on conflict (code) do update set data = excluded.data, updated_at = now();
+end $$;
+
+grant execute on function get_list(text), save_list(text, jsonb) to anon;`;
+
+function syncCardHTML(){
+  const c = syncCfg();
+  if(c) return `<div class="card"><h2>סנכרון בין מכשירים</h2>
+    <p>מחובר. כל שינוי נשמר גם בשרת, ומכשיר אחר עם אותו קוד מקבל אותו.</p>
+    <p class="mono-wrap">קוד הסנכרון: <code id="codeTxt">${esc(c.code)}</code></p>
+    <p id="syncLine" class="note">${esc(syncState)}</p>
+    <div class="actions"><button class="btn primary" id="syncGo">סנכרן עכשיו</button><button class="btn" id="copyCode">העתק קוד</button><button class="btn" id="syncOff">נתק</button></div></div>`;
+  return `<div class="card"><h2>סנכרון בין מכשירים</h2>
+    <p>כדי לראות את אותה רשימה בטלפון ובמחשב. דורש חשבון חינמי ב־Supabase, והגדרה של פעם אחת.</p>
+    <details><summary>איך מגדירים (5 דקות)</summary>
+      <ol class="steps">
+        <li>נרשמים ב־supabase.com ויוצרים פרויקט חדש (New project). הסיסמה שם לא נכנסת לכאן.</li>
+        <li>בתפריט נכנסים ל־<b>SQL Editor</b>, מדביקים את הקוד הזה ולוחצים <b>Run</b>:
+          <pre dir="ltr" id="sqlBox">${esc(SYNC_SQL)}</pre><button class="btn" id="copySql">העתק את הקוד</button></li>
+        <li>נכנסים ל־<b>Project Settings ← API Keys</b> (או לכפתור Connect), ומעתיקים לכאן את כתובת הפרויקט ואת ה־<b>Publishable key</b> (או anon key). את ה־secret / service_role לא מעתיקים לעולם.</li>
+        <li>במכשיר הראשון לוחצים "צור קוד חדש". במכשיר השני מדביקים את אותו קוד.</li>
+      </ol></details>
+    <label class="fld">כתובת הפרויקט<input type="text" id="sbUrl" dir="ltr" placeholder="https://xxxx.supabase.co" autocomplete="off"></label>
+    <label class="fld">Publishable / anon key<input type="text" id="sbKey" dir="ltr" placeholder="sb_publishable_…" autocomplete="off"></label>
+    <label class="fld">קוד סנכרון<input type="text" id="sbCode" dir="ltr" placeholder="לחץ על צור קוד חדש" autocomplete="off"></label>
+    <div class="actions"><button class="btn" id="genCode">צור קוד חדש</button><button class="btn primary" id="syncOn">התחבר</button></div>
+    <p class="note">הקוד הוא כמו סיסמה לרשימה: מי שיש לו אותו יכול לראות ולשנות אותה.</p>
+    <p id="syncLine" class="note">${esc(syncState)}</p></div>`;
+}
+async function copyText(t, okMsg){
+  try{ await navigator.clipboard.writeText(t); toast(okMsg); }catch(e){ toast("לא הצלחתי להעתיק. סמן והעתק ידנית."); }
+}
+function bindSyncCard(){
+  const c = syncCfg();
+  if(c){
+    $("#syncGo").onclick=()=>syncNow(false);
+    $("#copyCode").onclick=()=>copyText(c.code,"הקוד הועתק");
+    $("#syncOff").onclick=()=>{ setSyncCfg(null); syncState=""; toast("הסנכרון נותק. הרשימה נשארת בטלפון."); renderSettings(); };
+    return;
+  }
+  $("#copySql").onclick=()=>copyText(SYNC_SQL,"הקוד הועתק");
+  $("#genCode").onclick=()=>{ $("#sbCode").value=newCode(); };
+  $("#syncOn").onclick=async ()=>{
+    let url=$("#sbUrl").value.trim(), key=$("#sbKey").value.trim(), code=$("#sbCode").value.trim();
+    if(!/^https:\/\/.+/.test(url)) return toast("הכתובת צריכה להתחיל ב־https://");
+    if(!key) return toast("חסר המפתח");
+    if(/service_role|sb_secret_/.test(key)) return toast("זה המפתח הסודי! תעתיק את ה־Publishable / anon key");
+    if(code.length<20) return toast("הקוד קצר מדי. לחץ 'צור קוד חדש'");
+    setSyncCfg({url,key,code});
+    await syncNow(false);
+    if(syncState.startsWith("הסנכרון נכשל")){ const msg=syncState; setSyncCfg(null); renderSettings(); syncState=msg; updSyncLine(); }
+    else renderSettings();
+  };
 }
 
 function impStatus(html){ $("#imp") && ($("#imp").innerHTML = `<div class="msg">${html}</div>`); }
@@ -517,6 +778,8 @@ async function importMAL(file){
 /* ---------- הפעלה ---------- */
 if("serviceWorker" in navigator && location.protocol==="https:"){ navigator.serviceWorker.register("sw.js").catch(()=>{}); }
 render();
+setTimeout(()=>{ syncNow(true).finally(refreshFromAniList); }, 600);
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"){ syncNow(true); if(Date.now()-(prefs.lastRefresh||0)>30*60e3) refreshFromAniList(); } });
 </script>
 </body>
 </html>
