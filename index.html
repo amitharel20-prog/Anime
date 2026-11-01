@@ -248,7 +248,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 9;
+const APP_VERSION = 10;
 // חד־פעמי: אנימות ב"נצפה" בלי אף פרק שסומן כנצפה עוברות ל"בהמתנה"
 if(!db.meta.doneZeroToHold){
   for(const e of Object.values(db.items)){
@@ -284,9 +284,11 @@ function aired(e){
   if(e.next && e.next.ep) return e.next.ep-1;
   return e.episodes||0;
 }
+// "פרקים חדשים" רק בסדרה שמשודרת עכשיו, ורק אם כבר התחלת לראות אותה
 function newEps(e){
-  if(e.status!=="watching") return 0;
+  if(e.status!=="watching" || e.air!=="RELEASING") return 0;
   const a = aired(e), w = watchedMax(e);
+  if(!w) return 0;
   return a>w ? a-w : 0;
 }
 function epCount(m){
@@ -923,7 +925,9 @@ function applyImported(m, status, score, progress){
   // "נצפה" בלי אף פרק מסומן עובר ל"בהמתנה"
   if(status==="done" && !(progress>0)) status = "hold";
   e.status = status; if(score) e.score = Math.round(score);
-  let p = progress || 0;
+  // ההתקדמות מהייבוא קובעת אילו פרקים סומנו (ציוני פרקים נשמרים)
+  const p = progress || 0;
+  for(const k of Object.keys(e.eps)){ if(+k>p) e.eps[k]={...e.eps[k],w:false}; }
   for(let n=1;n<=p;n++) e.eps[n]={...(e.eps[n]||{}),w:true};
   e.updated = Date.now(); db.items[m.id]=e;
 }
