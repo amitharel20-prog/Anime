@@ -352,7 +352,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 73;
+const APP_VERSION = 74;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -1160,22 +1160,29 @@ const BROWSE = {
   tvz:{label:()=>"televizio", special:true}
 };
 // כל האנימות שיש ב־televizio: מחפשים כל שם ב־AniList (15 שמות בבקשה אחת), ושומרים בטלפון ל־3 ימים
-let tvzAll = null;
+let tvzAll = null, tvzProgress = null;
 async function loadTvz(){
   if(tvzAll) return tvzAll;
   const list = window.TELEVIZIO||[]; const sig = list.length+":"+(prefs.adult?1:0);
   try{ const c=JSON.parse(localStorage.getItem(KEY+".tvz")); if(c && c.sig===sig && Date.now()-c.t<3*864e5) return tvzAll=c.data; }catch(e){}
   const titles = [...new Set(list.map(t=>t.replace(/^=/,"")))];
   const seen = new Set(), out = [];
-  for(let i=0;i<titles.length;i+=15){
-    const part = titles.slice(i,i+15);
-    const q = `query(${part.map((_,j)=>`$s${j}:String`).join(",")}){${part.map((_,j)=>`a${j}:Page(perPage:3){media(search:$s${j},type:ANIME,${adultFilter()}sort:SEARCH_MATCH){${MEDIA_FIELDS}}}`).join(" ")}}`;
+  let failed = 0;
+  for(let i=0;i<titles.length;i+=20){
+    const part = titles.slice(i,i+20);
+    const q = `query(${part.map((_,j)=>`$s${j}:String`).join(",")}){${part.map((_,j)=>`a${j}:Page(perPage:2){media(search:$s${j},type:ANIME,${adultFilter()}sort:SEARCH_MATCH){${MEDIA_FIELDS}}}`).join(" ")}}`;
     const vars = {}; part.forEach((t,j)=>vars["s"+j]=t);
-    const d = await anilist(q, vars);
-    part.forEach((_,j)=>{ for(const m of ((d["a"+j]||{}).media||[])){ if(!seen.has(m.id) && onTvz(m)){ seen.add(m.id); out.push(m); } } });
+    try{
+      const d = await anilist(q, vars, 4);
+      part.forEach((_,j)=>{ for(const m of ((d["a"+j]||{}).media||[])){ if(!seen.has(m.id) && onTvz(m)){ seen.add(m.id); out.push(m); } } });
+    }catch(e){ failed++; }
+    // מציגים את מה שכבר נמצא בזמן שהשאר נטען
+    if(typeof tvzProgress==="function") tvzProgress(out.slice().sort((a,b)=>(b.averageScore||0)-(a.averageScore||0)), Math.min(100,Math.round((i+20)/titles.length*100)));
+    if(i+20<titles.length) await sleep(1500);
   }
+  if(failed && !out.length) throw new Error("AniList לא זמין כרגע");
   out.sort((a,b)=>(b.averageScore||0)-(a.averageScore||0));
-  try{ localStorage.setItem(KEY+".tvz", JSON.stringify({t:Date.now(),sig,data:out})); }catch(e){}
+  if(!failed){ try{ localStorage.setItem(KEY+".tvz", JSON.stringify({t:Date.now(),sig,data:out})); }catch(e){} }
   return tvzAll=out;
 }
 const browseCache = {};
@@ -1217,6 +1224,7 @@ function renderSearch(){
     bar.innerHTML = `<div class="chips" style="margin-top:12px">${Object.entries(BROWSE).map(([k,b])=>`<button class="chip${k==="tvz"?" tvzchip":""}" data-b="${k}" aria-pressed="${browseTab===k}">${b.label()}</button>`).join("")}</div>`;
     bar.querySelectorAll("[data-b]").forEach(c=>c.onclick=()=>{ browseTab=c.dataset.b; showBrowse(); });
     const k = browseTab, ck=bKey(k), g=browseGenre;
+    tvzProgress = k==="tvz" ? (list,pct)=>{ if(browseTab==="tvz" && !lastSearch.q && current.tab==="search" && !current.detail){ show(browseGenre?list.filter(m=>(m.genres||[]).includes(browseGenre)):list); sr.insertAdjacentHTML("afterbegin",`<p class="note">טוען את כל האנימות של televizio… ${pct}%</p>`); } } : null;
     const stored = !browseCache[ck] && storedBrowse(k);
     if(stored){ show(stored.data); if(Date.now()-stored.t<3600e3){ browseCache[ck]=stored.data; return; } }
     else if(!browseCache[ck]) sr.innerHTML=`<div class="empty">טוען…</div>`;
