@@ -311,7 +311,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 24;
+const APP_VERSION = 25;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -417,7 +417,7 @@ function go(state, push=true){
 }
 // חזרה אחורה: חוזרים לאותו מקום בדף
 $("#backBtn").onclick = ()=>{ const prev = stack.pop() || {tab:"list"}; current = prev; render(); requestAnimationFrame(()=>window.scrollTo(0,prev.scroll||0)); };
-document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{ stack=[]; go({tab:b.dataset.tab}, false); });
+document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{ stack=[]; lockOpen=false; if(listFilter==="locked") listFilter="watching"; go({tab:b.dataset.tab}, false); });
 
 function render(){
   setTab(current.tab);
@@ -489,6 +489,8 @@ function renderList(){
   if(!counts[listFilter] && !["all","new","locked"].includes(listFilter)) listFilter = counts.watching?"watching":"all";
   const sortKey = SORTS[prefs.sort] ? prefs.sort : "newEps";
   const showLocked = listFilter==="locked";
+  // הנעול נשאר פתוח רק כל עוד נמצאים בו (או בדף של אנימה שנפתחה ממנו)
+  if(!showLocked) lockOpen = false;
   const items = (showLocked ? (lockOpen?lockedItems:[]) : visible.filter(e=>listFilter==="all"||(listFilter==="new"?newEps(e)>0:e.status===listFilter))).sort(SORTS[sortKey].fn);
   const lb = db.meta.lastBackup || 0;
   const needBackup = all.length>=5 && Date.now()-lb > 14*864e5 && !syncCfg();
