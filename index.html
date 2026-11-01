@@ -213,6 +213,8 @@ nav.tabs button{font-size:11px;white-space:nowrap}
 html.noblur .adultimg{filter:none;transform:none}
 .r18{color:#c0392b}
 .tvz{display:inline-block;background:#111;color:#FFD400;border:1px solid #FFD400;font-size:11px;font-weight:800;letter-spacing:.3px;padding:1px 7px;border-radius:6px;direction:ltr;line-height:1.5}
+.chip.tvzchip{background:#111;color:#FFD400;border-color:#FFD400;direction:ltr}
+.chip.tvzchip[aria-pressed=true]{background:#FFD400;color:#111}
 .pimg .tvz{position:absolute;bottom:6px;left:6px}
 .hero .tvz{margin-top:6px}
 .snm{display:flex;flex-direction:column;align-items:center;line-height:1.2}
@@ -350,7 +352,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 66;
+const APP_VERSION = 67;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -555,14 +557,16 @@ function renderList(){
   const counts = {}; Object.keys(STATUS).forEach(k=>counts[k]=visible.filter(e=>e.status===k).length);
   const fresh = visible.filter(e=>newEps(e)>0);
   if(listFilter==="new" && !fresh.length) listFilter="watching";
-  if(!counts[listFilter] && !["all","new","locked"].includes(listFilter)) listFilter = counts.watching?"watching":"all";
+  const tvzItems = visible.filter(onTvz);
+  if(listFilter==="tvz" && !tvzItems.length) listFilter="watching";
+  if(!counts[listFilter] && !["all","new","locked","tvz"].includes(listFilter)) listFilter = counts.watching?"watching":"all";
   const sortKey = SORTS[prefs.sort] ? prefs.sort : "newEps";
   const showLocked = listFilter==="locked";
   // הנעול נשאר פתוח רק כל עוד נמצאים בו (או בדף של אנימה שנפתחה ממנו)
   if(!showLocked) lockOpen = false;
   const q = normQ(listQuery);
   // בחיפוש: מחפשים בכל הרשימות (בנעול — רק בתוך הנעול)
-  const pool = showLocked ? (lockOpen?lockedItems:[]) : (q ? visible : visible.filter(e=>listFilter==="all"||(listFilter==="new"?newEps(e)>0:e.status===listFilter)));
+  const pool = showLocked ? (lockOpen?lockedItems:[]) : (q ? visible : (listFilter==="tvz" ? tvzItems : visible.filter(e=>listFilter==="all"||(listFilter==="new"?newEps(e)>0:e.status===listFilter))));
   const qw = q ? q.split(" ") : [];
   const items = (q ? pool.filter(e=>{ const t=normQ(e.title+" "+(e.romaji||"")+" "+((heOf(e.id)||{}).t||"")+" "+(fanFor(e)||"")+" "+heAlias(fanFor(e))+" "+tlFor(e)); return qw.every(w=>t.includes(w)); }) : pool).sort(SORTS[sortKey].fn);
   const lb = db.meta.lastBackup || 0;
@@ -584,6 +588,7 @@ function renderList(){
       <button class="chip" data-f="all" aria-pressed="${listFilter==="all"}">הכל<span class="n">${all.length}</span></button>
       ${fresh.length?`<button class="chip" data-f="new" aria-pressed="${listFilter==="new"}">פרקים חדשים<span class="n">${fresh.length}</span></button>`:""}
       ${Object.entries(STATUS).map(([k,s])=>`<button class="chip schip ${s.cls}" data-f="${k}" aria-pressed="${listFilter===k}"><span class="cl">${s.label}</span><span class="n">${counts[k]}</span></button>`).join("")}
+      ${tvzItems.length?`<button class="chip tvzchip" data-f="tvz" aria-pressed="${listFilter==="tvz"}"><span class="cl">televizio</span><span class="n">${tvzItems.length}</span></button>`:""}
       <button class="chip lockchip" data-f="locked" aria-pressed="${showLocked}">${LOCK_ICON}<span class="cl">נעול</span>${lockOpen?`<span class="n">${lockedItems.length}</span>`:""}</button>
     </div>
     <div class="sortrow"><label for="sort">מיון</label><select id="sort">${Object.entries(SORTS).map(([k,s])=>`<option value="${k}" ${k===sortKey?"selected":""}>${s.label}</option>`).join("")}</select><button class="linkbtn" id="toStats" style="margin-inline-start:auto">סטטיסטיקות ←</button></div>
@@ -1149,8 +1154,28 @@ const BROWSE = {
   trending:{label:()=>"חם עכשיו", q:()=>[`sort:TRENDING_DESC`,{},""]},
   top:{label:()=>"המדורגים ביותר", q:()=>[`sort:SCORE_DESC,format_in:[TV,MOVIE,ONA,OVA]`,{},""]},
   popular:{label:()=>"הכי פופולריים", q:()=>[`sort:POPULARITY_DESC`,{},""]},
-  upcoming:{label:()=>"בקרוב", q:()=>[`status:NOT_YET_RELEASED,sort:POPULARITY_DESC`,{},""]}
+  upcoming:{label:()=>"בקרוב", q:()=>[`status:NOT_YET_RELEASED,sort:POPULARITY_DESC`,{},""]},
+  tvz:{label:()=>"televizio", special:true}
 };
+// כל האנימות שיש ב־televizio: מחפשים כל שם ב־AniList (15 שמות בבקשה אחת), ושומרים בטלפון ל־3 ימים
+let tvzAll = null;
+async function loadTvz(){
+  if(tvzAll) return tvzAll;
+  const list = window.TELEVIZIO||[]; const sig = list.length+":"+(prefs.adult?1:0);
+  try{ const c=JSON.parse(localStorage.getItem(KEY+".tvz")); if(c && c.sig===sig && Date.now()-c.t<3*864e5) return tvzAll=c.data; }catch(e){}
+  const titles = [...new Set(list.map(t=>t.replace(/^=/,"")))];
+  const seen = new Set(), out = [];
+  for(let i=0;i<titles.length;i+=15){
+    const part = titles.slice(i,i+15);
+    const q = `query(${part.map((_,j)=>`$s${j}:String`).join(",")}){${part.map((_,j)=>`a${j}:Page(perPage:3){media(search:$s${j},type:ANIME,${adultFilter()}sort:SEARCH_MATCH){${MEDIA_FIELDS}}}`).join(" ")}}`;
+    const vars = {}; part.forEach((t,j)=>vars["s"+j]=t);
+    const d = await anilist(q, vars);
+    part.forEach((_,j)=>{ for(const m of ((d["a"+j]||{}).media||[])){ if(!seen.has(m.id) && onTvz(m)){ seen.add(m.id); out.push(m); } } });
+  }
+  out.sort((a,b)=>(b.averageScore||0)-(a.averageScore||0));
+  try{ localStorage.setItem(KEY+".tvz", JSON.stringify({t:Date.now(),sig,data:out})); }catch(e){}
+  return tvzAll=out;
+}
 const browseCache = {};
 let browseTab = "season";
 let browseGenre = "";
@@ -1159,11 +1184,12 @@ function genreLabel(g){ return genreHe(g); }
 function genreOptions(){ return `<option value="">כל הז'אנרים</option>`+GENRE_LIST.filter(g=>g!=="Hentai"||prefs.adult).map(g=>`<option value="${g}" ${g===browseGenre?"selected":""}>${esc(genreLabel(g))}</option>`).join(""); }
 const bKey = k => k+(browseGenre?"|"+browseGenre:"");
 // שמירת תוצאות הגילוי בטלפון, כדי שיופיעו מיד בפתיחה (מתרעננות ברקע כל שעה)
-function storedBrowse(k){ if(browseGenre) return null; try{ const c=JSON.parse(localStorage.getItem(KEY+".browse."+k+(prefs.adult?".a":""))); return c&&c.data?c:null; }catch(e){ return null; } }
+function storedBrowse(k){ if(browseGenre || k==="tvz") return null; try{ const c=JSON.parse(localStorage.getItem(KEY+".browse."+k+(prefs.adult?".a":""))); return c&&c.data?c:null; }catch(e){ return null; } }
 function storeBrowse(k,data){ if(browseGenre) return; try{ localStorage.setItem(KEY+".browse."+k+(prefs.adult?".a":""),JSON.stringify({t:Date.now(),data})); }catch(e){} }
 async function loadBrowse(k){
   const ck=bKey(k);
   if(browseCache[ck]) return browseCache[ck];
+  if(k==="tvz"){ const all=await loadTvz(); return browseCache[ck] = browseGenre ? all.filter(m=>(m.genres||[]).includes(browseGenre)) : all; }
   let [args,vars,decl] = BROWSE[k].q();
   if(browseGenre){ vars={...vars,g:browseGenre}; decl=(decl?decl+",":"")+"$g:String"; args="genre:$g,"+args; }
   const adultPart = browseGenre==="Hentai" ? "isAdult:true," : adultFilter();
@@ -1186,7 +1212,7 @@ function renderSearch(){
     bindRows(sr,"search",res);
   };
   const showBrowse = async ()=>{
-    bar.innerHTML = `<div class="chips" style="margin-top:12px">${Object.entries(BROWSE).map(([k,b])=>`<button class="chip" data-b="${k}" aria-pressed="${browseTab===k}">${b.label()}</button>`).join("")}</div>`;
+    bar.innerHTML = `<div class="chips" style="margin-top:12px">${Object.entries(BROWSE).map(([k,b])=>`<button class="chip${k==="tvz"?" tvzchip":""}" data-b="${k}" aria-pressed="${browseTab===k}">${b.label()}</button>`).join("")}</div>`;
     bar.querySelectorAll("[data-b]").forEach(c=>c.onclick=()=>{ browseTab=c.dataset.b; showBrowse(); });
     const k = browseTab, ck=bKey(k), g=browseGenre;
     const stored = !browseCache[ck] && storedBrowse(k);
@@ -1543,10 +1569,10 @@ function renderSettings(){
   bindSyncCard();
   $("#noBlurT").onchange = ev=>{ prefs.noBlur=ev.target.checked; savePrefs(); document.documentElement.classList.toggle("noblur", prefs.noBlur); toast(prefs.noBlur?"הטשטוש הוסר":"הפוסטרים יוצגו מטושטשים"); };
   $("#adultT").onchange = ev=>{
-    if(!ev.target.checked){ prefs.adult=false; savePrefs(); if(browseGenre==="Hentai") browseGenre=""; for(const k in browseCache) delete browseCache[k]; for(const k in seasonCache) delete seasonCache[k]; lastSearch={q:"",results:[]}; toast("אנימות 18+ מוסתרות"); return; }
+    if(!ev.target.checked){ prefs.adult=false; savePrefs(); if(browseGenre==="Hentai") browseGenre=""; for(const k in browseCache) delete browseCache[k]; for(const k in seasonCache) delete seasonCache[k]; lastSearch={q:"",results:[]}; tvzAll=null; toast("אנימות 18+ מוסתרות"); return; }
     ev.target.checked=false;
     $("#adultConfirm").innerHTML=`<div class="confirm"><span>אני בן 18 ומעלה</span><button class="btn primary" id="adY">אישור</button><button class="btn" id="adN">ביטול</button></div>`;
-    $("#adY").onclick=()=>{ prefs.adult=true; savePrefs(); for(const k in browseCache) delete browseCache[k]; for(const k in seasonCache) delete seasonCache[k]; lastSearch={q:"",results:[]}; toast("אנימות 18+ יופיעו בחיפוש"); renderSettings(); };
+    $("#adY").onclick=()=>{ prefs.adult=true; savePrefs(); for(const k in browseCache) delete browseCache[k]; for(const k in seasonCache) delete seasonCache[k]; lastSearch={q:"",results:[]}; tvzAll=null; toast("אנימות 18+ יופיעו בחיפוש"); renderSettings(); };
     $("#adN").onclick=()=>{ $("#adultConfirm").innerHTML=""; };
   };
   const co=$("#copyOutside"); if(co) co.onclick=()=>{ const list=outsideNames(); copyText(list.join("\n"), `הועתקו ${list.length} שמות`); };
