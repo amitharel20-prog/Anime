@@ -345,7 +345,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 42;
+const APP_VERSION = 43;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -558,7 +558,7 @@ function renderList(){
   // בחיפוש: מחפשים בכל הרשימות (בנעול — רק בתוך הנעול)
   const pool = showLocked ? (lockOpen?lockedItems:[]) : (q ? visible : visible.filter(e=>listFilter==="all"||(listFilter==="new"?newEps(e)>0:e.status===listFilter)));
   const qw = q ? q.split(" ") : [];
-  const items = (q ? pool.filter(e=>{ const t=normQ(e.title+" "+(e.romaji||"")+" "+((heOf(e.id)||{}).t||"")); return qw.every(w=>t.includes(w)); }) : pool).sort(SORTS[sortKey].fn);
+  const items = (q ? pool.filter(e=>{ const t=normQ(e.title+" "+(e.romaji||"")+" "+((heOf(e.id)||{}).t||"")+" "+(fanFor(e)||"")+" "+tlFor(e)); return qw.every(w=>t.includes(w)); }) : pool).sort(SORTS[sortKey].fn);
   const lb = db.meta.lastBackup || 0;
   const needBackup = all.length>=5 && Date.now()-lb > 14*864e5 && !syncCfg();
 
@@ -725,7 +725,7 @@ function heOf(id){
   if(f) return {t:f,src:"fan"};
   const c=heCache[id]; return c&&c.t ? c : null;
 }
-function nameOf(o){ const en=enTitle(o); if(isHeLang()){ const f=fanFor(o); if(f) return f; const c=heOf(o.id); if(c) return c.t; } return en; }
+function nameOf(o){ const en=enTitle(o); if(isHeLang()){ const f=fanFor(o); if(f) return f; const c=heOf(o.id); if(c) return c.t; const t=tlFor(o); if(t && /[\u0590-\u05FF]/.test(t)) return t; } return en; }
 const heWant = new Map();
 function wantHe(o){
   if(!o || !o.id) return;
@@ -739,7 +739,9 @@ function wantHe(o){
 function tn(o){ if(isHeLang()) wantHe(o); return `<span data-tid="${o.id}" data-en="${esc(enTitle(o))}">${esc(nameOf(o))}</span>`; }
 function applyHeNames(){
   document.querySelectorAll("[data-tid]").forEach(el=>{
-    const c = isHeLang() && (fanMemo.get(+el.dataset.tid) ? {t:fanMemo.get(+el.dataset.tid)} : heOf(el.dataset.tid)); el.textContent = c ? c.t : el.dataset.en;
+    if(!isHeLang()){ el.textContent = el.dataset.en; return; }
+    const id=+el.dataset.tid; const c = fanMemo.get(id) ? {t:fanMemo.get(id)} : heOf(id);
+    el.textContent = c ? c.t : (tlMemo.get(id) || translitHe(el.dataset.en) || el.dataset.en);
   });
 }
 let heT=null, heBusy=false, mtBlockedUntil=+(localStorage.getItem(KEY+".mtblock")||0);
@@ -788,7 +790,8 @@ async function heTranslate(en){
   const ph = phraseHe(en);
   if(!/[A-Za-z]/.test(ph)) return ph;
   const tr = await mt(en);
-  return tr && /[\u0590-\u05FF]/.test(tr) ? tr : null;
+  if(!tr || !/[\u0590-\u05FF]/.test(tr)) return null;
+  return /[A-Za-z]/.test(tr) ? translitHe(tr) : tr;
 }
 async function processHe(){
   if(heBusy || !heWant.size || !navigator.onLine) return; heBusy=true;
@@ -819,6 +822,90 @@ async function processHe(){
     again = heWant.size>0 && Date.now()>=mtBlockedUntil;
   }finally{ heBusy=false; if(again) setTimeout(processHe,3000); }
 }
+// תעתיק לפי הצליל: יפנית (רומאג'י) ואנגלית -> אותיות עבריות
+const FINALS = {"כ":"ך","מ":"ם","נ":"ן","צ":"ץ"};
+function finalize(w){ if(!w) return w; const l=w[w.length-1]; return FINALS[l] ? w.slice(0,-1)+FINALS[l] : w; }
+
+// --- יפנית ---
+const JP_CONS = {ky:"קי",gy:"גי",sh:"ש",ch:"צ'",ts:"צ",ny:"ני",hy:"הי",by:"בי",py:"פי",my:"מי",ry:"רי",j:"ג'",k:"ק",g:"ג",s:"ס",z:"ז",t:"ט",d:"ד",n:"נ",h:"ה",f:"פ",b:"ב",p:"פ",m:"מ",y:"י",r:"ר",w:"ו",v:"ב"};
+const JP_SYL = /^(ky|gy|sh|ch|ts|ny|hy|by|py|my|ry|[kgsztdnhfbpmyrwjv])?(aa|ii|uu|ee|oo|ou|ei|a|i|u|e|o)/;
+const JP_PARTICLES = {wa:"וא",wo:"או",no:"נו",ni:"ני",to:"טו",ga:"גה",de:"דה",e:"א"};
+function jpWord(w){
+  w = w.toLowerCase().replace(/[āâ]/g,"aa").replace(/[ūû]/g,"uu").replace(/[ōô]/g,"ou").replace(/[ēê]/g,"ee").replace(/[īî]/g,"ii");
+  if(JP_PARTICLES[w]) return JP_PARTICLES[w];
+  let out="", i=0, first=true;
+  while(i<w.length){
+    const rest=w.slice(i);
+    if(/^([kstpcgbdmz])\1/.test(rest)){ i++; continue; }   // kk, tt...: עיצור אחד
+    if(/^tch/.test(rest)){ i++; continue; }
+    const m = rest.match(JP_SYL);
+    if(m){
+      const c=m[1]||"", v=m[2]; const atEnd = i+m[0].length>=w.length;
+      const cons = c ? JP_CONS[c] : "";
+      let vow;
+      if(v==="a"||v==="aa") vow = !c&&first ? "א" : (atEnd ? "ה" : "א");
+      else if(v==="i"||v==="ii") vow = !c&&first ? "אי" : (/י$/.test(cons) ? "" : "י");
+      else if(v==="u"||v==="uu") vow = !c&&first ? "או" : "ו";
+      else if(v==="e"||v==="ee") vow = !c&&first ? "א" : (atEnd ? "ה" : "");
+      else if(v==="ei") vow = !c&&first ? "איי" : "יי";
+      else vow = !c&&first ? "או" : "ו";
+      out += cons+vow; i+=m[0].length; first=false; continue;
+    }
+    if(rest[0]==="n"){ out+="נ"; i++; first=false; continue; }
+    if(rest[0]==="'"){ i++; continue; }
+    return null; // לא נראה כמו יפנית
+  }
+  return finalize(out);
+}
+
+// --- אנגלית (בקירוב, לפי הצליל) ---
+const EN_MULTI = [["tion","שן"],["sion","ז'ן"],["ture","צ'ר"],["tch","צ'"],["dge","דג'"],["ght","ט"],["ph","פ"],["sh","ש"],["ch","צ'"],["th","ת'"],["ck","ק"],["qu","קו"],["wh","ו"],
+  ["oo","ו"],["ou","או"],["ee","י"],["ea","י"],["ai","יי"],["ay","יי"],["oa","ו"],["au","או"],["aw","או"],["oi","וי"],["oy","וי"]];
+const CONS = "bcdfghjklmnpqrstvwxz";
+function enWord(w){
+  const s = w.toLowerCase().replace(/[^a-z]/g,"");
+  if(!s) return w;
+  let out="", i=0;
+  while(i<s.length){
+    const atStart = i===0;
+    if(atStart && s.startsWith("kn")){ out+="נ"; i+=2; continue; }
+    const mm = EN_MULTI.find(([k])=>s.startsWith(k,i));
+    if(mm){ out+=mm[1]; i+=mm[0].length; continue; }
+    const ch=s[i], nx=s[i+1]||"", nx2=s[i+2]||"", last=i===s.length-1;
+    if(ch===s[i-1] && CONS.includes(ch)){ i++; continue; }            // אות כפולה
+    const magicE = CONS.includes(nx) && nx2==="e" && i+3===s.length;   // a_e, i_e, o_e (game, slime, tone)
+    switch(ch){
+      case "a": out += atStart ? "א" : (last ? "ה" : (magicE ? "יי" : "א")); break;
+      case "e": out += atStart ? "א" : ""; break;
+      case "i": out += atStart ? "אי" : (magicE ? "יי" : "י"); break;
+      case "o": out += atStart ? "או" : "ו"; break;
+      case "u": out += atStart ? "א" : "א"; break;
+      case "y": out += atStart ? "י" : (CONS.includes(s[i-1]) && CONS.includes(nx) ? "יי" : "י"); break;
+      case "c": out += nx && "eiy".includes(nx) ? "ס" : "ק"; break;
+      case "g": out += nx && "eiy".includes(nx) && !atStart ? "ג'" : "ג"; break;
+      case "x": out += "קס"; break;
+      case "j": out += "ג'"; break;
+      case "v": out += "ב"; break;
+      case "w": out += "ו"; break;
+      default: out += ({b:"ב",d:"ד",f:"פ",h:"ה",k:"ק",l:"ל",m:"מ",n:"נ",p:"פ",q:"ק",r:"ר",s:"ס",t:"ט",z:"ז"})[ch]||"";
+    }
+    i++;
+  }
+  return finalize(out);
+}
+
+// מתעתק שם: כל מילה — קודם כיפנית, ואם היא לא נקראת כיפנית — כאנגלית
+function translitHe(text){
+  return text.split(/(\s+|[:\-–!?.,()~\/]+)/).map(t=>{
+    if(!/[A-Za-z]/.test(t)) return t;
+    if(/^[A-Z0-9]{2,4}$/.test(t) && !/^[AEIOU]/.test(t) ) return t;   // ראשי תיבות
+    return jpWord(t) || enWord(t);
+  }).join("").replace(/\s+/g," ").trim();
+}
+
+const tlMemo = new Map();
+function tlFor(o){ if(!tlMemo.has(o.id)) tlMemo.set(o.id, translitHe(enTitle(o))); return tlMemo.get(o.id); }
+
 // חיפוש בעברית: שמות שכבר ידועים, ויקיפדיה, ותרגום לאנגלית
 async function hebrewSearchIds(q){
   const ids=new Set(), mals=new Set(); const nq=normQ(q);
@@ -1228,6 +1315,7 @@ function detailHTML(id, m){
           if(isHeLang()){ if(c) lines.push(`<div class="alt" dir="ltr">${esc(enTitle(e))}</div>`); }
           else if(c) lines.push(`<div class="alt">${esc(c.t)}</div>`);
           if(c&&c.src==="mt" && !fanFor(e)) lines.push(`<div class="mtnote">השם בעברית תורגם אוטומטית</div>`);
+          if(!c && isHeLang()) lines.push(`<div class="mtnote">השם בעברית לפי הצליל</div>`);
           if(e.romaji&&e.romaji!==enTitle(e)) lines.push(`<div class="alt" dir="ltr">${esc(e.romaji)}</div>`);
           const nat = (base&&base.title&&base.title.native)||e.native; if(nat) lines.push(`<div class="alt jp" lang="ja" dir="ltr">${esc(nat)}</div>`);
           wantHe(e); return lines.join(""); })()}
@@ -1356,7 +1444,7 @@ function renderSettings(){
       const fan=ids.filter(id=>fanFor(db.items[id])).length;
       const wiki=ids.filter(id=>!fanFor(db.items[id])&&heCache[id]&&heCache[id].src==="wiki").length, mtc=ids.filter(id=>!fanFor(db.items[id])&&heCache[id]&&heCache[id].src==="mt").length;
       const missing=ids.length-fan-wiki-mtc; const blocked=Date.now()<mtBlockedUntil;
-      return `<div class="card"><h2>שמות בעברית</h2><p>מתוך ${ids.length} האנימות ברשימה שלך: ${fan} מאתרי תרגום ישראליים, ${wiki} מוויקיפדיה, ${mtc} בתרגום אוטומטי${missing?`, ו־${missing} עדיין באנגלית`:""}.</p>
+      return `<div class="card"><h2>שמות בעברית</h2><p>מתוך ${ids.length} האנימות ברשימה שלך: ${fan} מאתרי תרגום ישראליים, ${wiki} מוויקיפדיה, ${mtc} בתרגום אוטומטי${missing?`, ו־${missing} לפי הצליל (עד שיימצא להם תרגום)`:""}.</p>
       ${blocked?`<p class="note">שירות התרגום החינמי הגיע למגבלה היומית. השאר יתורגמו אוטומטית אחרי ${new Date(mtBlockedUntil).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})}.</p>`:(missing?`<p class="note">השמות החסרים ממשיכים להיטען ברקע.</p>`:"")}</div>`; })()}
     <div class="card"><h2>עדכון האפליקציה</h2><p>אם ביקשת שינוי והוא עוד לא מופיע, לוחצים כאן כדי לטעון מיד את הגרסה הכי חדשה. הרשימה שלך לא נמחקת.</p>
       <div class="actions"><button class="btn primary" id="forceUpd">טען את הגרסה החדשה</button></div></div>
