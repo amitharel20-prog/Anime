@@ -926,7 +926,19 @@ window.TELEVIZIO = [
   "Liar, Liar", "Liar Liar",
   "Chain Chronicle: The Light of Haecceitas", "Chain Chronicle: Haecceitas no Hikari",
   "SHIMONETA: A Boring World Where the Concept of Dirty Jokes Doesn’t Exist", "Shimoneta to Iu Gainen ga Sonzai Shinai Taikutsu na Sekai",
-  "Steins;Gate"
+  "Steins;Gate",
+  "Shikimori's Not Just a Cutie", "Kawaii dake ja Nai Shikimori-san",
+  "Shangri-La Frontier", "Shangri-La Frontier: Kusoge Hunter, Kamige ni Idoman to su",
+  "The Seven Heavenly Virtues", "Nanatsu no Bitoku",
+  "Akashic Records of Bastard Magic Instructor", "Rokudenashi Majutsu Koushi to Akashic Records",
+  "Blade Dance of the Elementalers", "Seirei Tsukai no Blade Dance",
+  "Wanna be the Strongest in the World!", "Sekai de Ichiban Tsuyoku Naritai!",
+  "Isekai Quartet",
+  "Ragna Crimson",
+  "Black Bullet",
+  "World Break: Aria of Curse for a Holy Swordsman", "Seiken Tsukai no World Break",
+  "Freezing",
+  "Kill la Kill"
 ];
 
 // שמות לפי אפליקציית televizio (לבקשת עמית)
@@ -956,5 +968,17 @@ Object.assign(window.HE_FAN_NAMES, {
   "Akagami no Shirayuki-hime": "שלגייה בעלת השיער האדום",
   "Liar, Liar": "שקרן שקרן",
   "Chain Chronicle: The Light of Haecceitas": "שרשרת כרונית: האור של האסיטאס",
-  "Chain Chronicle: Haecceitas no Hikari": "שרשרת כרונית: האור של האסיטאס"
+  "Chain Chronicle: Haecceitas no Hikari": "שרשרת כרונית: האור של האסיטאס",
+  "Shikimori's Not Just a Cutie": "שיקימורי-סאן לא רק חמודה",
+  "Kawaii dake ja Nai Shikimori-san": "שיקימורי-סאן לא רק חמודה",
+  "The Seven Heavenly Virtues": "שבע המידות הטובות",
+  "Nanatsu no Bitoku": "שבע המידות הטובות",
+  "Blade Dance of the Elementalers": "ריקודי הלהב של מתקשרי הרוחות",
+  "Seirei Tsukai no Blade Dance": "ריקודי הלהב של מתקשרי הרוחות",
+  "Isekai Quartet": "רביעיית איסקאי",
+  "Black Bullet": "קליע שחור",
+  "World Break: Aria of Curse for a Holy Swordsman": "קללת האריה: העולם השבור",
+  "Seiken Tsukai no World Break": "קללת האריה: העולם השבור",
+  "Freezing": "קיפאון",
+  "Kill la Kill": "קיל לה קיל"
 });
