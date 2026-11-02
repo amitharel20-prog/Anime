@@ -253,6 +253,14 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 .banner::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,var(--bg))}
 .hero.over{margin-top:-60px;position:relative}
 .hero.over img{box-shadow:0 6px 18px rgba(0,0,0,.35)}
+.sugwrap{position:relative}
+.sug{position:absolute;inset-inline:0;top:calc(100% + 4px);z-index:20;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.25);overflow:hidden;max-height:70vh;overflow-y:auto}
+.sugi{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;border-bottom:1px solid var(--line);padding:8px 10px;text-align:start}
+.sugi:last-child{border-bottom:0}
+.sugi img,.sugi .ph{width:36px;height:52px;object-fit:cover;border-radius:6px;flex:none;background:var(--line)}
+.sugi b{display:block;font-weight:700;line-height:1.3}
+.sugi small{color:var(--muted);font-size:12px}
+.sugload{padding:8px 12px;color:var(--muted);font-size:13px}
 .ytbox{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:12px}
 .ytbox .ytframe{width:100%;max-width:900px;aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden}
 .ytbox iframe{width:100%;height:100%;border:0;display:block}
@@ -345,7 +353,7 @@ header.top .themebtn,header.top .bellbtn,header.top .langbtn{background:color-mi
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=82"></script>
+<script src="he-names.js?v=83"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -371,7 +379,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 82;
+const APP_VERSION = 83;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -1252,16 +1260,74 @@ async function loadBrowse(k, more){
   storeBrowse(k,d.Page.media);
   return browseCache[ck]=d.Page.media;
 }
+/* ---------- הצעות בזמן הקלדה ---------- */
+const sugCache = new Map(); let sugSeq = 0;
+function sugLocal(q){
+  const nq=normQ(q); if(!nq) return [];
+  const out=[];
+  for(const e of Object.values(db.items)){
+    if(!e.status || isHidden(e)) continue;
+    const f=fanFor(e)||"";
+    if(normQ([e.title,e.romaji,f,heAlias(f)].join(" ")).includes(nq)) out.push({id:e.id, name:tn(e), sub:[e.year, STATUS[e.status]&&STATUS[e.status].label].filter(Boolean).join(" · "), img:e.cover, adult:e.adult});
+    if(out.length>=4) break;
+  }
+  return out;
+}
+async function sugRemote(q){
+  const key=q.toLowerCase(); if(sugCache.has(key)) return sugCache.get(key);
+  let list=[];
+  if(/[\u0590-\u05FF]/.test(q)){
+    const nq=normQ(q), titles=[]; const seen=new Set();
+    for(const [en,he] of Object.entries(window.HE_FAN_NAMES||{})){ if(normQ(he+" "+heAlias(he)).includes(nq) && !seen.has(he)){ seen.add(he); titles.push(en); if(titles.length>=4) break; } }
+    if(titles.length){
+      const qq=`query(${titles.map((_,j)=>`$s${j}:String`).join(",")}){${titles.map((_,j)=>`a${j}:Page(perPage:2){media(search:$s${j},type:ANIME,${adultFilter()}sort:SEARCH_MATCH){${MEDIA_FIELDS}}}`).join(" ")}}`;
+      const vars={}; titles.forEach((t,j)=>vars["s"+j]=t);
+      const d=await anilist(qq,vars,1); const ids=new Set();
+      titles.forEach((_,j)=>((d["a"+j]||{}).media||[]).forEach(m=>{ if(!ids.has(m.id)){ ids.add(m.id); list.push(m); } }));
+    }
+  } else {
+    const d=await anilist(`query($s:String){Page(perPage:8){media(search:$s,type:ANIME,${adultFilter()}sort:SEARCH_MATCH){${MEDIA_FIELDS}}}}`,{s:q},1);
+    list=d.Page.media;
+  }
+  sugCache.set(key,list); return list;
+}
+function bindSuggest(inp, box){
+  let t=null;
+  const hide=()=>{ box.hidden=true; box.innerHTML=""; };
+  const draw=(local, remote, loading)=>{
+    const seen=new Set(); const rows=[];
+    local.forEach(x=>{ seen.add(x.id); rows.push(x); });
+    (remote||[]).forEach(m=>{ if(seen.has(m.id)) return; seen.add(m.id); const mine=db.items[m.id]; rows.push({id:m.id, name:tn(m), sub:[FORMAT[m.format]||m.format, m.seasonYear, mine&&mine.status&&!isHidden(mine)?STATUS[mine.status].label:null].filter(Boolean).join(" · "), img:m.coverImage&&(m.coverImage.medium||m.coverImage.large), adult:m.isAdult, m}); });
+    if(!rows.length && !loading){ hide(); return; }
+    box.innerHTML = rows.slice(0,8).map(r=>`<button type="button" class="sugi" data-sid="${r.id}">${r.img?`<img src="${esc(r.img)}" alt="" loading="lazy" decoding="async"${r.adult?' class="adultimg"':""}>`:`<span class="ph"></span>`}<span><b>${r.name}</b><small>${esc(r.sub||"")}</small></span></button>`).join("") + (loading?`<div class="sugload">מחפש…</div>`:"");
+    box.hidden=false;
+    box.querySelectorAll("[data-sid]").forEach(b=>{ const r=rows.find(x=>x.id===+b.dataset.sid);
+      b.onpointerdown=()=>prefetchFull(r.id);
+      b.onclick=()=>{ if(r.m) cacheMedia[r.id]=r.m; hide(); inp.blur(); go({tab:"search", detail:r.id}); }; });
+  };
+  inp.addEventListener("input",()=>{
+    clearTimeout(t); const q=inp.value.trim(); const my=++sugSeq;
+    if(q.length<2){ hide(); return; }
+    const local=sugLocal(q); const cached=sugCache.get(q.toLowerCase());
+    draw(local, cached, !cached);
+    if(cached) return;
+    t=setTimeout(async ()=>{ try{ const r=await sugRemote(q); if(my===sugSeq && inp.value.trim()===q) draw(local, r, false); }catch(e){ if(my===sugSeq) draw(local, [], false); } }, 280);
+  });
+  inp.addEventListener("blur",()=>setTimeout(hide,200));
+  inp.addEventListener("focus",()=>{ if(inp.value.trim().length>=2) inp.dispatchEvent(new Event("input")); });
+  inp.form && inp.form.addEventListener("submit",()=>{ sugSeq++; hide(); });
+}
 function renderSearch(){
   setHeader("חיפוש אנימה", false);
   view.innerHTML = `
-    <form class="search" id="sf"><input id="q" type="search" placeholder="חפש בעברית או באנגלית" value="${esc(lastSearch.q)}" autocomplete="off" enterkeyhint="search"><button class="btn primary">חפש</button></form>
+    <div class="sugwrap"><form class="search" id="sf"><input id="q" type="search" placeholder="חפש בעברית או באנגלית" value="${esc(lastSearch.q)}" autocomplete="off" enterkeyhint="search"><button class="btn primary">חפש</button></form><div id="sug" class="sug" hidden></div></div>
     <div id="browseBar"></div>
     <div class="sortrow genrerow"><label for="gsel">ז'אנר</label><select id="gsel">${genreOptions()}</select></div>
     <div class="sortrow"><label for="ssel">מיון</label><select id="ssel">${Object.entries(SORT_OPTS).map(([k,l])=>`<option value="${k}" ${k===browseSort?"selected":""}>${l}</option>`).join("")}</select></div>
     <div id="sr" class="list"></div>`;
   const sr = $("#sr"), bar=$("#browseBar");
   $("#gsel").onchange = ev=>{ browseGenre=ev.target.value; renderSearch(); };
+  bindSuggest($("#q"), $("#sug"));
   $("#ssel").onchange = ev=>{ browseSort=ev.target.value; renderSearch(); };
   const show = res => {
     if(lastSearch.q && browseGenre) res = res.filter(m=>(m.genres||[]).includes(browseGenre));
@@ -1416,20 +1482,45 @@ async function renderSeasonal(){
 
 /* ---------- מסך אנימה ---------- */
 const cacheMedia = {};
+// מידע מלא על אנימה: נשמר בטלפון (40 האחרונות), ומתחיל להיטען כבר כשנוגעים בה
+const fullInflight = {};
+const FULL_KEY = KEY+".full";
+let fullStore = (()=>{ try{ return JSON.parse(localStorage.getItem(FULL_KEY))||{}; }catch(e){ return {}; } })();
+function saveFull(id, m){
+  fullStore[id]={t:Date.now(),m};
+  const ids=Object.keys(fullStore).sort((a,b)=>fullStore[b].t-fullStore[a].t);
+  ids.slice(40).forEach(k=>delete fullStore[k]);
+  try{ localStorage.setItem(FULL_KEY, JSON.stringify(fullStore)); }catch(e){ fullStore={}; try{ localStorage.removeItem(FULL_KEY); }catch(_){} }
+}
+function fetchFull(id){
+  if(fullInflight[id]) return fullInflight[id];
+  const p = anilist(`query($id:Int){Media(id:$id){${MEDIA_FIELDS} description(asHtml:false) airingSchedule(perPage:150){nodes{episode airingAt}} bannerImage season studios(isMain:true){nodes{name}} trailer{id site} streamingEpisodes{title} relations{edges{relationType node{id type format title{romaji english} coverImage{large medium} seasonYear}}}}}`,{id}).then(d=>{ cacheMedia[id+"full"]=d.Media; saveFull(id,d.Media); return d.Media; })
+    .finally(()=>{ setTimeout(()=>delete fullInflight[id], 1000); });
+  return fullInflight[id]=p;
+}
+function prefetchFull(id){
+  if(cacheMedia[id+"full"] || fullInflight[id]) return;
+  const st=fullStore[id]; if(st && Date.now()-st.t<6*3600e3){ cacheMedia[id+"full"]=st.m; return; }
+  fetchFull(id).catch(()=>{});
+}
+document.addEventListener("pointerdown",ev=>{ const b=ev.target.closest&&ev.target.closest("[data-id],[data-rid]"); if(!b) return; const id=+(b.dataset.id||b.dataset.rid); if(id) prefetchFull(id); },{passive:true});
 async function renderDetail(id){
   let e = db.items[id];
   setHeader(e?e.title:"…", true, e||null);
   let m = cacheMedia[id+"full"];
+  const st = fullStore[id];
+  if(!m && st){ m = cacheMedia[id+"full"] = st.m; }
   const paint = ()=>detailHTML(id, m);
   paint();
-  if(!m){
+  const fresh = st && Date.now()-st.t < 6*3600e3;
+  if(!m || !fresh || fullInflight[id]){
     try{
-      const d = await anilist(`query($id:Int){Media(id:$id){${MEDIA_FIELDS} description(asHtml:false) airingSchedule(perPage:150){nodes{episode airingAt}} bannerImage season studios(isMain:true){nodes{name}} trailer{id site} streamingEpisodes{title} relations{edges{relationType node{id type format title{romaji english} coverImage{large medium} seasonYear}}}}}`,{id});
-      m = cacheMedia[id+"full"] = d.Media;
+      const hadM = !!m;
+      m = await fetchFull(id);
       // עדכון נתונים שהשתנו (למשל פרקים חדשים בסדרה משודרת)
-      if(db.items[id]){ const fresh=entryFromMedia(m); Object.assign(db.items[id],{episodes:fresh.episodes,cover:fresh.cover||db.items[id].cover,title:db.items[id].title||fresh.title,genres:fresh.genres,duration:fresh.duration,air:fresh.air,next:fresh.next}); save(false); }
-      if(current.detail===id) paint();
-    }catch(err){ if(current.detail===id && !db.items[id]) view.innerHTML=`<div class="msg">לא הצלחתי לטעון: ${esc(err.message)}</div>`; }
+      if(db.items[id]){ const fr=entryFromMedia(m); Object.assign(db.items[id],{episodes:fr.episodes,cover:fr.cover||db.items[id].cover,title:db.items[id].title||fr.title,genres:fr.genres,duration:fr.duration,air:fr.air,next:fr.next}); save(false); }
+      if(current.detail===id){ const y=window.scrollY; paint(); if(hadM) window.scrollTo(0,y); }
+    }catch(err){ if(current.detail===id && !db.items[id] && !m) view.innerHTML=`<div class="msg">לא הצלחתי לטעון: ${esc(err.message)}</div>`; }
   }
 }
 function getOrCreate(id, m){
