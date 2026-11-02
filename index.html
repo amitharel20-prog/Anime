@@ -353,7 +353,7 @@ header.top .themebtn,header.top .bellbtn,header.top .langbtn{background:color-mi
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=83"></script>
+<script src="he-names.js?v=84"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -379,7 +379,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 83;
+const APP_VERSION = 84;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -1269,9 +1269,17 @@ function sugLocal(q){
     if(!e.status || isHidden(e)) continue;
     const f=fanFor(e)||"";
     if(normQ([e.title,e.romaji,f,heAlias(f)].join(" ")).includes(nq)) out.push({id:e.id, name:tn(e), sub:[e.year, STATUS[e.status]&&STATUS[e.status].label].filter(Boolean).join(" · "), img:e.cover, adult:e.adult});
-    if(out.length>=4) break;
+    if(out.length>=3) break;
   }
   return out;
+}
+// חיפוש שם עברי בוויקידאטה (גם אנימות שאין במילון שלנו): מחזיר מספרי MAL
+async function wikiHeMals(q){
+  const u="https://www.wikidata.org/w/api.php?origin=*&format=json&action=wbsearchentities&language=he&uselang=he&type=item&limit=12&search="+encodeURIComponent(q);
+  const j=await (await fetch(u)).json(); const ids=(j.search||[]).map(x=>x.id); if(!ids.length) return [];
+  const j2=await (await fetch("https://www.wikidata.org/w/api.php?origin=*&format=json&action=wbgetentities&props=claims&ids="+ids.join("|"))).json();
+  const mals=[]; for(const id of ids){ const c=j2.entities&&j2.entities[id]&&j2.entities[id].claims&&j2.entities[id].claims.P4086; if(c&&c[0]&&c[0].mainsnak.datavalue) mals.push(+c[0].mainsnak.datavalue.value); }
+  return mals;
 }
 async function sugRemote(q){
   const key=q.toLowerCase(); if(sugCache.has(key)) return sugCache.get(key);
@@ -1282,11 +1290,18 @@ async function sugRemote(q){
     if(titles.length){
       const qq=`query(${titles.map((_,j)=>`$s${j}:String`).join(",")}){${titles.map((_,j)=>`a${j}:Page(perPage:2){media(search:$s${j},type:ANIME,${adultFilter()}sort:SEARCH_MATCH){${MEDIA_FIELDS}}}`).join(" ")}}`;
       const vars={}; titles.forEach((t,j)=>vars["s"+j]=t);
-      const d=await anilist(qq,vars,1); const ids=new Set();
+      const d=await anilist(qq,vars,2); const ids=new Set();
       titles.forEach((_,j)=>((d["a"+j]||{}).media||[]).forEach(m=>{ if(!ids.has(m.id)){ ids.add(m.id); list.push(m); } }));
     }
+    if(list.length<6){
+      try{
+        const mals=await wikiHeMals(q);
+        if(mals.length){ const d=await anilist(`query($m:[Int]){Page(perPage:8){media(idMal_in:$m,type:ANIME,${adultFilter()}sort:POPULARITY_DESC){${MEDIA_FIELDS}}}}`,{m:mals},2);
+          const have=new Set(list.map(x=>x.id)); d.Page.media.forEach(m=>{ if(!have.has(m.id)) list.push(m); }); }
+      }catch(e){}
+    }
   } else {
-    const d=await anilist(`query($s:String){Page(perPage:8){media(search:$s,type:ANIME,${adultFilter()}sort:SEARCH_MATCH){${MEDIA_FIELDS}}}}`,{s:q},1);
+    const d=await anilist(`query($s:String){Page(perPage:8){media(search:$s,type:ANIME,${adultFilter()}sort:SEARCH_MATCH){${MEDIA_FIELDS}}}}`,{s:q},2);
     list=d.Page.media;
   }
   sugCache.set(key,list); return list;
