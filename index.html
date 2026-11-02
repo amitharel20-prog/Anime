@@ -257,6 +257,8 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 .banner::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,var(--bg))}
 .hero.over{margin-top:-60px;position:relative}
 .hero.over img{box-shadow:0 6px 18px rgba(0,0,0,.35)}
+.langpick{display:flex;gap:8px;margin-top:10px}
+.langpick .btn{flex:1}
 .sugwrap{position:relative}
 .sug{position:absolute;inset-inline:0;top:calc(100% + 4px);z-index:20;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.25);overflow:hidden;max-height:70vh;overflow-y:auto}
 .sugi{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;border-bottom:1px solid var(--line);padding:8px 10px;text-align:start}
@@ -352,9 +354,9 @@ button,a,.chip,select,input{touch-action:manipulation}
 </head>
 <body>
 <header class="top"><div class="wrap">
-  <button class="back" id="backBtn" hidden aria-label="חזרה">→</button>
+  <button class="back nofx" id="backBtn" hidden aria-label="חזרה">→</button>
   <h1 id="pageTitle">הרשימה שלי</h1>
-  <button class="langbtn" id="langBtn" aria-label="שפת שמות האנימות"></button>
+  <button class="langbtn nofx" id="langBtn" aria-label="שפת שמות האנימות"></button>
   <button class="bellbtn" id="bellBtn" aria-label="התראות"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg><span id="bellBadge" hidden>0</span></button>
   <button class="themebtn" id="themeBtn" aria-label="מצב תצוגה"></button>
 </div></header>
@@ -377,7 +379,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=87"></script>
+<script src="he-names.js?v=89"></script>
+<script src="i18n-en.js?v=89"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -403,7 +406,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 87;
+const APP_VERSION = 89;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -420,6 +423,71 @@ function save(sync=true){
 function removeItem(id){ delete db.items[id]; db.meta.deleted[id]=Date.now(); save(); }
 const prefs = (()=>{ try{ return JSON.parse(localStorage.getItem(KEY+".prefs"))||{}; }catch(e){ return {}; } })();
 function savePrefs(){ try{ localStorage.setItem(KEY+".prefs", JSON.stringify(prefs)); }catch(e){} }
+/* ---------- שפת הממשק (עברית / English) ---------- */
+// הכפתור עב/EN למעלה משנה גם את שמות האנימות וגם את כל הממשק
+if(!prefs.ui2){ prefs.ui2=1; if(prefs.lang!=="en") prefs.lang="he"; else prefs.lang="he"; try{ localStorage.setItem(KEY+".prefs", JSON.stringify(prefs)); }catch(e){} }
+const uiEn = ()=>prefs.lang==="en";
+const LOC = ()=>uiEn() ? "en-GB" : "he-IL";
+const I18N_SKIP = ".name,.ptitle,.hero h2,.alt,.sugi b,#pageTitle[data-tid],.rel span,code,script,style,.desc,.nofx";
+const NUM_RE = /\d+(?:[.,:/]\d+)*/g;
+const I18N_PATTERNS = [
+  [/^יצאו (\d+) פרקים חדשים של (.+) \(עד פרק (\d+)\)$/, "$1 new episodes of $2 are out (up to ep. $3)"],
+  [/^יצא פרק (\d+) של (.+)$/, "Episode $1 of $2 is out"],
+  [/^העונה החדשה של (.+) יוצאת ב־(.+)$/, "New season of $1 comes out $2"],
+  [/^ב־(.+) ←$/, "in $1 →"],
+  [/^העונה \((.+)\)$/, "This season ($1)"],
+  [/^קודם · (.+)$/, "Previous · $1"],
+  [/^יוצא ב־?(.+?) בשעה$/, "Airs $1 at"],
+  [/^יוצא ב־?(.+?) \(בעוד (\d+) ימים\)$/, "Airs $1 (in $2 days)"],
+  [/^יוצא ב־?(.+?) \(מחר\)$/, "Airs $1 (tomorrow)"],
+  [/^יוצא ב־?(.+)$/, "Airs $1"],
+  [/^שודר ב־?(.+)$/, "Aired $1"],
+  [/^נמצאו (\d+) בכל הרשימות$/, "Found $1 in all lists"],
+  [/^נמצאו (\d+) בנעול$/, "Found $1 in locked"],
+  [/^סומנו פרקים (\d+)–(\d+)$/, "Marked episodes $1–$2"],
+  [/^הועתקו (\d+) שמות$/, "Copied $1 names"],
+  [/^בסדרה הזו יש$/, "This series has"],
+  [/^פרקי פילר \(לא מהמנגה, אפשר לדלג\) ו־(\d+) פרקים חצי פילר\. הם מסומנים ברשימה\.$/, "filler episodes (not from the manga, safe to skip) and $1 mixed episodes. They're marked in the list."],
+  [/^ועוד (\d+) אנימות שנפתחו בחיפוש, בבית או בעונתי \(לא ברשימה שלך\) קיבלו תרגום אוטומטי או לפי הצליל\.$/, "Plus $1 anime opened in search, home or seasonal (not in your list) got machine or sound-based names."],
+  [/^הייבוא נכשל: (.+)$/, "Import failed: $1"],
+  [/^החיפוש נכשל: (.+)\. בדוק חיבור לאינטרנט ונסה שוב\.$/, "Search failed: $1. Check your internet connection and try again."],
+  [/^לא הצלחתי לטעון: (.+)$/, "Couldn't load: $1"],
+  [/^התקבלו (\d+) עדכונים מהמכשיר השני$/, "Received $1 updates from the other device"]
+];
+let I18N_PHRASES = null;
+function trText(raw){
+  if(!raw || !/[\u0590-\u05FF]/.test(raw)) return raw;
+  const lead = raw.match(/^\s*/)[0], trail = raw.match(/\s*$/)[0];
+  const t = raw.replace(/\s+/g," ").trim();
+  const D = (window.I18N_EN||{}).exact||{};
+  const nums = t.match(NUM_RE)||[]; const key = t.replace(NUM_RE,"{n}");
+  if(D[key]!=null){ let i=0; return lead + D[key].replace(/\{n\}/g,()=>nums[i++]??"") + trail; }
+  for(const [re,out] of I18N_PATTERNS){ if(re.test(t)) return lead + t.replace(re,out) + trail; }
+  if(!I18N_PHRASES){ I18N_PHRASES = ((window.I18N_EN||{}).phrases||[]).slice().sort((a,b)=>b[0].length-a[0].length).map(([he,en])=>[new RegExp("(^|[\\s(·,:–—\\-])"+he.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"(?=$|[\\s)·,.:–—\\-])","g"), en]); }
+  let s = t; for(const [re,en] of I18N_PHRASES) s = s.replace(re, (m,p)=>p+en);
+  return lead + s + trail;
+}
+function trTree(root){
+  if(!uiEn() || !root) return;
+  if(root.nodeType===3){ if(!(root.parentElement && root.parentElement.closest(I18N_SKIP))){ const v=trText(root.nodeValue); if(v!==root.nodeValue) root.nodeValue=v; } return; }
+  if(root.nodeType!==1 || root.closest && root.closest(I18N_SKIP) && root.matches && !root.matches("body")) return;
+  const w=document.createTreeWalker(root, NodeFilter.SHOW_TEXT); let n;
+  while((n=w.nextNode())){ if(n.parentElement && n.parentElement.closest(I18N_SKIP)) continue; const v=trText(n.nodeValue); if(v!==n.nodeValue) n.nodeValue=v; }
+  const els = root.querySelectorAll ? root.querySelectorAll("[placeholder],[aria-label],[title]") : [];
+  [root,...els].forEach(e=>{ if(!e.getAttribute) return; ["placeholder","aria-label","title"].forEach(a=>{ const v=e.getAttribute(a); if(v && /[\u0590-\u05FF]/.test(v)){ const nv=trText(v); if(nv!==v) e.setAttribute(a,nv); } }); });
+}
+let i18nObs = null;
+function applyUiLang(){
+  const en = uiEn();
+  document.documentElement.lang = en ? "en" : "he";
+  document.documentElement.dir = en ? "ltr" : "rtl";
+  const bb=document.getElementById("backBtn"); if(bb){ bb.textContent = en ? "←" : "→"; bb.setAttribute("aria-label", en?"Back":"חזרה"); }
+  if(en && !i18nObs){
+    i18nObs = new MutationObserver(muts=>{ for(const m of muts){ if(m.type==="characterData") trTree(m.target); else m.addedNodes.forEach(trTree); } });
+    i18nObs.observe(document.body,{childList:true,subtree:true,characterData:true});
+    trTree(document.body);
+  }
+}
 // בקשה מהדפדפן לא למחוק את הנתונים
 try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
 
@@ -508,15 +576,21 @@ $("#themeBtn").onclick=()=>{
   applyTheme(); toast("מצב תצוגה: "+THEMES[prefs.theme].label);
 };
 applyTheme();
+applyUiLang();
 document.documentElement.classList.toggle("noblur", !!prefs.noBlur);
 $("#bellBtn").onclick=()=>go({tab:current.tab,notifs:true});
 function paintLangBtn(){ $("#langBtn").textContent = isHeLang() ? "עב" : "EN"; }
 paintLangBtn();
-$("#langBtn").onclick=()=>{ prefs.lang = isHeLang() ? "en" : "he"; savePrefs(); paintLangBtn(); render(); toast(isHeLang()?"שמות האנימות בעברית":"Anime names in English"); };
+$("#langBtn").onclick=()=>{
+  prefs.lang = isHeLang() ? "en" : "he"; savePrefs();
+  // שומרים איפה היית, וטוענים מחדש בשפה החדשה
+  try{ sessionStorage.setItem(KEY+".cur", JSON.stringify({tab:current.tab, detail:current.detail||null})); }catch(e){}
+  location.reload();
+};
 
 /* ---------- ניווט ---------- */
 let stack = [];
-let current = {tab:"home"};
+let current = (()=>{ try{ const c=JSON.parse(sessionStorage.getItem(KEY+".cur")); sessionStorage.removeItem(KEY+".cur"); if(c&&c.tab) return c.detail?{tab:c.tab,detail:c.detail}:{tab:c.tab}; }catch(e){} return {tab:"home"}; })();
 let listFilter = "watching";
 let lastSearch = {q:"", results:[]};
 
@@ -770,7 +844,7 @@ function closeSheet(){ const sh=$("#sheet"); sh.hidden=true; sh.innerHTML=""; }
 const HE_KEY = KEY+".he";
 let heCache = (()=>{ try{ return JSON.parse(localStorage.getItem(HE_KEY))||{}; }catch(e){ return {}; } })();
 function saveHe(){ try{ localStorage.setItem(HE_KEY, JSON.stringify(heCache)); }catch(e){} }
-function isHeLang(){ return prefs.lang==="he"; }
+function isHeLang(){ return prefs.lang!=="en"; }
 function enTitle(o){ if(!o) return ""; if(o.title && typeof o.title==="object") return o.title.english||o.title.romaji||o.title.native||""; return o.title||o.titleStr||""; }
 // שמות מאתרי תרגום ישראליים (he-names.js) — המקור המועדף
 const keyN = s => (s||"").toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g,"");
@@ -1071,7 +1145,7 @@ function releaseInfo(e){
   return null;
 }
 const HE_MONTHS=["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
-const fmtDay = t => new Date(t).toLocaleDateString("he-IL",{weekday:"short",day:"numeric",month:"numeric",year:"2-digit"});
+const fmtDay = t => new Date(t).toLocaleDateString(LOC(),{weekday:"short",day:"numeric",month:"numeric",year:"2-digit"});
 function releaseText(e){
   const r = releaseInfo(e); if(!r) return "תאריך יציאה עוד לא ידוע";
   if(r.t){ const days=Math.ceil((r.t-Date.now())/DAY); return `יוצא ב־${fmtDay(r.t)}${days>0&&days<=60?` (בעוד ${days===1?"יום":days+" ימים"})`:""}`; }
@@ -1119,7 +1193,7 @@ function renderNotifs(){
     <div class="nhead"><span class="note">התראות על פרקים חדשים ועל עונות חדשות של אנימות שראית</span><button class="linkbtn" id="nClear">נקה הכל</button></div>
     <div class="nlist">${list.map((n,i)=>{ const e=db.items[n.animeId];
       return `<button class="nitem ${n.read?"":"unread"}" data-ni="${i}">${e&&e.cover&&!e.adult?`<img src="${esc(e.cover)}" alt="" loading="lazy" decoding="async">`:`<span class="ph"></span>`}
-        <span class="ntext"><span>${esc(n.text)}</span><small>${new Date(n.at).toLocaleDateString("he-IL",{day:"numeric",month:"numeric"})} ${new Date(n.at).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})}</small></span></button>`; }).join("")}</div>
+        <span class="ntext"><span>${esc(n.text)}</span><small>${new Date(n.at).toLocaleDateString(LOC(),{day:"numeric",month:"numeric"})} ${new Date(n.at).toLocaleTimeString(LOC(),{hour:"2-digit",minute:"2-digit"})}</small></span></button>`; }).join("")}</div>
     ${notifCardHTML()}`
   : `<div class="empty"><h2>אין התראות</h2><p>כאן יופיעו פרקים חדשים באנימות שאתה רואה, ועונות חדשות של אנימות שראית (3 ימים לפני שהן יוצאות).</p></div>${notifCardHTML()}`;
   view.querySelectorAll("[data-ni]").forEach(b=>b.onclick=()=>{ const n=list[+b.dataset.ni]; if(db.items[n.animeId]) go({tab:current.tab,detail:n.animeId}); });
@@ -1202,9 +1276,9 @@ function renderStats(){
   const missingDur = all.some(e=>watchedCount(e)&&!e.duration);
   view.innerHTML = `
     <div class="bigstats">
-      <div><b>${hours.toLocaleString("he-IL")}</b>שעות צפייה</div>
+      <div><b>${hours.toLocaleString(LOC())}</b>שעות צפייה</div>
       <div><b>${days}</b>ימים רצופים</div>
-      <div><b>${epsW.toLocaleString("he-IL")}</b>פרקים</div>
+      <div><b>${epsW.toLocaleString(LOC())}</b>פרקים</div>
       <div><b>${avg}</b>ציון ממוצע</div>
     </div>
     ${missingDur?`<p class="note">חלק מהאנימות עוד מתעדכנות מ־AniList, אז לפעמים החישוב מניח 24 דקות לפרק.</p>`:""}
@@ -1626,7 +1700,7 @@ function detailHTML(id, m){
         ${genres.length?`<div class="gtags big">${genres.map(g=>`<span>${esc(genreHe(g))}</span>`).join("")}</div>`:""}
         ${trailer?`<a class="trailer" href="${trailer}" target="_blank" rel="noopener" data-yt="${esc(m.trailer.id)}">▶ טריילר</a>`:""}
         ${base&&base.status==="NOT_YET_RELEASED"?`<div class="relbig">${esc(releaseText(relEntry))}</div>`:""}
-        ${base&&base.nextAiringEpisode?`<div class="facts"><span>פרק ${base.nextAiringEpisode.episode} יוצא ב־<b>${new Date(base.nextAiringEpisode.airingAt*1000).toLocaleDateString("he-IL",{day:"numeric",month:"numeric",weekday:"short"})}</b></span></div>`:""}
+        ${base&&base.nextAiringEpisode?`<div class="facts"><span>פרק ${base.nextAiringEpisode.episode} יוצא ב־<b>${new Date(base.nextAiringEpisode.airingAt*1000).toLocaleDateString(LOC(),{day:"numeric",month:"numeric",weekday:"short"})}</b></span></div>`:""}
       </div></div>
 
     <h3>סטטוס</h3>
@@ -1651,7 +1725,7 @@ function detailHTML(id, m){
     <div class="eps">${(()=>{ const fl=fillerOf(e); return Array.from({length:showCount},(_,i)=>{const n=i+1, ep=(e.eps||{})[n]||{};
       const ftag = fl ? (fl.f.has(n)?'<span class="fill">פילר</span>':(fl.m.has(n)?'<span class="fill mix">חצי פילר</span>':"")) : "";
       return `<div class="ep${ftag?(fl.f.has(n)?" isfill":" ismix"):""}"><label><input type="checkbox" id="w${n}" data-ep="${n}" ${ep.w?"checked":""}>פרק ${n}${ftag}</label>
-      <span class="ttl" dir="auto">${esc(cleanEpTitle(epTitles[i]))}${sched[n]?`<small class="epdate ${sched[n]>Date.now()?"future":""}">${sched[n]>Date.now()?"יוצא ב":"שודר ב"}${fmtDay(sched[n])}${sched[n]>Date.now()?` בשעה <bdi dir="ltr">${new Date(sched[n]).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})}</bdi>`:""}</small>`:""}</span></div>`;}).join(""); })()}</div>`
+      <span class="ttl" dir="auto">${esc(cleanEpTitle(epTitles[i]))}${sched[n]?`<small class="epdate ${sched[n]>Date.now()?"future":""}">${sched[n]>Date.now()?"יוצא ב":"שודר ב"}${fmtDay(sched[n])}${sched[n]>Date.now()?` בשעה <bdi dir="ltr">${new Date(sched[n]).toLocaleTimeString(LOC(),{hour:"2-digit",minute:"2-digit"})}</bdi>`:""}</small>`:""}</span></div>`;}).join(""); })()}</div>`
     :`<p class="desc">מספר הפרקים עוד לא ידוע ב־AniList.</p>`}
     ${mineReal?`<h3>הסרה</h3><div id="rmBox"><button class="btn" id="rm">הסר מהרשימה שלי</button></div>`:""}
     <div style="height:24px"></div>`;
@@ -1727,7 +1801,7 @@ function cleanEpTitle(t){ return t ? t.replace(/^Episode\s*\d+\s*[-:–]\s*/i,""
 function renderSettings(){
   setHeader("הגדרות", false);
   const n = Object.keys(db.items).length;
-  const lb = db.meta.lastBackup ? new Date(db.meta.lastBackup).toLocaleDateString("he-IL") : "עוד לא גיבית";
+  const lb = db.meta.lastBackup ? new Date(db.meta.lastBackup).toLocaleDateString(LOC()) : "עוד לא גיבית";
   view.innerHTML = `
     ${syncCardHTML()}
     <div class="card"><h2>גיבוי</h2><p>שומר קובץ עם כל ${n} האנימות, הסטטוסים והציונים. שמור אותו בדרייב או שלח לעצמך. גיבוי אחרון: ${lb}.</p>
@@ -1751,7 +1825,7 @@ function renderSettings(){
       return `<div class="card"><h2>שמות בעברית</h2><p>מתוך ${ids.length} האנימות ברשימה שלך: ${fan} מאתרי תרגום ישראליים, ${wiki} מוויקיפדיה, ${mtc} בתרגום אוטומטי${missing?`, ו־${missing} לפי הצליל (עד שיימצא להם תרגום)`:""}.</p>
       ${(()=>{ const n=outsideNames().length; return n?`<p style="margin-top:10px">ועוד ${n} אנימות שנפתחו בחיפוש, בבית או בעונתי (לא ברשימה שלך) קיבלו תרגום אוטומטי או לפי הצליל.</p><div class="actions"><button class="btn" id="copyOutside">העתק שמות מחוץ לרשימה</button></div>`:""; })()}
       ${(missing||mtc)?`<div class="actions" style="margin-top:8px"><button class="btn" id="copyMissing">העתק שמות לבדיקה</button></div><p class="note">מעתיק את השמות שתורגמו אוטומטית או לפי הצליל. אפשר להדביק אותם בצ'אט עם Claude ולכתוב ליד כל אחד איך תרצה שייקרא.</p>`:""}
-      ${blocked?`<p class="note">שירות התרגום החינמי הגיע למגבלה היומית. השאר יתורגמו אוטומטית אחרי ${new Date(mtBlockedUntil).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})}.</p>`:(missing?`<p class="note">השמות החסרים ממשיכים להיטען ברקע.</p>`:"")}</div>`; })()}
+      ${blocked?`<p class="note">שירות התרגום החינמי הגיע למגבלה היומית. השאר יתורגמו אוטומטית אחרי ${new Date(mtBlockedUntil).toLocaleTimeString(LOC(),{hour:"2-digit",minute:"2-digit"})}.</p>`:(missing?`<p class="note">השמות החסרים ממשיכים להיטען ברקע.</p>`:"")}</div>`; })()}
     <div class="card"><h2>עדכון האפליקציה</h2><p>אם ביקשת שינוי והוא עוד לא מופיע, לוחצים כאן כדי לטעון מיד את הגרסה הכי חדשה. הרשימה שלך לא נמחקת.</p>
       <div class="actions"><button class="btn primary" id="forceUpd">טען את הגרסה החדשה</button></div></div>
     <p class="note" style="text-align:center">גרסה ${APP_VERSION}</p>`;
@@ -1843,7 +1917,7 @@ async function syncNow(silent){
     save(false);
     await rpc(c,"save_list",{p_code:c.code,p_data:{items:db.items,deleted:db.meta.deleted}});
     c.last=Date.now(); setSyncCfg(c);
-    syncState=`סונכרן ${new Date().toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})}`;
+    syncState=`סונכרן ${new Date().toLocaleTimeString(LOC(),{hour:"2-digit",minute:"2-digit"})}`;
     if(changed && !silent) toast(`התקבלו ${changed} עדכונים מהמכשיר השני`);
     if(changed && !current.detail) render();
   }catch(err){
