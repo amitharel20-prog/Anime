@@ -1553,5 +1553,7 @@ window.PENDING_ADDS = [
     ["Succubus Yondara Gibo ga Kita!?"],
     ["Megane no Megami"],
     ["Seika Jogakuin Kounin Sao Ojisan"]
-  ]}
+  ]},
+  // 3 שלא נמצאו לפי שם — מחפשים לפי מספר MAL
+  {key:"locked-batch-2026-11-02-mal", status:"plan", locked:true, mals:[56511,52617,51662], titles:[]}
 ];
