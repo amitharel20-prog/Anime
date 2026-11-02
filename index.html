@@ -16,6 +16,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Secular+One&display=swap">
+<script>
+// מצב תצוגה נקבע מיד בפתיחה (לפני שהעמוד מצויר), לפי מה שבחרת בפעם האחרונה
+try{ var _p=JSON.parse(localStorage.getItem("animeTracker.v1.prefs")||"{}"); var _t=_p.theme==="light"||_p.theme==="dark"?_p.theme:(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"); document.documentElement.setAttribute("data-theme",_t); }catch(e){}
+</script>
 <style>
 /* Layout: one column, sticky top bar, fixed bottom tab bar like a native app */
 :root{
@@ -353,7 +357,7 @@ header.top .themebtn,header.top .bellbtn,header.top .langbtn{background:color-mi
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=85"></script>
+<script src="he-names.js?v=86"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -379,7 +383,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 85;
+const APP_VERSION = 86;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
