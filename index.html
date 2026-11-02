@@ -250,6 +250,12 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 .banner::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,var(--bg))}
 .hero.over{margin-top:-60px;position:relative}
 .hero.over img{box-shadow:0 6px 18px rgba(0,0,0,.35)}
+.ytbox{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:12px}
+.ytbox .ytframe{width:100%;max-width:900px;aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden}
+.ytbox iframe{width:100%;height:100%;border:0;display:block}
+.ytbox .ytbar{display:flex;gap:10px;width:100%;max-width:900px;justify-content:space-between;align-items:center}
+.ytbox .ytbar a{color:#ddd;font-size:14px}
+.ytbox .ytclose{background:#fff;color:#111;border:0;border-radius:999px;padding:8px 18px;font-weight:700;font-size:15px}
 .trailer{display:inline-block;margin-top:10px;padding:6px 14px;border-radius:999px;background:#c4302b;color:#fff;font-weight:700;text-decoration:none;font-size:14px}
 .desctools{display:flex;gap:16px;align-items:center}
 .desctools a{text-decoration:none}
@@ -329,7 +335,7 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=76"></script>
+<script src="he-names.js?v=77"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -355,7 +361,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 76;
+const APP_VERSION = 77;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -1454,7 +1460,7 @@ function detailHTML(id, m){
         </div>
         ${m&&m.season&&m.seasonYear?`<div class="facts"><span>${SEASON_HE[m.season]} ${m.seasonYear} (${SEASON_MONTHS[m.season]})</span>${studio?`<span>${esc(studio)}</span>`:""}</div>`:(studio?`<div class="facts"><span>${esc(studio)}</span></div>`:"")}
         ${genres.length?`<div class="gtags big">${genres.map(g=>`<span>${esc(genreHe(g))}</span>`).join("")}</div>`:""}
-        ${trailer?`<a class="trailer" href="${trailer}" target="_blank" rel="noopener">▶ טריילר</a>`:""}
+        ${trailer?`<a class="trailer" href="${trailer}" target="_blank" rel="noopener" data-yt="${esc(m.trailer.id)}">▶ טריילר</a>`:""}
         ${base&&base.status==="NOT_YET_RELEASED"?`<div class="relbig">${esc(releaseText(relEntry))}</div>`:""}
         ${base&&base.nextAiringEpisode?`<div class="facts"><span>פרק ${base.nextAiringEpisode.episode} יוצא ב־<b>${new Date(base.nextAiringEpisode.airingAt*1000).toLocaleDateString("he-IL",{day:"numeric",month:"numeric",weekday:"short"})}</b></span></div>`:""}
       </div></div>
@@ -1784,6 +1790,21 @@ async function importMAL(file){
     impStatus(`יובאו ${done} אנימות.${miss.length?` לא נמצאו ב־AniList: ${esc(miss.slice(0,5).join(", "))}${miss.length>5?" ועוד":""}.`:""}`);
   }catch(err){ impStatus(`הייבוא נכשל: ${esc(err.message)}`); }
 }
+
+/* ---------- טריילר בתוך האפליקציה ---------- */
+function openTrailer(id, url){
+  closeTrailer();
+  const box=document.createElement("div"); box.className="ytbox"; box.id="ytbox";
+  box.innerHTML=`<div class="ytbar"><button class="ytclose" id="ytClose">✕ סגור</button><a href="${url}" target="_blank" rel="noopener">לא נפתח? צפה ביוטיוב</a></div>
+    <div class="ytframe"><iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&playsinline=1&rel=0&modestbranding=1" title="טריילר" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div>`;
+  document.body.appendChild(box);
+  box.addEventListener("click",ev=>{ if(ev.target===box) closeTrailer(); });
+  $("#ytClose").onclick=closeTrailer;
+  history.pushState({yt:1},"");
+}
+function closeTrailer(){ const b=$("#ytbox"); if(b){ b.remove(); if(history.state&&history.state.yt) history.back(); } }
+window.addEventListener("popstate",()=>{ const b=$("#ytbox"); if(b) b.remove(); });
+document.addEventListener("click",ev=>{ const a=ev.target.closest&&ev.target.closest("a[data-yt]"); if(!a) return; ev.preventDefault(); openTrailer(a.dataset.yt, a.href); });
 
 /* ---------- הפעלה ---------- */
 if("serviceWorker" in navigator && location.protocol==="https:"){ navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>r.update()).catch(()=>{});
