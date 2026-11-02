@@ -143,6 +143,9 @@ h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute
 .ep label{display:flex;align-items:center;gap:10px;font-weight:600;font-variant-numeric:tabular-nums}
 .ep input[type=checkbox]{width:22px;height:22px;accent-color:var(--s-watch)}
 .ep select{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:4px 6px}
+.ep .fill{display:inline-block;font-size:11px;font-weight:800;padding:1px 7px;border-radius:6px;background:#e67e22;color:#fff;line-height:1.5}
+.ep .fill.mix{background:transparent;color:#e67e22;border:1px solid #e67e22}
+.ep.isfill{border-color:#e67e2266}
 .ep .ttl{color:var(--muted);font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .eptools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
 .rel{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px}
@@ -336,7 +339,7 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=78"></script>
+<script src="he-names.js?v=79"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -362,7 +365,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 78;
+const APP_VERSION = 79;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -780,6 +783,14 @@ function onTvz(o){
   tvzMemo.set(o.id,r); return r;
 }
 const TVZ = '<span class="tvz">televizio</span>';
+const fillerMemo = new Map();
+function fillerOf(e){
+  const mal = e && (e.idMal || (db.items[e.id]&&db.items[e.id].idMal)); const F = mal && window.FILLERS && window.FILLERS[mal];
+  if(!F) return null;
+  if(fillerMemo.has(mal)) return fillerMemo.get(mal);
+  const parse = s => { const set=new Set(); (s||"").split(",").forEach(p=>{ const [a,b]=p.split("-").map(Number); for(let i=a;i<=(b||a);i++) set.add(i); }); return set; };
+  const r = {f:parse(F.f), m:parse(F.m)}; fillerMemo.set(mal,r); return r;
+}
 function heOf(id){
   const it=db.items[id]; const f = it && fanFor(it);
   if(f) return {t:f,src:"fan"};
@@ -1484,9 +1495,11 @@ function detailHTML(id, m){
 
     <h3>פרקים</h3>
     ${showCount?`<div class="eptools"><button class="btn" id="allW">סמן הכל כנצפה</button><button class="btn" id="noneW">נקה סימונים</button></div>
-    <div class="eps">${Array.from({length:showCount},(_,i)=>{const n=i+1, ep=(e.eps||{})[n]||{};
-      return `<div class="ep"><label><input type="checkbox" id="w${n}" data-ep="${n}" ${ep.w?"checked":""}>פרק ${n}</label>
-      <span class="ttl" dir="auto">${esc(cleanEpTitle(epTitles[i]))}${sched[n]?`<small class="epdate ${sched[n]>Date.now()?"future":""}">${sched[n]>Date.now()?"יוצא ב":"שודר ב"}${fmtDay(sched[n])}${sched[n]>Date.now()?` בשעה <bdi dir="ltr">${new Date(sched[n]).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})}</bdi>`:""}</small>`:""}</span></div>`;}).join("")}</div>`
+    ${(()=>{ const fl=fillerOf(e); return fl?`<p class="note fillnote">בסדרה הזו יש <b>${fl.f.size}</b> פרקי פילר (לא מהמנגה, אפשר לדלג) ו־${fl.m.size} פרקים חצי פילר. הם מסומנים ברשימה.</p>`:""; })()}
+    <div class="eps">${(()=>{ const fl=fillerOf(e); return Array.from({length:showCount},(_,i)=>{const n=i+1, ep=(e.eps||{})[n]||{};
+      const ftag = fl ? (fl.f.has(n)?'<span class="fill">פילר</span>':(fl.m.has(n)?'<span class="fill mix">חצי פילר</span>':"")) : "";
+      return `<div class="ep${ftag?(fl.f.has(n)?" isfill":" ismix"):""}"><label><input type="checkbox" id="w${n}" data-ep="${n}" ${ep.w?"checked":""}>פרק ${n}${ftag}</label>
+      <span class="ttl" dir="auto">${esc(cleanEpTitle(epTitles[i]))}${sched[n]?`<small class="epdate ${sched[n]>Date.now()?"future":""}">${sched[n]>Date.now()?"יוצא ב":"שודר ב"}${fmtDay(sched[n])}${sched[n]>Date.now()?` בשעה <bdi dir="ltr">${new Date(sched[n]).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})}</bdi>`:""}</small>`:""}</span></div>`;}).join(""); })()}</div>`
     :`<p class="desc">מספר הפרקים עוד לא ידוע ב־AniList.</p>`}
     ${mineReal?`<h3>הסרה</h3><div id="rmBox"><button class="btn" id="rm">הסר מהרשימה שלי</button></div>`:""}
     <div style="height:24px"></div>`;
