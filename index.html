@@ -397,8 +397,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=92"></script>
-<script src="i18n-en.js?v=92"></script>
+<script src="he-names.js?v=93"></script>
+<script src="i18n-en.js?v=93"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -424,7 +424,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 92;
+const APP_VERSION = 93;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -472,6 +472,8 @@ const I18N_PATTERNS = [
   [/^נמצאו (\d+) בנעול$/, "Found $1 in locked"],
   [/^סומנו פרקים (\d+)–(\d+)$/, "Marked episodes $1–$2"],
   [/^הועתקו (\d+) שמות$/, "Copied $1 names"],
+  [/^נוספו (\d+) אנימות ל'(.+)'$/, "Added $1 anime to '$2'"],
+  [/^נוספו (\d+) אנימות$/, "Added $1 anime"],
   [/^מגריל מתוך$/, "Drawing from"],
   [/^אנימות ב"אצפה בעתיד"\. ל־(\d+) אנימות עם ⭐ יש סיכוי כפול\.$/, "anime in \"Plan to watch\". $1 anime with ⭐ get double the chance."],
   [/^אנימות ב"אצפה בעתיד"\.$/, "anime in \"Plan to watch\"."],
@@ -2219,6 +2221,38 @@ buildNotifs(); updateBell();
 // שמות בעברית לכל הרשימה שלך ברקע, כדי שהחיפוש יעבוד בשתי השפות
 setTimeout(()=>{ Object.values(db.items).forEach(e=>{ if(e.status) wantHe(e); }); }, 1500);
 setTimeout(()=>{ syncNow(true); }, 600);
+// הוספות שביקשת דרך Claude: מחפשים כל שם ב־AniList פעם אחת ומוסיפים לרשימה
+async function processPendingAdds(){
+  const list=window.PENDING_ADDS||[]; if(!list.length || !navigator.onLine) return;
+  db.meta.pendingDone = db.meta.pendingDone || {};
+  for(const batch of list){
+    if(db.meta.pendingDone[batch.key]) continue;
+    const added=[], missing=[]; let netFail=false;
+    for(const names of batch.titles){
+      let found=null;
+      for(const q of names){
+        try{
+          const d=await anilist(`query($s:String){Page(perPage:5){media(search:$s,type:ANIME,sort:SEARCH_MATCH){${MEDIA_FIELDS}}}}`,{s:q},2);
+          const kn=keyN(q); const res=d.Page.media||[];
+          found = res.find(m=>[m.title.english,m.title.romaji].some(t=>t&&(keyN(t).includes(kn)||kn.includes(keyN(t))))) || null;
+          if(found) break;
+        }catch(e){ netFail=true; break; }
+        await sleep(700);
+      }
+      if(netFail) break;
+      if(found){
+        const it=db.items[found.id] || (db.items[found.id]=entryFromMedia(found));
+        if(!it.status || batch.locked){ if(!it.status) it.status=batch.status; if(batch.locked) it.locked=true; it.updated=Date.now(); added.push(found.id); }
+      } else missing.push(names[0]);
+    }
+    if(netFail) return;              // ננסה שוב בפתיחה הבאה
+    db.meta.pendingDone[batch.key]={at:Date.now(), added:added.length, missing};
+    save();
+    if(added.length) toast(batch.locked ? `נוספו ${added.length} אנימות` : `נוספו ${added.length} אנימות ל'${STATUS[batch.status].label}'`);
+    if(!current.detail && current.tab==="list") renderList();
+  }
+}
+setTimeout(()=>{ processPendingAdds().catch(()=>{}); }, 2500);
 // רענון פרקים ברקע: רק אחרי שהמסך נטען, ולכל היותר פעם בחצי שעה
 setTimeout(()=>{ if(Date.now()-(prefs.lastRefresh||0)>30*60e3) refreshFromAniList(); }, 8000);
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"){ syncNow(true); if(Date.now()-(prefs.lastRefresh||0)>30*60e3) refreshFromAniList(); } });

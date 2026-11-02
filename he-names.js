@@ -1539,3 +1539,19 @@ window.FILLERS = {
   "1482":  {f:"14-18,25,27,29-36,41-50", m:""},
   "3588":  {f:"17,32,37-51", m:""}
 };
+
+// אנימות שעמית ביקש להוסיף לרשימה (האפליקציה מחפשת אותן ב־AniList פעם אחת ומוסיפה)
+window.PENDING_ADDS = [
+  {key:"locked-batch-2026-11-02", status:"plan", locked:true, titles:[
+    ["Imaizumi Brings All the Gyarus to His House","Imaizumin-chi wa Douyara Gal no Tamariba ni Natteru Rashii"],
+    ["Kaede and Suzu The Animation","Kaede to Suzu The Animation"],
+    ["Master Piece The Animation"],
+    ["Notice My Love! The Animation"],
+    ["Hatsukoi Jikan"],
+    ["Ane wa Yanmama Junyuu-chuu"],
+    ["Mankitsu Happening"],
+    ["Succubus Yondara Gibo ga Kita!?"],
+    ["Megane no Megami"],
+    ["Seika Jogakuin Kounin Sao Ojisan"]
+  ]}
+];
