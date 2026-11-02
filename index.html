@@ -345,7 +345,7 @@ header.top .themebtn,header.top .bellbtn,header.top .langbtn{background:color-mi
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=81"></script>
+<script src="he-names.js?v=82"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -371,7 +371,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 81;
+const APP_VERSION = 82;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -487,7 +487,10 @@ function go(state, push=true){
 }
 // חזרה אחורה: חוזרים לאותו מקום בדף
 $("#backBtn").onclick = ()=>{ const prev = stack.pop() || {tab:"list"}; current = prev; render(); requestAnimationFrame(()=>window.scrollTo(0,prev.scroll||0)); };
-document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{ stack=[]; lockOpen=false; if(listFilter==="locked") listFilter="watching"; go({tab:b.dataset.tab}, false); });
+document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{ stack=[]; lockOpen=false; if(listFilter==="locked") listFilter="watching";
+  // מעבר בין לשוניות מתחיל כל מסך מחדש: עונתי חוזר לעונה הנוכחית, והחיפושים מתנקים
+  seasonSel=null; seasonFmt="TV"; lastSearch={q:"",results:[]}; browseTab="season"; browseGenre=""; browseSort=""; listQuery="";
+  go({tab:b.dataset.tab}, false); window.scrollTo(0,0); });
 
 function render(){
   if(view._guard){ view.removeEventListener("click",view._guard,true); view.removeEventListener("pointerdown",view._guard,true); view._guard=null; }
