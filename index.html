@@ -254,7 +254,8 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 .ytbox .ytframe{width:100%;max-width:900px;aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden}
 .ytbox iframe{width:100%;height:100%;border:0;display:block}
 .ytbox .ytbar{display:flex;gap:10px;width:100%;max-width:900px;justify-content:space-between;align-items:center}
-.ytbox .ytbar a{color:#ddd;font-size:14px}
+.ytbox .ytlink{color:#ddd;font-size:14px}
+.ytbox .ytframe:fullscreen{max-width:none;border-radius:0;aspect-ratio:auto;width:100vw;height:100vh}
 .ytbox .ytclose{background:#fff;color:#111;border:0;border-radius:999px;padding:8px 18px;font-weight:700;font-size:15px}
 .trailer{display:inline-block;margin-top:10px;padding:6px 14px;border-radius:999px;background:#c4302b;color:#fff;font-weight:700;text-decoration:none;font-size:14px}
 .desctools{display:flex;gap:16px;align-items:center}
@@ -335,7 +336,7 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=77"></script>
+<script src="he-names.js?v=78"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -361,7 +362,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 77;
+const APP_VERSION = 78;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -1795,14 +1796,24 @@ async function importMAL(file){
 function openTrailer(id, url){
   closeTrailer();
   const box=document.createElement("div"); box.className="ytbox"; box.id="ytbox";
-  box.innerHTML=`<div class="ytbar"><button class="ytclose" id="ytClose">✕ סגור</button><a href="${url}" target="_blank" rel="noopener">לא נפתח? צפה ביוטיוב</a></div>
-    <div class="ytframe"><iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&playsinline=1&rel=0&modestbranding=1" title="טריילר" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div>`;
+  box.innerHTML=`<div class="ytbar"><button class="ytclose" id="ytClose">✕ סגור</button><button class="ytclose" id="ytFull">⛶ מסך מלא</button></div>
+    <div class="ytframe"><iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&playsinline=1&rel=0&modestbranding=1" title="טריילר" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div>
+    <a class="ytlink" href="${url}" target="_blank" rel="noopener">לא נפתח? צפה ביוטיוב</a>`;
   document.body.appendChild(box);
   box.addEventListener("click",ev=>{ if(ev.target===box) closeTrailer(); });
   $("#ytClose").onclick=closeTrailer;
+  $("#ytFull").onclick=async ()=>{
+    const f=box.querySelector(".ytframe");
+    try{
+      await (f.requestFullscreen ? f.requestFullscreen({navigationUI:"hide"}) : f.webkitRequestFullscreen());
+      // בטלפון: מסובבים לרוחב כדי שהסרטון יתפוס את כל המסך
+      try{ await screen.orientation.lock("landscape"); }catch(e){}
+    }catch(e){ toast("הטלפון לא איפשר מסך מלא. אפשר ללחוץ על סמל המסך המלא בתוך הנגן"); }
+  };
   history.pushState({yt:1},"");
 }
-function closeTrailer(){ const b=$("#ytbox"); if(b){ b.remove(); if(history.state&&history.state.yt) history.back(); } }
+document.addEventListener("fullscreenchange",()=>{ if(!document.fullscreenElement){ try{ screen.orientation.unlock(); }catch(e){} } });
+function closeTrailer(){ if(document.fullscreenElement) document.exitFullscreen().catch(()=>{}); const b=$("#ytbox"); if(b){ b.remove(); if(history.state&&history.state.yt) history.back(); } }
 window.addEventListener("popstate",()=>{ const b=$("#ytbox"); if(b) b.remove(); });
 document.addEventListener("click",ev=>{ const a=ev.target.closest&&ev.target.closest("a[data-yt]"); if(!a) return; ev.preventDefault(); openTrailer(a.dataset.yt, a.href); });
 
