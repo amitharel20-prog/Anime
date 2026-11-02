@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>מעקב אנימה</title>
-<meta name="theme-color" content="#1d1f3a">
+<meta name="theme-color" content="#3b4bb8">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -310,6 +310,12 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 .alt.jp{font-size:15px;text-align:right}
 @media (max-width:480px){.themebtn span{display:none}.themebtn{padding:6px 9px}}
 @media (prefers-reduced-motion:no-preference){.rmain,.chip,.btn{transition:transform .1s}.rmain:active{transform:scale(.99)}}
+
+/* פס עליון בצבע הכפתורים הראשיים */
+header.top{background:var(--accent);border-bottom:0;color:var(--accent-fg)}
+body::before{background:var(--accent)}
+header.top h1,header.top .back{color:var(--accent-fg)}
+header.top .themebtn,header.top .bellbtn,header.top .langbtn{background:color-mix(in srgb,var(--accent-fg) 16%,transparent);border-color:color-mix(in srgb,var(--accent-fg) 30%,transparent);color:var(--accent-fg)}
 </style>
 </head>
 <body>
@@ -339,7 +345,7 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=80"></script>
+<script src="he-names.js?v=81"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -365,7 +371,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 80;
+const APP_VERSION = 81;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -458,7 +464,7 @@ function applyTheme(){
   if(t==="auto") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme",t);
   const b=$("#themeBtn"); b.innerHTML = THEMES[t].icon+`<span>${THEMES[t].label}</span>`;
   const dark = t==="dark" || (t==="auto" && matchMedia("(prefers-color-scheme: dark)").matches);
-  const meta=document.querySelector('meta[name="theme-color"]'); if(meta) meta.content = dark?"#13142a":"#f3f2ee";
+  const meta=document.querySelector('meta[name="theme-color"]'); if(meta) meta.content = dark?"#8b97ff":"#3b4bb8";
 }
 $("#themeBtn").onclick=()=>{ const order=["auto","light","dark"]; prefs.theme = order[(order.indexOf(prefs.theme||"auto")+1)%3]; savePrefs(); applyTheme(); toast("מצב תצוגה: "+THEMES[prefs.theme].label); };
 applyTheme();
