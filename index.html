@@ -258,6 +258,17 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 .banner::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,var(--bg))}
 .hero.over{margin-top:-60px;position:relative}
 .hero.over img{box-shadow:0 6px 18px rgba(0,0,0,.35)}
+.wo-list{display:grid;gap:6px}
+.wo-row{display:flex;align-items:center;gap:10px;width:100%;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 10px;text-align:start}
+.wo-row.cur{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.wo-row img,.wo-row .ph{width:38px;aspect-ratio:2/3;object-fit:cover;border-radius:6px;flex:none;background:var(--line)}
+.wo-n{width:22px;flex:none;text-align:center;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
+.wo-t{min-width:0;flex:1}.wo-t b{display:block;line-height:1.3;font-size:15px}.wo-t small{color:var(--muted);font-size:12px}
+.wo-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}.wo-tags .pill{font-size:11px}
+.wo-here{font-style:normal;font-size:11px;font-weight:800;background:var(--accent);color:var(--accent-fg);padding:1px 8px;border-radius:999px}
+.wo-next{font-style:normal;font-size:11px;font-weight:800;border:1px solid var(--accent);color:var(--accent);padding:0 8px;border-radius:999px}
+.wo-nextcard{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;background:color-mix(in srgb,var(--accent) 14%,var(--surface));border:1px solid var(--accent);border-radius:12px;padding:10px 14px;margin-bottom:8px;text-align:start}
+.wo-nextcard span{font-size:13px;font-weight:700;color:var(--accent)}.wo-nextcard b{font-size:17px}.wo-nextcard small{color:var(--muted)}
 .wnote{text-align:center;margin:14px 0 6px}
 .wheelbox{position:relative;width:min(92vw,360px);margin:8px auto 16px;aspect-ratio:1}
 #wwrap{width:100%;height:100%;border-radius:50%;overflow:hidden;box-shadow:0 8px 22px rgba(0,0,0,.3)}
@@ -398,8 +409,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=94"></script>
-<script src="i18n-en.js?v=94"></script>
+<script src="he-names.js?v=95"></script>
+<script src="i18n-en.js?v=95"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -425,7 +436,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 94;
+const APP_VERSION = 95;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -475,6 +486,7 @@ const I18N_PATTERNS = [
   [/^הועתקו (\d+) שמות$/, "Copied $1 names"],
   [/^נוספו (\d+) אנימות ל'(.+)'$/, "Added $1 anime to '$2'"],
   [/^נוספו (\d+) אנימות$/, "Added $1 anime"],
+  [/^(\d+) חלקים בסדרה · ראית (\d+)$/, "$1 parts in the series · watched $2"],
   [/^מגריל מתוך$/, "Drawing from"],
   [/^אנימות ב"אצפה בעתיד"\. ל־(\d+) אנימות עם ⭐ יש סיכוי כפול\.$/, "anime in \"Plan to watch\". $1 anime with ⭐ get double the chance."],
   [/^אנימות ב"אצפה בעתיד"\.$/, "anime in \"Plan to watch\"."],
@@ -1758,6 +1770,7 @@ function detailHTML(id, m){
 
     ${desc?`<h3>תקציר (באנגלית)</h3><p class="desc clamp" id="desc" dir="ltr" style="text-align:left">${esc(desc).replace(/\n+/g,"<br>")}</p><div class="desctools"><button class="linkbtn" id="more">הצג עוד</button><a class="linkbtn" href="https://translate.google.com/?sl=en&tl=iw&op=translate&text=${encodeURIComponent(desc.slice(0,4500))}" target="_blank" rel="noopener">תרגם לעברית ←</a></div>`:""}
 
+    ${rels.some(r=>r.relationType==="PREQUEL"||r.relationType==="SEQUEL")?`<div id="woBox"><h3>סדר צפייה</h3><p class="note">טוען סדר צפייה…</p></div>`:""}
     ${rels.length?`<h3>עונות וסדרות קשורות</h3><div class="rel">${rels.map(r=>`<button data-rid="${r.node.id}"><img src="${esc(r.node.coverImage&&(r.node.coverImage.large||r.node.coverImage.medium)||"")}" alt="" loading="lazy" decoding="async"><em>${REL[r.relationType]||"קשור"}${r.node.seasonYear?" · "+r.node.seasonYear:""}</em><span>${tn({id:r.node.id,title:r.node.title})}</span></button>`).join("")}</div>`:""}
 
     <h3>פרקים</h3>
@@ -1785,6 +1798,7 @@ function detailHTML(id, m){
     };
     view.addEventListener("click",view._guard,true); view.addEventListener("pointerdown",view._guard,true);
   }
+  fillWatchOrder(id);
   const dS=$("#dStar"); if(dS) dS.onclick=()=>{ const it=db.items[id]; if(!it) return; it.star=!it.star; touch(it); toast(it.star?"סומן בכוכב עדיפות":"הכוכב הוסר"); detailHTML(id,m); };
   $("#dLock").onclick=()=>{
     const it=getOrCreate(id,base); if(!it.status) it.status="done";
@@ -2179,6 +2193,76 @@ function spinWheel(){
   svg.addEventListener("transitionend",done,{once:true}); setTimeout(done, fast?900:5400);
 }
 
+/* ---------- סדר צפייה: כל העונות והסרטים לפי הסדר (לפי קישורי "קודם"/"המשך" ב־AniList) ---------- */
+const WO_KEY = KEY+".wo";
+let woStore = (()=>{ try{ return JSON.parse(localStorage.getItem(WO_KEY))||{}; }catch(e){ return {}; } })();
+const woInflight = {};
+const WO_FIELDS = `id format seasonYear startDate{year month day} episodes status isAdult title{romaji english native} coverImage{medium large} relations{edges{relationType node{id type}}}`;
+async function buildWatchOrder(startId){
+  const nodes = {}; let frontier=[startId]; const seen=new Set([startId]);
+  for(let round=0; round<8 && frontier.length && Object.keys(nodes).length<30; round++){
+    const d = await anilist(`query($ids:[Int]){Page(perPage:50){media(id_in:$ids,type:ANIME){${WO_FIELDS}}}}`,{ids:frontier},2);
+    const next=[];
+    for(const m of d.Page.media){
+      nodes[m.id]=m;
+      for(const e of (m.relations&&m.relations.edges)||[]){
+        if(e.node.type!=="ANIME") continue;
+        if((e.relationType==="PREQUEL"||e.relationType==="SEQUEL") && !seen.has(e.node.id)){ seen.add(e.node.id); next.push(e.node.id); }
+      }
+    }
+    frontier=next.slice(0,40);
+  }
+  const rel=(m,t)=>((m.relations&&m.relations.edges)||[]).filter(e=>e.relationType===t && nodes[e.node.id]).map(e=>nodes[e.node.id]);
+  const sd=m=>{ const s=m.startDate||{}; return (s.year||m.seasonYear||9999)*10000+(s.month||12)*100+(s.day||28); };
+  // הולכים אחורה עד ההתחלה, ואז קדימה עד הסוף
+  let head=nodes[startId], guard=0;
+  while(head && guard++<40){ const p=rel(head,"PREQUEL").sort((a,b)=>sd(b)-sd(a))[0]; if(!p || p.id===startId && guard>1) break; head=p; }
+  const chain=[]; const inChain=new Set(); let cur=head; guard=0;
+  while(cur && !inChain.has(cur.id) && guard++<40){ chain.push(cur.id); inChain.add(cur.id); cur=rel(cur,"SEQUEL").filter(x=>!inChain.has(x.id)).sort((a,b)=>sd(a)-sd(b))[0]; }
+  const extra=Object.values(nodes).filter(m=>!inChain.has(m.id)).sort((a,b)=>sd(a)-sd(b)).map(m=>m.id);
+  const slim=Object.fromEntries(Object.values(nodes).map(m=>[m.id,{id:m.id,format:m.format,seasonYear:m.seasonYear,episodes:m.episodes,status:m.status,isAdult:m.isAdult,title:m.title,coverImage:m.coverImage,startDate:m.startDate}]));
+  return {t:Date.now(), chain, extra, nodes:slim};
+}
+function getWatchOrder(id){
+  // אותו סדר צפייה משותף לכל העונות של אותה סדרה
+  const key=Object.keys(woStore).find(k=>woStore[k].chain.includes(id)||woStore[k].extra.includes(id));
+  if(key && Date.now()-woStore[key].t < 3*864e5) return Promise.resolve(woStore[key]);
+  if(woInflight[id]) return woInflight[id];
+  return woInflight[id] = buildWatchOrder(id).then(wo=>{
+    if(key) delete woStore[key];
+    woStore[wo.chain[0]||id]=wo;
+    const ks=Object.keys(woStore).sort((a,b)=>woStore[b].t-woStore[a].t); ks.slice(30).forEach(k=>delete woStore[k]);
+    try{ localStorage.setItem(WO_KEY, JSON.stringify(woStore)); }catch(e){}
+    return wo;
+  }).finally(()=>delete woInflight[id]);
+}
+function woRow(n, idx, curId, mark){
+  const mine=db.items[n.id]; const st=mine&&mine.status&&!isHidden(mine)?STATUS[mine.status]:null;
+  const img=n.coverImage&&(n.coverImage.medium||n.coverImage.large);
+  const sub=[FORMAT[n.format]||n.format, n.seasonYear||(n.startDate&&n.startDate.year), n.episodes?n.episodes+" פרקים":null].filter(Boolean).join(" · ");
+  return `<button class="wo-row ${n.id===curId?"cur":""}" data-woid="${n.id}">
+    <span class="wo-n">${idx}</span>${img?`<img src="${esc(img)}" alt="" loading="lazy" decoding="async"${n.isAdult?' class="adultimg"':""}>`:`<span class="ph"></span>`}
+    <span class="wo-t"><b class="name">${tn({id:n.id,title:n.title})}</b><small>${esc(sub)}</small>
+      <span class="wo-tags">${n.id===curId?`<em class="wo-here">אתה כאן</em>`:""}${mark?`<em class="wo-next">הבא בתור</em>`:""}${st?`<span class="pill ${st.cls}">${st.label}</span>`:""}</span></span></button>`;
+}
+async function fillWatchOrder(id){
+  const box=$("#woBox"); if(!box) return;
+  let wo; try{ wo=await getWatchOrder(id); }catch(e){ if($("#woBox")) $("#woBox").remove(); return; }
+  const b=$("#woBox"); if(!b || current.detail!==id) return;
+  if(wo.chain.length<2){ b.remove(); return; }
+  const pos=wo.chain.indexOf(id);
+  // "הבא בתור": הפרק הבא בשרשרת שעוד לא סיימת
+  let nextId=null;
+  if(pos>=0){ for(let i=pos+1;i<wo.chain.length;i++){ const it=db.items[wo.chain[i]]; if(!it || it.status!=="done"){ nextId=wo.chain[i]; break; } } }
+  const nextN = nextId && wo.nodes[nextId];
+  const done = wo.chain.filter(x=>db.items[x]&&db.items[x].status==="done").length;
+  b.innerHTML = `<h3>סדר צפייה</h3>
+    ${nextN?`<button class="wo-nextcard" data-woid="${nextId}"><span>הבא בתור אחרי זה:</span><b class="name">${tn({id:nextId,title:nextN.title})}</b><small>${esc([FORMAT[nextN.format]||nextN.format, nextN.seasonYear, nextN.status==="NOT_YET_RELEASED"?"עוד לא יצא":null].filter(Boolean).join(" · "))}</small></button>`:""}
+    <p class="note">${wo.chain.length} חלקים בסדרה · ראית ${done}</p>
+    <div class="wo-list">${wo.chain.map((x,i)=>woRow(wo.nodes[x], i+1, id, x===nextId)).join("")}</div>`;
+  b.querySelectorAll("[data-woid]").forEach(el=>{ el.onpointerdown=()=>prefetchFull(+el.dataset.woid); el.onclick=()=>{ const n=wo.nodes[el.dataset.woid]; if(+el.dataset.woid===id) return; if(n) cacheMedia[n.id]=Object.assign({},cacheMedia[n.id]||{},n); go({tab:current.tab, detail:+el.dataset.woid}); }; });
+}
+
 /* ---------- טריילר בתוך האפליקציה ---------- */
 function openTrailer(id, url){
   closeTrailer();
@@ -2252,7 +2336,7 @@ async function processPendingAdds(){
     db.meta.pendingDone[batch.key]={at:Date.now(), added:added.length, missing};
     save();
     if(added.length) toast(batch.locked ? `נוספו ${added.length} אנימות` : `נוספו ${added.length} אנימות ל'${STATUS[batch.status].label}'`);
-    if(!current.detail && current.tab==="list") renderList();
+    if(added.length && !current.detail && !current.wheel && current.tab==="list" && !(document.activeElement&&/INPUT|SELECT/.test(document.activeElement.tagName))) renderList();
   }
 }
 setTimeout(()=>{ processPendingAdds().catch(()=>{}); }, 2500);
