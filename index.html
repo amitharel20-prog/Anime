@@ -263,6 +263,7 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 .wsvg{width:100%;height:100%;display:block;will-change:transform}
 .wpointer{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-top:26px solid var(--accent);z-index:2;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
 .wspin{font-size:18px;padding:12px 34px}
+.wmute{margin-inline-start:8px;font-size:18px;padding:12px 14px}
 .wwin{margin-top:18px;background:var(--surface);border:2px solid var(--accent);border-radius:14px;padding:14px;animation:fadeIn .3s ease}
 .wwin-t{font-weight:800;color:var(--accent);margin-bottom:8px}
 .wwin-c{display:flex;gap:12px;align-items:center;background:none;border:0;padding:0;width:100%;text-align:start}
@@ -396,8 +397,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=90"></script>
-<script src="i18n-en.js?v=90"></script>
+<script src="he-names.js?v=91"></script>
+<script src="i18n-en.js?v=91"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -423,7 +424,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 90;
+const APP_VERSION = 91;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -724,7 +725,9 @@ function renderList(){
   // אנימות "נעולות" מופיעות רק בלשונית הנעול, אבל נספרות בסך הכל
   const visible = all.filter(e=>!e.locked);
   const lockedItems = all.filter(e=>e.locked);
-  const counts = {}; Object.keys(STATUS).forEach(k=>counts[k]=visible.filter(e=>e.status===k).length);
+  // אנימות עם כוכב מופיעות רק ב"עדיפות" (ולא גם ב"אצפה בעתיד")
+  const inStatus = (e,k)=> e.status===k && !(k==="plan" && e.star);
+  const counts = {}; Object.keys(STATUS).forEach(k=>counts[k]=visible.filter(e=>inStatus(e,k)).length);
   const fresh = visible.filter(e=>newEps(e)>0);
   if(listFilter==="new" && !fresh.length) listFilter="watching";
   const tvzItems = visible.filter(onTvz);
@@ -738,7 +741,7 @@ function renderList(){
   if(!showLocked) lockOpen = false;
   const q = normQ(listQuery);
   // בחיפוש: מחפשים בכל הרשימות (בנעול — רק בתוך הנעול)
-  const pool = showLocked ? (lockOpen?lockedItems:[]) : (q ? visible : (listFilter==="tvz" ? tvzItems : listFilter==="star" ? starItems : visible.filter(e=>listFilter==="all"||(listFilter==="new"?newEps(e)>0:e.status===listFilter))));
+  const pool = showLocked ? (lockOpen?lockedItems:[]) : (q ? visible : (listFilter==="tvz" ? tvzItems : listFilter==="star" ? starItems : visible.filter(e=>listFilter==="all"||(listFilter==="new"?newEps(e)>0:inStatus(e,listFilter)))));
   const qw = q ? q.split(" ") : [];
   const items = (q ? pool.filter(e=>{ const t=normQ(e.title+" "+(e.romaji||"")+" "+((heOf(e.id)||{}).t||"")+" "+(fanFor(e)||"")+" "+heAlias(fanFor(e))+" "+tlFor(e)); return qw.every(w=>t.includes(w)); }) : pool).sort((a,b)=>(listFilter==="plan"||listFilter==="star") && !q ? ((b.star?1:0)-(a.star?1:0) || SORTS[sortKey].fn(a,b)) : SORTS[sortKey].fn(a,b));
   const lb = db.meta.lastBackup || 0;
@@ -761,7 +764,7 @@ function renderList(){
       ${fresh.length?`<button class="chip" data-f="new" aria-pressed="${listFilter==="new"}">פרקים חדשים<span class="n">${fresh.length}</span></button>`:""}
       ${Object.entries(STATUS).map(([k,s])=>`<button class="chip schip ${s.cls}" data-f="${k}" aria-pressed="${listFilter===k}"><span class="cl">${s.label}</span><span class="n">${counts[k]}</span></button>`).join("")}
       ${starItems.length?`<button class="chip starchip" data-f="star" aria-pressed="${listFilter==="star"}"><span class="cl">⭐ עדיפות</span><span class="n">${starItems.length}</span></button>`:""}
-      ${counts.plan?`<button class="chip wheelchip" data-wheel="1">🎡 הגרלה</button>`:""}
+      ${(counts.plan||starItems.length)?`<button class="chip wheelchip" data-wheel="1">🎡 הגרלה</button>`:""}
       ${tvzItems.length?`<button class="chip tvzchip" data-f="tvz" aria-pressed="${listFilter==="tvz"}"><span class="cl">televizio</span><span class="n">${tvzItems.length}</span></button>`:""}
       <button class="chip lockchip" data-f="locked" aria-pressed="${showLocked}">${LOCK_ICON}<span class="cl">נעול</span>${lockOpen?`<span class="n">${lockedItems.length}</span>`:""}</button>
     </div>
@@ -2067,6 +2070,22 @@ async function importMAL(file){
 
 /* ---------- גלגל הגרלה: אנימה מ"אצפה בעתיד" (עם כוכב = סיכוי כפול) ---------- */
 let wheelRot = 0, wheelSpinning = false;
+// צלילים: "טיק" בכל פעם שמחיצה עוברת מתחת לחץ, וצלצול בסוף
+let wAudio = null;
+function wSound(){ if(prefs.wheelMute) return null; try{ wAudio = wAudio || new (window.AudioContext||window.webkitAudioContext)(); if(wAudio.state==="suspended") wAudio.resume(); return wAudio; }catch(e){ return null; } }
+function wTick(){
+  const ac=wSound(); if(!ac) return; const t=ac.currentTime;
+  const o=ac.createOscillator(), g=ac.createGain(); o.type="triangle"; o.frequency.setValueAtTime(1500,t); o.frequency.exponentialRampToValueAtTime(600,t+0.03);
+  g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.35,t+0.003); g.gain.exponentialRampToValueAtTime(0.0001,t+0.045);
+  o.connect(g).connect(ac.destination); o.start(t); o.stop(t+0.05);
+}
+function wDing(){
+  const ac=wSound(); if(!ac) return; const t=ac.currentTime;
+  [[880,0],[1318.5,0.12],[1760,0.24]].forEach(([f,d])=>{ const o=ac.createOscillator(), g=ac.createGain(); o.type="sine"; o.frequency.value=f;
+    g.gain.setValueAtTime(0.0001,t+d); g.gain.exponentialRampToValueAtTime(0.3,t+d+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+d+0.6);
+    o.connect(g).connect(ac.destination); o.start(t+d); o.stop(t+d+0.65); });
+}
+function svgAngle(svg){ const m=getComputedStyle(svg).transform; if(!m||m==="none") return 0; const v=m.match(/matrix\(([^)]+)\)/); if(!v) return 0; const [a,b]=v[1].split(",").map(Number); return (Math.atan2(b,a)*180/Math.PI+360)%360; }
 function wheelPool(){ return Object.values(db.items).filter(e=>e.status==="plan" && !isHidden(e)); }
 function weightedPick(list, n, exclude){
   const pool=list.filter(e=>!exclude.has(e.id)).map(e=>({e,w:e.star?2:1})); const out=[];
@@ -2097,9 +2116,10 @@ function renderWheel(){
   view.innerHTML=`
     <p class="note wnote">מגריל מתוך <b>${pool.length}</b> אנימות ב"אצפה בעתיד"${stars?`. ל־${stars} אנימות עם ⭐ יש סיכוי כפול`:""}.</p>
     <div class="wheelbox"><div class="wpointer"></div><div id="wwrap">${wheelSVG(segs)}</div></div>
-    <div style="text-align:center"><button class="btn primary wspin" id="wSpin">🎡 סובב</button></div>
+    <div style="text-align:center"><button class="btn primary wspin" id="wSpin">🎡 סובב</button><button class="btn wmute" id="wMute" aria-label="${prefs.wheelMute?"הפעל צליל":"השתק צליל"}">${prefs.wheelMute?"🔇":"🔊"}</button></div>
     <div id="wres"></div><div style="height:24px"></div>`;
   $("#wSpin").onclick=()=>spinWheel();
+  $("#wMute").onclick=ev=>{ prefs.wheelMute=!prefs.wheelMute; savePrefs(); ev.currentTarget.textContent=prefs.wheelMute?"🔇":"🔊"; };
 }
 function spinWheel(){
   if(wheelSpinning) return;
@@ -2116,10 +2136,19 @@ function spinWheel(){
   const final = wheelRot + 360*6 + ((target - wheelRot%360) % 360 + 360) % 360;
   wheelSpinning=true; const btn=$("#wSpin"); btn.disabled=true;
   const fast = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  requestAnimationFrame(()=>{ svg.style.transition = fast ? "transform .6s ease-out" : "transform 5s cubic-bezier(.12,.62,.12,1)"; svg.style.transform=`rotate(${final}deg)`; });
+  wSound();
+  requestAnimationFrame(()=>{ svg.style.transition = fast ? "transform .6s ease-out" : "transform 5s cubic-bezier(.12,.62,.12,1)"; svg.style.transform=`rotate(${final}deg)`;
+    // מעקב אחרי הסיבוב כדי להשמיע טיק בכל מחיצה
+    let last=svgAngle(svg), acc=0, lastSeg=Math.floor(((360-last)%360)/a);
+    const loop=()=>{ if(!wheelSpinning) return; const cur=svgAngle(svg); let d=cur-last; if(d<-180) d+=360; if(d>180) d-=360; last=cur; acc+=d;
+      const seg=Math.floor((((360-cur)%360)+360)%360/a); if(seg!==lastSeg){ lastSeg=seg; wTick(); }
+      requestAnimationFrame(loop); };
+    requestAnimationFrame(loop);
+  });
   const done=()=>{
     if(!wheelSpinning) return; wheelSpinning=false; wheelRot=final; btn.disabled=false; btn.textContent="🎡 סובב שוב";
     try{ navigator.vibrate && navigator.vibrate(40); }catch(e){}
+    wDing();
     const img=winner.cover;
     $("#wres").innerHTML=`<div class="wwin"><div class="wwin-t">יצא לך:</div>
       <button class="wwin-c" data-id="${winner.id}">${img?`<img src="${esc(img)}" alt=""${winner.adult?' class="adultimg"':""}>`:`<span class="ph"></span>`}<span><b class="name">${winner.star?"⭐ ":""}${tn(winner)}</b><small>${esc([FORMAT[winner.format]||winner.format, winner.year, winner.episodes?winner.episodes+" פרקים":null].filter(Boolean).join(" · "))}</small></span></button>
