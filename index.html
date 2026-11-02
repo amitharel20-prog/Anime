@@ -328,6 +328,26 @@ header.top{background:var(--accent);border-bottom:0;color:var(--accent-fg)}
 body::before{background:var(--accent)}
 header.top h1,header.top .back{color:var(--accent-fg)}
 header.top .themebtn,header.top .bellbtn,header.top .langbtn{background:color-mix(in srgb,var(--accent-fg) 16%,transparent);border-color:color-mix(in srgb,var(--accent-fg) 30%,transparent);color:var(--accent-fg)}
+
+/* חלקות: משוב מגע, אנימציות קצרות, ומעברים רכים */
+html{-webkit-tap-highlight-color:transparent}
+button,a,.chip,select,input{touch-action:manipulation}
+.rail .pcs,.rails,.chips,.rel{overscroll-behavior-x:contain}
+@media (prefers-reduced-motion:no-preference){
+  .pcmain,.sugi,.chip,.btn,.side,nav.tabs button,.sheet-list button,.statusset button{transition:transform .12s ease,background-color .2s ease,color .2s ease,border-color .2s ease}
+  .pcmain:active,.chip:active,.btn:active,.side:active,.sheet-list button:active,.statusset button:active{transform:scale(.96)}
+  nav.tabs button:active svg{transform:scale(.9)}
+  nav.tabs button svg{transition:transform .12s ease}
+  .sheet-bg{animation:fadeIn .18s ease}
+  .sheet-card{animation:sheetUp .22s cubic-bezier(.2,.8,.2,1)}
+  .sug:not([hidden]){animation:fadeIn .12s ease}
+  .ytbox{animation:fadeIn .18s ease}
+  #toast,.toast{transition:opacity .2s ease,transform .2s ease}
+  ::view-transition-old(root),::view-transition-new(root){animation-duration:.16s}
+  html.theming,html.theming *{transition:background-color .35s ease,color .35s ease,border-color .35s ease,fill .35s ease!important}
+}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:none}}
 </style>
 </head>
 <body>
@@ -357,7 +377,7 @@ header.top .themebtn,header.top .bellbtn,header.top .langbtn{background:color-mi
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=86"></script>
+<script src="he-names.js?v=87"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -383,7 +403,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 86;
+const APP_VERSION = 87;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -480,7 +500,13 @@ function applyTheme(){
   const dark = t==="dark";
   const meta=document.querySelector('meta[name="theme-color"]'); if(meta) meta.content = dark?"#8b97ff":"#3b4bb8";
 }
-$("#themeBtn").onclick=()=>{ prefs.theme = prefs.theme==="dark" ? "light" : "dark"; savePrefs(); applyTheme(); toast("מצב תצוגה: "+THEMES[prefs.theme].label); };
+const reduceMotion = ()=>matchMedia("(prefers-reduced-motion: reduce)").matches;
+$("#themeBtn").onclick=()=>{
+  prefs.theme = prefs.theme==="dark" ? "light" : "dark"; savePrefs();
+  const html=document.documentElement;
+  if(!reduceMotion()){ html.classList.add("theming"); clearTimeout(window._thT); window._thT=setTimeout(()=>html.classList.remove("theming"),400); }
+  applyTheme(); toast("מצב תצוגה: "+THEMES[prefs.theme].label);
+};
 applyTheme();
 document.documentElement.classList.toggle("noblur", !!prefs.noBlur);
 $("#bellBtn").onclick=()=>go({tab:current.tab,notifs:true});
@@ -497,10 +523,15 @@ let lastSearch = {q:"", results:[]};
 function go(state, push=true){
   if(push){ current.scroll = window.scrollY; stack.push(current); }
   else listLimit = LIST_STEP;
-  current = state; render(); window.scrollTo(0,0);
+  current = state; softRender(()=>{ render(); window.scrollTo(0,0); });
+}
+// מעבר רך בין מסכים (בדפדפנים שתומכים), בלי לעכב את הטעינה
+function softRender(fn){
+  if(document.startViewTransition && !reduceMotion() && !document.hidden){ try{ document.startViewTransition(fn); return; }catch(e){} }
+  fn();
 }
 // חזרה אחורה: חוזרים לאותו מקום בדף
-$("#backBtn").onclick = ()=>{ const prev = stack.pop() || {tab:"list"}; current = prev; render(); requestAnimationFrame(()=>window.scrollTo(0,prev.scroll||0)); };
+$("#backBtn").onclick = ()=>{ const prev = stack.pop() || {tab:"list"}; current = prev; softRender(()=>{ render(); window.scrollTo(0,prev.scroll||0); }); requestAnimationFrame(()=>window.scrollTo(0,prev.scroll||0)); };
 document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{ stack=[]; lockOpen=false; if(listFilter==="locked") listFilter="watching";
   // מעבר בין לשוניות מתחיל כל מסך מחדש: עונתי חוזר לעונה הנוכחית, והחיפושים מתנקים
   seasonSel=null; seasonFmt="TV"; lastSearch={q:"",results:[]}; browseTab="season"; browseGenre=""; browseSort=""; listQuery="";
