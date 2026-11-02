@@ -220,6 +220,7 @@ nav.tabs button{font-size:12px}
 nav.tabs button{font-size:11px;white-space:nowrap}
 @media (max-width:380px){nav.tabs button{font-size:10px;padding-inline:0}}
 .adultimg{filter:blur(14px) saturate(.6);transform:scale(1.1)}
+.hero img.adultimg{transform:none;clip-path:inset(0 round 8px)}
 html.noblur .adultimg{filter:none;transform:none}
 .r18{color:#c0392b}
 .tvz{display:inline-block;background:#111;color:#FFD400;border:1px solid #FFD400;font-size:11px;font-weight:800;letter-spacing:.3px;padding:1px 7px;border-radius:6px;direction:ltr;line-height:1.5}
@@ -397,8 +398,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=93"></script>
-<script src="i18n-en.js?v=93"></script>
+<script src="he-names.js?v=94"></script>
+<script src="i18n-en.js?v=94"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -424,7 +425,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 93;
+const APP_VERSION = 94;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -1714,10 +1715,12 @@ function detailHTML(id, m){
   const genres = (m&&m.genres)||(base&&base.genres)||e.genres||[];
   const studio = m&&m.studios&&m.studios.nodes[0] ? m.studios.nodes[0].name : "";
   const banner = m&&m.bannerImage;
+  // באנר של אנימה 18+ מוצג רק אם בחרת להציג בלי טשטוש (אחרת גם הכותרת לא נדחפת מתחת לפס העליון)
+  const showBanner = !!banner && (!(base&&base.isAdult) || !!prefs.noBlur);
   const trailer = m&&m.trailer&&m.trailer.site==="youtube" ? "https://www.youtube.com/watch?v="+encodeURIComponent(m.trailer.id) : "";
   view.innerHTML = `
-    ${banner&&!(base&&base.isAdult)?`<div class="banner" style="background-image:url('${esc(banner)}')"></div>`:""}
-    <div class="hero ${banner?"over":""}">${base&&base.coverImage?`<img src="${esc(base.coverImage.extraLarge||base.coverImage.large||base.coverImage.medium)}" alt=""${base.isAdult?' class="adultimg"':""}>`:poster(e.cover, e.adult)}
+    ${showBanner?`<div class="banner" style="background-image:url('${esc(banner)}')"></div>`:""}
+    <div class="hero ${showBanner?"over":""}">${base&&base.coverImage?`<img src="${esc(base.coverImage.extraLarge||base.coverImage.large||base.coverImage.medium)}" alt=""${base.isAdult?' class="adultimg"':""}>`:poster(e.cover, e.adult)}
       <div><h2>${isHeLang()?tn(e):esc(enTitle(e))}</h2>${onTvz(e)||onTvz(base)?`<div>${TVZ}</div>`:""}
         ${(()=>{ const c=(fanFor(e)?{t:fanFor(e),src:"fan"}:heOf(id)); const lines=[];
           if(isHeLang()){ if(c) lines.push(`<div class="alt" dir="ltr">${esc(enTitle(e))}</div>`); }
