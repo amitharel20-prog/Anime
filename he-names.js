@@ -1555,5 +1555,6 @@ window.PENDING_ADDS = [
     ["Seika Jogakuin Kounin Sao Ojisan"]
   ]},
   // 3 שלא נמצאו לפי שם — מחפשים לפי מספר MAL
-  {key:"locked-batch-2026-11-02-mal", status:"plan", locked:true, mals:[56511,52617,51662], titles:[]}
+  {key:"locked-batch-2026-11-02-mal", status:"plan", locked:true, mals:[56511,52617,51662], titles:[]},
+  {key:"plan-death-march-2026-11-02", status:"plan", mals:[34497], titles:[]}
 ];
