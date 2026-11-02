@@ -1,6 +1,9 @@
 // תרגום ממשק האפליקציה לאנגלית (כשבוחרים "English" בהגדרות). שמות אנימות לא מתורגמים כאן.
 window.I18N_EN = {
 exact: {
+"הגרלת אנימה":"Anime roulette","🎡 הגרלה":"🎡 Roulette","🎡 סובב":"🎡 Spin","🎡 סובב שוב":"🎡 Spin again","יצא לך:":"You got:","פתח את האנימה":"Open anime","התחל לצפות":"Start watching",
+"אין מה להגריל":"Nothing to draw","כדי להגריל צריך אנימות ב\"אצפה בעתיד\".":"You need anime in \"Plan to watch\" to spin.","⭐ עדיפות":"⭐ Priority","עדיפות":"Priority","בעדיפות":"Prioritized",
+"סומן בכוכב עדיפות":"Marked as priority","הכוכב הוסר":"Priority removed","עבר ל'בצפייה'. צפייה מהנה!":"Moved to 'Watching'. Enjoy!",
 "הרשימה שלי":"My List","חיפוש":"Search","בית":"Home","עונתי":"Seasonal","הגדרות":"Settings","ניווט":"Navigation",
 "אנימה":"Anime","אנימה עונתית":"Seasonal Anime","חיפוש אנימה":"Search Anime","התראות":"Notifications","סטטיסטיקות":"Statistics",
 "חזרה":"Back","חפש":"Search","חפש בעברית או באנגלית":"Search in English or Hebrew","חפש ברשימה שלי…":"Search my list…",
