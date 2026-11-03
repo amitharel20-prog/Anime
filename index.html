@@ -157,6 +157,15 @@ h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute
 .rel img{width:96px;aspect-ratio:2/3;object-fit:cover;border-radius:6px;background:var(--line)}
 .rel span{display:block;font-size:12px;line-height:1.3;margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .rel em{font-style:normal;color:var(--muted);font-size:11px;display:block}
+.chars{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;overscroll-behavior-x:contain}
+.chr{flex:none;width:92px;text-align:center}
+.chr img{width:92px;aspect-ratio:3/4;object-fit:cover;border-radius:10px;background:var(--line);display:block}
+.chr .cname{display:block;font-size:12.5px;line-height:1.25;margin-top:5px;font-weight:700;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.chr .cva{display:block;font-size:11px;line-height:1.25;margin-top:2px;color:var(--muted);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.studiolink{background:none;border:0;padding:0;font:inherit;color:var(--accent);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.stchips{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0 12px}
+.stchips .lbl{font-size:13px;color:var(--muted)}
+.stchip{border:1px solid var(--accent);color:var(--accent);background:none;border-radius:999px;padding:6px 12px;font:inherit;font-size:13.5px;font-weight:700;cursor:pointer}
 
 .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
 .card h2{font-family:var(--display);font-weight:400;font-size:20px;margin:0 0 6px}
@@ -409,8 +418,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=98"></script>
-<script src="i18n-en.js?v=98"></script>
+<script src="he-names.js?v=99"></script>
+<script src="i18n-en.js?v=99"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -436,7 +445,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 98;
+const APP_VERSION = 99;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -466,7 +475,7 @@ function savePrefs(){ try{ localStorage.setItem(KEY+".prefs", JSON.stringify(pre
 if(!prefs.ui2){ prefs.ui2=1; if(prefs.lang!=="en") prefs.lang="he"; else prefs.lang="he"; try{ localStorage.setItem(KEY+".prefs", JSON.stringify(prefs)); }catch(e){} }
 const uiEn = ()=>prefs.lang==="en";
 const LOC = ()=>uiEn() ? "en-GB" : "he-IL";
-const I18N_SKIP = ".name,.ptitle,.hero h2,.alt,.sugi b,#pageTitle[data-tid],.rel span,code,script,style,.desc,.nofx";
+const I18N_SKIP = ".cname,.cva,.stchip,.studiolink,.name,.ptitle,.hero h2,.alt,.sugi b,#pageTitle[data-tid],.rel span,code,script,style,.desc,.nofx";
 const NUM_RE = /\d+(?:[.,:/]\d+)*/g;
 const I18N_PATTERNS = [
   [/^יצאו (\d+) פרקים חדשים של (.+) \(עד פרק (\d+)\)$/, "$1 new episodes of $2 are out (up to ep. $3)"],
@@ -484,7 +493,7 @@ const I18N_PATTERNS = [
   [/^נמצאו (\d+) בנעול$/, "Found $1 in locked"],
   [/^סומנו פרקים (\d+)–(\d+)$/, "Marked episodes $1–$2"],
   [/^הועתקו (\d+) שמות$/, "Copied $1 names"],
-  [/^נוספו (\d+) אנימות ל'(.+)'$/, "Added $1 anime to '$2'"],
+  [/^נוספו (\d+) אנימות ל'(.+)'$/, (m,a,b)=>`Added ${a} anime to '${trText(b)}'`],
   [/^נוספו (\d+) אנימות$/, "Added $1 anime"],
   [/^סומנו (\d+) אנימות בכוכב ⭐$/, "Starred $1 anime ⭐"],
   [/^(\d+) חלקים בסדרה · ראית (\d+)$/, "$1 parts in the series · watched $2"],
@@ -662,6 +671,7 @@ function render(){
   if(current.notifs) return renderNotifs();
   if(current.wheel) return renderWheel();
   if(current.detail) return renderDetail(current.detail);
+  if(current.studio) return renderStudio(current.studio);
   if(current.tab==="search") return renderSearch();
   if(current.tab==="settings") return renderSettings();
   if(current.tab==="stats") return renderStats();
@@ -1498,7 +1508,7 @@ function bindSuggest(inp, box){
 function renderSearch(){
   setHeader("חיפוש אנימה", false);
   view.innerHTML = `
-    <div class="sugwrap"><form class="search" id="sf"><input id="q" type="search" placeholder="חפש בעברית או באנגלית" value="${esc(lastSearch.q)}" autocomplete="off" enterkeyhint="search"><button class="btn primary">חפש</button></form><div id="sug" class="sug" hidden></div></div>
+    <div class="sugwrap"><form class="search" id="sf"><input id="q" type="search" placeholder="חפש אנימה או סטודיו" value="${esc(lastSearch.q)}" autocomplete="off" enterkeyhint="search"><button class="btn primary">חפש</button></form><div id="sug" class="sug" hidden></div></div>
     <div id="browseBar"></div>
     <div class="sortrow genrerow"><label for="gsel">ז'אנר</label><select id="gsel">${genreOptions()}</select></div>
     <div class="sortrow"><label for="ssel">מיון</label><select id="ssel">${Object.entries(SORT_OPTS).map(([k,l])=>`<option value="${k}" ${k===browseSort?"selected":""}>${l}</option>`).join("")}</select></div>
@@ -1510,8 +1520,10 @@ function renderSearch(){
   const show = res => {
     if(lastSearch.q && browseGenre) res = res.filter(m=>(m.genres||[]).includes(browseGenre));
     if(lastSearch.q) res = sortList(res);
-    sr.innerHTML = res.length ? res.map(resultHTML).join("") : `<div class="empty">${lastSearch.q&&browseGenre?"לא נמצאו תוצאות בז'אנר הזה. נסה לבחור \"כל הז'אנרים\".":"לא נמצאו תוצאות. נסה את השם באנגלית או ביפנית."}</div>`;
+    const stl = lastSearch.q && lastSearch.studios && lastSearch.studios.length ? `<div class="stchips"><span class="lbl">סטודיו:</span>${lastSearch.studios.map(x=>`<button class="stchip" data-stid="${x.id}" data-sname="${esc(x.name)}">${esc(x.name)}</button>`).join("")}</div>` : "";
+    sr.innerHTML = stl + (res.length ? res.map(resultHTML).join("") : `<div class="empty">${lastSearch.q&&browseGenre?"לא נמצאו תוצאות בז'אנר הזה. נסה לבחור \"כל הז'אנרים\".":"לא נמצאו תוצאות. נסה את השם באנגלית או ביפנית."}</div>`);
     bindRows(sr,"search",res);
+    sr.querySelectorAll("[data-stid]").forEach(b=>b.onclick=()=>go({tab:"search", studio:{id:+b.dataset.stid, name:b.dataset.sname}}));
   };
   const showBrowse = async ()=>{
     bar.innerHTML = `<div class="chips" style="margin-top:12px">${Object.entries(BROWSE).map(([k,b])=>`<button class="chip${k==="tvz"?" tvzchip":""}" data-b="${k}" aria-pressed="${browseTab===k}">${b.label()}</button>`).join("")}</div>`;
@@ -1538,7 +1550,7 @@ function renderSearch(){
     $("#q").blur();
     sr.innerHTML = `<div class="empty">מחפש…</div>`;
     try{
-      let results;
+      let results, studios=[];
       if(/[\u0590-\u05FF]/.test(q)){
         const hs = await hebrewSearchIds(q);
         const seen=new Set(); results=[];
@@ -1556,10 +1568,12 @@ function renderSearch(){
           add(d2.Page.media);
         }
       } else {
-        const d = await anilist(`query($s:String){Page(perPage:30){media(search:$s,type:ANIME,${adultFilter()}sort:SEARCH_MATCH){${MEDIA_FIELDS}}}}`,{s:q});
+        const d = await anilist(`query($s:String){Page(perPage:30){media(search:$s,type:ANIME,${adultFilter()}sort:SEARCH_MATCH){${MEDIA_FIELDS}}} st:Page(perPage:8){studios(search:$s,sort:SEARCH_MATCH){id name isAnimationStudio}}}`,{s:q});
         results = d.Page.media;
+        const sts = (d.st&&d.st.studios)||[]; const anim = sts.filter(x=>x.isAnimationStudio);
+        studios = (anim.length?anim:sts).slice(0,5);
       }
-      lastSearch = {q, results}; renderSearch();
+      lastSearch = {q, results, studios}; renderSearch();
     }catch(err){ sr.innerHTML = `<div class="msg">החיפוש נכשל: ${esc(err.message)}. בדוק חיבור לאינטרנט ונסה שוב.</div>`; }
   };
 }
@@ -1658,6 +1672,48 @@ async function renderSeasonal(){
   }catch(err){ const sg=$("#sg"); if(sg) sg.innerHTML=`<div class="msg" style="grid-column:1/-1">לא הצלחתי לטעון: ${esc(err.message)}</div>`; }
 }
 
+/* ---------- דמויות וסטודיו ---------- */
+function pickChars(edges){
+  if(!edges||!edges.length) return [];
+  const mk = x=>({...x, va: x.voiceActors&&x.voiceActors[0] ? (x.voiceActors[0].name.full||x.voiceActors[0].name.native) : ""});
+  const main = edges.filter(x=>x.role==="MAIN");
+  const rest = edges.filter(x=>x.role!=="MAIN");
+  const out = main.length>=4 ? main : main.concat(rest.slice(0, 6-main.length));
+  return out.slice(0,12).map(mk);
+}
+const studioCache = {};
+async function loadStudioPage(id, page){
+  const d = await anilist(`query($id:Int,$p:Int){Studio(id:$id){name media(isMain:true,sort:START_DATE_DESC,page:$p,perPage:50){pageInfo{hasNextPage} nodes{${MEDIA_FIELDS}}}}}`,{id,p:page});
+  return d.Studio;
+}
+async function renderStudio(s){
+  setHeader(s.name, true);
+  const st = studioCache[s.id] || (studioCache[s.id]={list:[],page:0,has:true});
+  view.innerHTML = `<p class="note nofx">${uiEn()?`All anime by <b dir="ltr">${esc(s.name)}</b>, newest first`:`כל האנימות שהסטודיו <b dir="ltr">${esc(s.name)}</b> הוציא, מהחדשה לישנה`}</p><div id="stl" class="list">${st.page?"":`<div class="empty">טוען…</div>`}</div>`;
+  const box = $("#stl");
+  const more = async ()=>{
+    const r = await loadStudioPage(s.id, st.page+1);
+    st.page++; st.has = !!(r && r.media && r.media.pageInfo.hasNextPage);
+    const seen = new Set(st.list.map(m=>m.id));
+    ((r&&r.media&&r.media.nodes)||[]).forEach(m=>{ if(!seen.has(m.id) && (prefs.adult||!m.isAdult)){ seen.add(m.id); st.list.push(m); } });
+  };
+  const show = ()=>{
+    box.innerHTML = st.list.length ? st.list.map(resultHTML).join("") : `<div class="empty">לא נמצאו אנימות לסטודיו הזה.</div>`;
+    bindRows(box, current.tab, st.list);
+    if(st.has){
+      box.insertAdjacentHTML("beforeend",`<div style="text-align:center;margin:14px 0"><button class="btn" id="stMore">טען עוד</button></div>`);
+      $("#stMore").onclick = async ev=>{ ev.target.disabled=true; ev.target.textContent="טוען…";
+        try{ await more(); if(current.studio===s){ const y=window.scrollY; show(); window.scrollTo(0,y); } }
+        catch(e){ ev.target.disabled=false; ev.target.textContent="נסה שוב"; } };
+    }
+  };
+  if(!st.page){
+    try{ await more(); }
+    catch(e){ if(current.studio===s){ box.innerHTML=`<div class="msg">לא הצלחתי לטעון: ${esc(e.message)}</div><button class="btn" id="stRetry">נסה שוב</button>`; $("#stRetry").onclick=()=>renderStudio(s); } return; }
+  }
+  if(current.studio===s) show();
+}
+
 /* ---------- מסך אנימה ---------- */
 const cacheMedia = {};
 // מידע מלא על אנימה: נשמר בטלפון (40 האחרונות), ומתחיל להיטען כבר כשנוגעים בה
@@ -1672,13 +1728,13 @@ function saveFull(id, m){
 }
 function fetchFull(id){
   if(fullInflight[id]) return fullInflight[id];
-  const p = anilist(`query($id:Int){Media(id:$id){${MEDIA_FIELDS} description(asHtml:false) airingSchedule(perPage:150){nodes{episode airingAt}} bannerImage season studios(isMain:true){nodes{name}} trailer{id site} streamingEpisodes{title} relations{edges{relationType node{id type format title{romaji english} coverImage{large medium} seasonYear}}}}}`,{id}).then(d=>{ cacheMedia[id+"full"]=d.Media; saveFull(id,d.Media); return d.Media; })
+  const p = anilist(`query($id:Int){Media(id:$id){${MEDIA_FIELDS} description(asHtml:false) airingSchedule(perPage:150){nodes{episode airingAt}} bannerImage season studios(isMain:true){nodes{id name}} characters(sort:[ROLE,RELEVANCE,ID],perPage:12){edges{role node{id name{full native} image{large medium}} voiceActors(language:JAPANESE,sort:[RELEVANCE,ID]){name{full native}}}} trailer{id site} streamingEpisodes{title} relations{edges{relationType node{id type format title{romaji english} coverImage{large medium} seasonYear}}}}}`,{id}).then(d=>{ cacheMedia[id+"full"]=d.Media; saveFull(id,d.Media); return d.Media; })
     .finally(()=>{ setTimeout(()=>delete fullInflight[id], 1000); });
   return fullInflight[id]=p;
 }
 function prefetchFull(id){
   if(cacheMedia[id+"full"] || fullInflight[id]) return;
-  const st=fullStore[id]; if(st && Date.now()-st.t<6*3600e3){ cacheMedia[id+"full"]=st.m; return; }
+  const st=fullStore[id]; if(st && Date.now()-st.t<6*3600e3 && st.m && st.m.characters!==undefined){ cacheMedia[id+"full"]=st.m; return; }
   fetchFull(id).catch(()=>{});
 }
 document.addEventListener("pointerdown",ev=>{ const b=ev.target.closest&&ev.target.closest("[data-id],[data-rid]"); if(!b) return; const id=+(b.dataset.id||b.dataset.rid); if(id) prefetchFull(id); },{passive:true});
@@ -1690,7 +1746,7 @@ async function renderDetail(id){
   if(!m && st){ m = cacheMedia[id+"full"] = st.m; }
   const paint = ()=>detailHTML(id, m);
   paint();
-  const fresh = st && Date.now()-st.t < 6*3600e3;
+  const fresh = st && Date.now()-st.t < 6*3600e3 && st.m && st.m.characters!==undefined;
   if(!m || !fresh || fullInflight[id]){
     try{
       const hadM = !!m;
@@ -1727,6 +1783,9 @@ function detailHTML(id, m){
 
   const genres = (m&&m.genres)||(base&&base.genres)||e.genres||[];
   const studio = m&&m.studios&&m.studios.nodes[0] ? m.studios.nodes[0].name : "";
+  const studioId = m&&m.studios&&m.studios.nodes[0] ? m.studios.nodes[0].id : null;
+  const studioHTML = studio ? (studioId?`<button class="studiolink" data-studio="${studioId}" data-sname="${esc(studio)}">${esc(studio)}</button>`:esc(studio)) : "";
+  const chars = pickChars(m&&m.characters&&m.characters.edges);
   const banner = m&&m.bannerImage;
   // באנר של אנימה 18+ מוצג רק אם בחרת להציג בלי טשטוש (אחרת גם הכותרת לא נדחפת מתחת לפס העליון)
   const showBanner = !!banner && (!(base&&base.isAdult) || !!prefs.noBlur);
@@ -1750,7 +1809,7 @@ function detailHTML(id, m){
           ${base&&base.status?`<span>${AIR[base.status]||""}</span>`:""}
           ${base&&base.averageScore?`<span>AniList <b>${(base.averageScore/10).toFixed(1)}</b></span>`:""}
         </div>
-        ${m&&m.season&&m.seasonYear?`<div class="facts"><span>${SEASON_HE[m.season]} ${m.seasonYear} (${SEASON_MONTHS[m.season]})</span>${studio?`<span>${esc(studio)}</span>`:""}</div>`:(studio?`<div class="facts"><span>${esc(studio)}</span></div>`:"")}
+        ${m&&m.season&&m.seasonYear?`<div class="facts"><span>${SEASON_HE[m.season]} ${m.seasonYear} (${SEASON_MONTHS[m.season]})</span>${studio?`<span>${studioHTML}</span>`:""}</div>`:(studio?`<div class="facts"><span>${studioHTML}</span></div>`:"")}
         ${genres.length?`<div class="gtags big">${genres.map(g=>`<span>${esc(genreHe(g))}</span>`).join("")}</div>`:""}
         ${trailer?`<a class="trailer" href="${trailer}" target="_blank" rel="noopener" data-yt="${esc(m.trailer.id)}">▶ טריילר</a>`:""}
         ${base&&base.status==="NOT_YET_RELEASED"?`<div class="relbig">${esc(releaseText(relEntry))}</div>`:""}
@@ -1771,7 +1830,7 @@ function detailHTML(id, m){
 
     ${desc?`<h3>תקציר (באנגלית)</h3><p class="desc clamp" id="desc" dir="ltr" style="text-align:left">${esc(desc).replace(/\n+/g,"<br>")}</p><div class="desctools"><button class="linkbtn" id="more">הצג עוד</button><a class="linkbtn" href="https://translate.google.com/?sl=en&tl=iw&op=translate&text=${encodeURIComponent(desc.slice(0,4500))}" target="_blank" rel="noopener">תרגם לעברית ←</a></div>`:""}
 
-    ${rels.some(r=>r.relationType==="PREQUEL"||r.relationType==="SEQUEL")?`<div id="woBox"><h3>סדר צפייה</h3><p class="note">טוען סדר צפייה…</p></div>`:""}
+    ${chars.length?`<h3>דמויות עיקריות</h3><div class="chars">${chars.map(c=>`<div class="chr"><img src="${esc((c.node.image&&(c.node.image.large||c.node.image.medium))||"")}" alt="" loading="lazy" decoding="async"${base&&base.isAdult?' class="adultimg"':""}><b class="cname" dir="auto">${esc(c.node.name.full||c.node.name.native||"")}</b>${c.va?`<small class="cva" dir="auto">🎙️ ${esc(c.va)}</small>`:""}</div>`).join("")}</div>`:""}
     ${rels.length?`<h3>עונות וסדרות קשורות</h3><div class="rel">${rels.map(r=>`<button data-rid="${r.node.id}"><img src="${esc(r.node.coverImage&&(r.node.coverImage.large||r.node.coverImage.medium)||"")}" alt="" loading="lazy" decoding="async"><em>${REL[r.relationType]||"קשור"}${r.node.seasonYear?" · "+r.node.seasonYear:""}</em><span>${tn({id:r.node.id,title:r.node.title})}</span></button>`).join("")}</div>`:""}
 
     <h3>פרקים</h3>
@@ -1782,9 +1841,11 @@ function detailHTML(id, m){
       return `<div class="ep${ftag?(fl.f.has(n)?" isfill":" ismix"):""}"><label><input type="checkbox" id="w${n}" data-ep="${n}" ${ep.w?"checked":""}>פרק ${n}${ftag}</label>
       <span class="ttl" dir="auto">${esc(cleanEpTitle(epTitles[i]))}${sched[n]?`<small class="epdate ${sched[n]>Date.now()?"future":""}">${sched[n]>Date.now()?"יוצא ב":"שודר ב"}${fmtDay(sched[n])}${sched[n]>Date.now()?` בשעה <bdi dir="ltr">${new Date(sched[n]).toLocaleTimeString(LOC(),{hour:"2-digit",minute:"2-digit"})}</bdi>`:""}</small>`:""}</span></div>`;}).join(""); })()}</div>`
     :`<p class="desc">מספר הפרקים עוד לא ידוע ב־AniList.</p>`}
+    ${rels.some(r=>r.relationType==="PREQUEL"||r.relationType==="SEQUEL")?`<div id="woBox"><h3>סדר צפייה</h3><p class="note">טוען סדר צפייה…</p></div>`:""}
     ${mineReal?`<h3>הסרה</h3><div id="rmBox"><button class="btn" id="rm">הסר מהרשימה שלי</button></div>`:""}
     <div style="height:24px"></div>`;
 
+  view.querySelectorAll("[data-studio]").forEach(b=>b.onclick=()=>go({tab:current.tab, studio:{id:+b.dataset.studio, name:b.dataset.sname}}));
   view.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{
     const it=getOrCreate(id,base); it.status = it.status===b.dataset.s?null:b.dataset.s;
     if(it.status==="done" && it.episodes && !watchedCount(it)){ for(let n=1;n<=it.episodes;n++){ it.eps[n]={...(it.eps[n]||{}),w:true}; } }
