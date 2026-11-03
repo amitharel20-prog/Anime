@@ -450,8 +450,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=101"></script>
-<script src="i18n-en.js?v=101"></script>
+<script src="he-names.js?v=102"></script>
+<script src="i18n-en.js?v=102"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -477,7 +477,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 101;
+const APP_VERSION = 102;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -1819,7 +1819,7 @@ const CHAR_LABELS = {
   "status":["מצב","Status"], "relatives":["קרובי משפחה","Relatives"], "family":["משפחה","Family"], "likes":["אוהב/ת","Likes"], "dislikes":["לא אוהב/ת","Dislikes"], "hobbies":["תחביבים","Hobbies"], "hobby":["תחביבים","Hobbies"],
   "favorite food":["אוכל אהוב","Favorite food"], "favourite food":["אוכל אהוב","Favorite food"], "abilities":["יכולות","Abilities"], "ability":["יכולת","Ability"], "quirk":["קווירק","Quirk"], "devil fruit":["פרי השטן","Devil Fruit"],
   "bounty":["פרס על ראשו","Bounty"], "weapon":["נשק","Weapon"], "weapons":["נשק","Weapons"], "titles":["תארים","Titles"], "title":["תואר","Title"], "nickname":["כינוי","Nickname"], "nicknames":["כינויים","Nicknames"], "alias":["כינוי","Alias"], "aliases":["כינויים","Aliases"],
-  "voice":["קול","Voice"], "seiyuu":["מדובב/ת","Seiyuu"], "dominant hand":["יד דומיננטית","Dominant hand"], "element":["אלמנט","Element"], "magic":["קסם","Magic"], "power":["כוח","Power"], "level":["רמה","Level"], "club":["מועדון","Club"]
+  "voice":["קול","Voice"], "seiyuu":["מדובב/ת","Seiyuu"], "dominant hand":["יד דומיננטית","Dominant hand"], "element":["אלמנט","Element"], "magic":["קסם","Magic"], "power":["כוח","Power"], "level":["רמה","Level"], "club":["מועדון","Club"], "three sizes":["מידות (חזה-מותניים-ירכיים)","Three sizes"], "measurements":["מידות","Measurements"], "bust":["חזה","Bust"], "waist":["מותניים","Waist"], "hips":["ירכיים","Hips"], "hip":["ירכיים","Hips"], "cup size":["מידת חזייה","Cup size"]
 };
 const charLabel = k=>{ const L=CHAR_LABELS[k.toLowerCase().trim()]; return L ? (uiEn()?L[1]:L[0]) : k; };
 // טקסט AniList: מסירים markdown, משאירים ספוילרים מסומנים
@@ -1889,14 +1889,18 @@ async function renderChar(c){
   const a = v.al || {}; const nm = a.name||{};
   // שדות: קודם מ־AniList (מובנים), אחר כך מהתיאור, ואז מ־MAL
   const facts=[]; const seen=new Set();
-  const add=(k,val,sp,note)=>{ if(val==null||val==="") return; const kk=k.toLowerCase().replace(/[^a-z ]/g,"").trim(); if(CHAR_HIDE.test(k) || seen.has(kk)) return; seen.add(kk); facts.push({k,val:String(val),sp:!!sp,note}); };
+  const aSplit = splitCharText(a.description||"");
+  const mSplit = splitCharText((v.about||"").replace(/\r/g,""));
+  // מידות גוף מוצגות רק לדמות שכל הגילאים הרשומים שלה הם 18 ומעלה (ועד 100)
+  const ageTexts = [a.age||"", ...aSplit.facts.concat(mSplit.facts).filter(f=>/\bage\b/i.test(f[0])).map(f=>f[1])].filter(Boolean);
+  const ageNums = ageTexts.join(" ").replace(/~!|!~/g,"").match(/\d+/g)||[];
+  const allowSizes = ageNums.length>0 && ageNums.map(Number).every(n=>n>=18 && n<=100);
+  const add=(k,val,sp,note)=>{ if(val==null||val==="") return; const kk=k.toLowerCase().replace(/[^a-z ]/g,"").trim(); if((CHAR_HIDE.test(k) && !allowSizes) || seen.has(kk)) return; seen.add(kk); facts.push({k,val:String(val),sp:!!sp,note}); };
   if(a.age){ const grows=/[-–~,]|\d\s*\(/.test(a.age); add("Age", a.age, false, grows?(uiEn()?"Age changes over the series":"הגיל משתנה במהלך הסדרה"):""); }
   if(a.gender) add("Gender", ({Male:uiEn()?"Male":"זכר",Female:uiEn()?"Female":"נקבה"})[a.gender]||a.gender);
   if(a.dateOfBirth&&a.dateOfBirth.month){ const dob=a.dateOfBirth; const dt=new Date(dob.year||2000, dob.month-1, dob.day||1); add("Birthday", dt.toLocaleDateString(LOC(), dob.day?{day:"numeric",month:"long",...(dob.year?{year:"numeric"}:{})}:{month:"long"})); }
   if(a.bloodType) add("Blood type", a.bloodType);
-  const aSplit = splitCharText(a.description||"");
   aSplit.facts.forEach(([k,val,sp])=>add(k,val,sp));
-  const mSplit = splitCharText((v.about||"").replace(/\r/g,""));
   mSplit.facts.forEach(([k,val])=>add(k,val,false));
   if(v.nick&&v.nick.length) add("Nicknames", v.nick.join(", "));
   // גיל שגדל: אם יש כמה גילאים במקורות, מציגים טווח
