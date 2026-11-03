@@ -8,7 +8,7 @@ exact: {
 "סומן בכוכב עדיפות":"Marked as priority","הכוכב הוסר":"Priority removed","עבר ל'בצפייה'. צפייה מהנה!":"Moved to 'Watching'. Enjoy!",
 "הרשימה שלי":"My List","חיפוש":"Search","בית":"Home","עונתי":"Seasonal","הגדרות":"Settings","ניווט":"Navigation",
 "אנימה":"Anime","אנימה עונתית":"Seasonal Anime","חיפוש אנימה":"Search Anime","התראות":"Notifications","סטטיסטיקות":"Statistics",
-"חזרה":"Back","חפש":"Search","חפש בעברית או באנגלית":"Search in English or Hebrew","חפש אנימה או סטודיו":"Search anime or studio","סטודיו:":"Studio:","דמויות עיקריות":"Main characters","לא נמצאו אנימות לסטודיו הזה.":"No anime found for this studio.","חפש ברשימה שלי…":"Search my list…",
+"חזרה":"Back","חפש":"Search","חפש בעברית או באנגלית":"Search in English or Hebrew","חפש אנימה או סטודיו":"Search anime or studio","טוען פרטים על הדמות…":"Loading character details…","לא הצלחתי לטעון את הדמות:":"Couldn't load the character:","סטודיו:":"Studio:","דמויות עיקריות":"Main characters","לא נמצאו אנימות לסטודיו הזה.":"No anime found for this studio.","חפש ברשימה שלי…":"Search my list…",
 "הכל":"All","הכל ←":"All →","פרקים חדשים":"New episodes","יצאו {n} פרקים חדשים":"{n} new episodes out","פרק חדש":"New episode","{n} פרקים חדשים":"{n} new episodes","{n} פרקים":"{n} episodes","פרק {n}":"Episode {n}","בצפייה":"Watching","נצפה":"Completed","בהמתנה":"On hold","אצפה בעתיד":"Plan to watch","נטשתי":"Dropped","נעול":"Locked",
 "בצפייה עכשיו":"Watching now","העונה הנוכחית":"This season","חם עכשיו":"Trending now","המדורגים ביותר":"Top rated","הכי פופולריים":"Most popular","בקרוב":"Upcoming",
 "מיון":"Sort","ז'אנר":"Genre","כל הז'אנרים":"All genres","ברירת מחדל":"Default","דירוג (מהגבוה לנמוך)":"Rating (high to low)","פופולריות":"Popularity","החדשות ביותר":"Newest",

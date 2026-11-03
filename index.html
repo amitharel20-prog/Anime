@@ -162,6 +162,38 @@ h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute
 .chr img{width:92px;aspect-ratio:3/4;object-fit:cover;border-radius:10px;background:var(--line);display:block}
 .chr .cname{display:block;font-size:12.5px;line-height:1.25;margin-top:5px;font-weight:700;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .chr .cva{display:block;font-size:11px;line-height:1.25;margin-top:2px;color:var(--muted);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.chr{cursor:pointer}
+.chr button{all:unset;display:block;cursor:pointer;width:100%}
+.chr button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:10px}
+.chhero{display:grid;grid-template-columns:130px 1fr;gap:16px;align-items:start}
+.chhero>img{width:130px;aspect-ratio:3/4;object-fit:cover;border-radius:12px;background:var(--line);cursor:zoom-in}
+.chhero h2{font-family:var(--display);font-weight:400;font-size:24px;line-height:1.2;margin:0 0 4px;overflow-wrap:anywhere}
+.chhero .alt{color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.chfav{display:inline-block;margin-top:8px;font-size:13px;color:var(--muted)}
+.chfacts{display:grid;grid-template-columns:auto 1fr;gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface)}
+.chfacts>div{padding:9px 12px;border-bottom:1px solid var(--line);font-size:14.5px;line-height:1.4;overflow-wrap:anywhere}
+.chfacts>div:nth-last-child(-n+2){border-bottom:0}
+.chfacts .k{color:var(--muted);font-weight:700;white-space:nowrap}
+.chfacts .v{color:var(--fg)}
+.chfacts .v small{color:var(--muted);display:block;font-size:12px}
+.spoil{background:var(--fg);color:transparent;border-radius:4px;cursor:pointer;padding:0 3px;transition:color .2s,background .2s}
+.spoil.open{background:color-mix(in srgb,var(--accent) 14%,transparent);color:inherit}
+.chgal{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;overscroll-behavior-x:contain}
+.chgal button{all:unset;flex:none;cursor:zoom-in}
+.chgal img{height:150px;width:auto;min-width:80px;border-radius:10px;background:var(--line);display:block;object-fit:cover}
+.chva{display:flex;gap:10px;flex-wrap:wrap}
+.chva>div{display:flex;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 12px 8px 8px;min-width:0;flex:1 1 220px}
+.chva img{width:46px;height:46px;border-radius:50%;object-fit:cover;background:var(--line);flex:none}
+.chva b{display:block;font-size:14.5px}
+.chva small{display:block;font-size:12px;color:var(--muted)}
+.chnote{font-size:12.5px;color:var(--muted);margin-top:6px}
+#imgview{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;touch-action:pan-y}
+#imgview img{max-width:100vw;max-height:86vh;object-fit:contain}
+#imgview .ivx,#imgview .ivp,#imgview .ivn{position:absolute;background:rgba(255,255,255,.14);color:#fff;border:0;border-radius:999px;width:44px;height:44px;font-size:22px;cursor:pointer}
+#imgview .ivx{top:calc(env(safe-area-inset-top) + 12px);left:12px}
+#imgview .ivp{right:10px;top:50%;transform:translateY(-50%)}
+#imgview .ivn{left:10px;top:50%;transform:translateY(-50%)}
+#imgview .ivc{position:absolute;bottom:calc(env(safe-area-inset-bottom) + 16px);color:#fff;font-size:13px;opacity:.8}
 .studiolink{background:none;border:0;padding:0;font:inherit;color:var(--accent);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .stchips{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0 12px}
 .stchips .lbl{font-size:13px;color:var(--muted)}
@@ -418,8 +450,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=100"></script>
-<script src="i18n-en.js?v=100"></script>
+<script src="he-names.js?v=101"></script>
+<script src="i18n-en.js?v=101"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -445,7 +477,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 100;
+const APP_VERSION = 101;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -475,7 +507,7 @@ function savePrefs(){ try{ localStorage.setItem(KEY+".prefs", JSON.stringify(pre
 if(!prefs.ui2){ prefs.ui2=1; if(prefs.lang!=="en") prefs.lang="he"; else prefs.lang="he"; try{ localStorage.setItem(KEY+".prefs", JSON.stringify(prefs)); }catch(e){} }
 const uiEn = ()=>prefs.lang==="en";
 const LOC = ()=>uiEn() ? "en-GB" : "he-IL";
-const I18N_SKIP = ".cname,.cva,.stchip,.studiolink,.name,.ptitle,.hero h2,.alt,.sugi b,#pageTitle[data-tid],.rel span,code,script,style,.desc,.nofx";
+const I18N_SKIP = ".cname,.cva,.chhero h2,.chhero .alt,.chfacts .v,.chva b,.stchip,.studiolink,.name,.ptitle,.hero h2,.alt,.sugi b,#pageTitle[data-tid],.rel span,code,script,style,.desc,.nofx";
 const NUM_RE = /\d+(?:[.,:/]\d+)*/g;
 const I18N_PATTERNS = [
   [/^יצאו (\d+) פרקים חדשים של (.+) \(עד פרק (\d+)\)$/, "$1 new episodes of $2 are out (up to ep. $3)"],
@@ -672,6 +704,7 @@ function render(){
   if(current.wheel) return renderWheel();
   if(current.detail) return renderDetail(current.detail);
   if(current.studio) return renderStudio(current.studio);
+  if(current.char) return renderChar(current.char);
   if(current.tab==="search") return renderSearch();
   if(current.tab==="settings") return renderSettings();
   if(current.tab==="stats") return renderStats();
@@ -1692,17 +1725,25 @@ const CHIMG_KEY = KEY+".chimg";
 let chimgStore = (()=>{ try{ return JSON.parse(localStorage.getItem(CHIMG_KEY))||{}; }catch(e){ return {}; } })();
 const chimgInflight = {};
 function getCharImages(mal){
-  const st=chimgStore[mal]; if(st && Date.now()-st.t<14*86400e3) return Promise.resolve(st.map);
+  const st=chimgStore[mal]; if(st && st.ids && Date.now()-st.t<14*86400e3) return Promise.resolve(st.map);
   if(chimgInflight[mal]) return chimgInflight[mal];
   return chimgInflight[mal] = fetch(`https://api.jikan.moe/v4/anime/${mal}/characters`).then(r=>{ if(!r.ok) throw new Error("jikan "+r.status); return r.json(); }).then(d=>{
-    const map={};
-    (d.data||[]).forEach(x=>{ const c=x.character||{}; const im=c.images&&((c.images.webp&&c.images.webp.image_url)||(c.images.jpg&&c.images.jpg.image_url));
-      if(!im || /questionmark|apple-touch|na\.gif/.test(im)) return; const k=charKey(c.name); if(k && !map[k]) map[k]=im; });
-    chimgStore[mal]={t:Date.now(),map};
+    const map={}, ids={};
+    (d.data||[]).forEach(x=>{ const c=x.character||{}; const k=charKey(c.name); if(!k) return;
+      if(c.mal_id && !ids[k]) ids[k]=c.mal_id;
+      const im=c.images&&((c.images.webp&&c.images.webp.image_url)||(c.images.jpg&&c.images.jpg.image_url));
+      if(!im || /questionmark|apple-touch|na\.gif/.test(im)) return; if(!map[k]) map[k]=im; });
+    chimgStore[mal]={t:Date.now(),map,ids};
     const ks=Object.keys(chimgStore).sort((a,b)=>chimgStore[b].t-chimgStore[a].t); ks.slice(60).forEach(k=>delete chimgStore[k]);
     try{ localStorage.setItem(CHIMG_KEY, JSON.stringify(chimgStore)); }catch(e){}
     return map;
   }).finally(()=>{ setTimeout(()=>delete chimgInflight[mal],1000); });
+}
+// התאמת שם דמות בין AniList ל־MAL: זהה, או שם קצר שמוכל בשם המלא (רק אם יש מועמד אחד)
+function matchCharKey(k, keys){
+  if(!k) return null; if(keys.includes(k)) return k;
+  const a=k.split(" "); const cand=keys.filter(x=>{ const b=x.split(" "); const [sm,lg]=a.length<=b.length?[a,b]:[b,a]; return sm.every(t=>lg.includes(t)) && sm.join("").length>=3; });
+  return cand.length===1 ? cand[0] : null;
 }
 async function fillCharImages(id, mal){
   let map; try{ map=await getCharImages(mal); }catch(e){ return; }
@@ -1710,11 +1751,7 @@ async function fillCharImages(id, mal){
   const keys=Object.keys(map);
   view.querySelectorAll(".chars img[data-ck]").forEach(img=>{
     const k=img.dataset.ck; if(!k) return;
-    let url=map[k];
-    if(!url){ // התאמה חלקית: שם קצר יותר שמוכל בשם המלא, רק אם יש מועמד אחד
-      const a=k.split(" "); const cand=keys.filter(x=>{ const b=x.split(" "); const [sm,lg]=a.length<=b.length?[a,b]:[b,a]; return sm.every(t=>lg.includes(t)) && sm.join("").length>=3; });
-      if(cand.length===1) url=map[cand[0]];
-    }
+    const mk=matchCharKey(k, keys); const url=mk?map[mk]:null;
     if(!url || img.src===url) return;
     const pre=new Image(); pre.onload=()=>{ if(img.isConnected) img.src=url; }; pre.src=url;
   });
@@ -1749,6 +1786,152 @@ async function renderStudio(s){
     catch(e){ if(current.studio===s){ box.innerHTML=`<div class="msg">לא הצלחתי לטעון: ${esc(e.message)}</div><button class="btn" id="stRetry">נסה שוב</button>`; $("#stRetry").onclick=()=>renderStudio(s); } return; }
   }
   if(current.studio===s) show();
+}
+
+/* ---------- עמוד דמות ---------- */
+const CHAR_KEY = KEY+".char";
+let charStore = (()=>{ try{ return JSON.parse(localStorage.getItem(CHAR_KEY))||{}; }catch(e){ return {}; } })();
+function saveChar(k, v){
+  charStore[k]={t:Date.now(),v};
+  const ks=Object.keys(charStore).sort((a,b)=>charStore[b].t-charStore[a].t); ks.slice(30).forEach(x=>delete charStore[x]);
+  try{ localStorage.setItem(CHAR_KEY, JSON.stringify(charStore)); }catch(e){ charStore={}; try{ localStorage.removeItem(CHAR_KEY); }catch(_){} }
+}
+const sleepMs = ms=>new Promise(r=>setTimeout(r,ms));
+async function jikanGet(path){
+  for(let i=0;i<3;i++){
+    const r = await fetch("https://api.jikan.moe/v4"+path);
+    if(r.status===429){ await sleepMs(1200*(i+1)); continue; }
+    if(!r.ok) throw new Error("jikan "+r.status);
+    return (await r.json()).data;
+  }
+  throw new Error("jikan busy");
+}
+// שדות שלא מציגים (מידות גוף)
+const CHAR_HIDE = /three\s*sizes|measurements|bust|waist|hips?\b|cup\s*size|\bb\s*-\s*w\s*-\s*h\b|^sizes?$/i;
+// תוויות מוכרות: [עברית, אנגלית]
+const CHAR_LABELS = {
+  "age":["גיל","Age"], "initial age":["גיל בהתחלה","Initial age"], "birthday":["יום הולדת","Birthday"], "date of birth":["יום הולדת","Birthday"], "born":["נולד/ה","Born"],
+  "height":["גובה","Height"], "weight":["משקל","Weight"], "gender":["מין","Gender"], "sex":["מין","Gender"], "blood type":["סוג דם","Blood type"], "bloodtype":["סוג דם","Blood type"],
+  "species":["גזע","Species"], "race":["גזע","Race"], "occupation":["עיסוק","Occupation"], "occupations":["עיסוק","Occupation"], "position":["תפקיד","Position"], "rank":["דרגה","Rank"],
+  "affiliation":["שיוך","Affiliation"], "affiliations":["שיוך","Affiliation"], "team":["צוות","Team"], "class":["כיתה / מעמד","Class"], "grade":["כיתה","Grade"], "school":["בית ספר","School"],
+  "hair color":["צבע שיער","Hair color"], "hair colour":["צבע שיער","Hair color"], "eye color":["צבע עיניים","Eye color"], "eye colour":["צבע עיניים","Eye color"],
+  "zodiac":["מזל","Zodiac"], "star sign":["מזל","Zodiac"], "nationality":["לאום","Nationality"], "hometown":["עיר הולדת","Hometown"], "birthplace":["מקום לידה","Birthplace"], "place of birth":["מקום לידה","Birthplace"], "origin":["מוצא","Origin"],
+  "status":["מצב","Status"], "relatives":["קרובי משפחה","Relatives"], "family":["משפחה","Family"], "likes":["אוהב/ת","Likes"], "dislikes":["לא אוהב/ת","Dislikes"], "hobbies":["תחביבים","Hobbies"], "hobby":["תחביבים","Hobbies"],
+  "favorite food":["אוכל אהוב","Favorite food"], "favourite food":["אוכל אהוב","Favorite food"], "abilities":["יכולות","Abilities"], "ability":["יכולת","Ability"], "quirk":["קווירק","Quirk"], "devil fruit":["פרי השטן","Devil Fruit"],
+  "bounty":["פרס על ראשו","Bounty"], "weapon":["נשק","Weapon"], "weapons":["נשק","Weapons"], "titles":["תארים","Titles"], "title":["תואר","Title"], "nickname":["כינוי","Nickname"], "nicknames":["כינויים","Nicknames"], "alias":["כינוי","Alias"], "aliases":["כינויים","Aliases"],
+  "voice":["קול","Voice"], "seiyuu":["מדובב/ת","Seiyuu"], "dominant hand":["יד דומיננטית","Dominant hand"], "element":["אלמנט","Element"], "magic":["קסם","Magic"], "power":["כוח","Power"], "level":["רמה","Level"], "club":["מועדון","Club"]
+};
+const charLabel = k=>{ const L=CHAR_LABELS[k.toLowerCase().trim()]; return L ? (uiEn()?L[1]:L[0]) : k; };
+// טקסט AniList: מסירים markdown, משאירים ספוילרים מסומנים
+function charMd(t){
+  let s = esc(t||"");
+  s = s.replace(/~!([\s\S]*?)!~/g, (m,x)=>`<span class="spoil" role="button" tabindex="0">${x}</span>`);
+  s = s.replace(/\[([^\]]+)\]\((?:[^)]+)\)/g,"$1").replace(/__([^_]+?)__/g,"<b>$1</b>").replace(/\*\*([^*]+?)\*\*/g,"<b>$1</b>").replace(/(^|[\s(])_([^_\n]+?)_(?=[\s).,!?]|$)/g,"$1<i>$2</i>").replace(/(^|[\s(])\*([^*\n]+?)\*(?=[\s).,!?]|$)/g,"$1<i>$2</i>");
+  s = s.replace(/&lt;br\s*\/?&gt;/gi,"\n");
+  return s;
+}
+// מפרקים תיאור לשדות (גיל: 17 וכו') ולטקסט חופשי
+function splitCharText(raw){
+  const facts=[], rest=[];
+  (raw||"").replace(/<br\s*\/?>/gi,"\n").split(/\n/).forEach(line=>{
+    const L=line.trim(); if(!L){ rest.push(""); return; }
+    let m = L.match(/^(?:~!)?\s*(?:__|\*\*)([^_*:]{1,40}?):?(?:__|\*\*)\s*:?\s*(.+)$/) || L.match(/^([A-Z][A-Za-z .'\/()&-]{1,32}):\s+(.{1,240})$/);
+    if(m && !/^https?$/i.test(m[1].trim())){ facts.push([m[1].trim(), m[2].trim().replace(/!~$/,"").trim(), /^~!/.test(L)]); return; }
+    rest.push(L);
+  });
+  return {facts, text: rest.join("\n").replace(/\n{3,}/g,"\n\n").trim()};
+}
+async function loadChar(c){
+  const ck = "a"+c.id; const st=charStore[ck];
+  if(st && Date.now()-st.t<7*86400e3) return st.v;
+  const d = await anilist(`query($id:Int){Character(id:$id){id name{full native alternative} image{large medium} description(asHtml:false) age gender dateOfBirth{year month day} bloodType favourites media(sort:[POPULARITY_DESC],perPage:20,type:ANIME){edges{characterRole node{id type format isAdult title{romaji english native} coverImage{large medium} seasonYear} voiceActors{id name{full native} image{medium} languageV2}}}}}`,{id:c.id});
+  const v = {al:d.Character, mal:null, about:"", pics:[], malName:"", nick:[]};
+  // MAL: מוצאים את מספר הדמות דרך רשימת הדמויות של האנימה
+  try{
+    let malId = null;
+    if(c.amal){ await getCharImages(c.amal).catch(()=>{}); const S=chimgStore[c.amal]; if(S&&S.ids){ const mk=matchCharKey(c.ck||charKey(v.al.name.full), Object.keys(S.ids)); if(mk) malId=S.ids[mk]; } }
+    if(malId){
+      v.mal = malId;
+      const full = await jikanGet(`/characters/${malId}/full`);
+      v.about = full.about||""; v.malName = full.name||""; v.nick = full.nicknames||[];
+      if(full.images){ const im=(full.images.jpg&&full.images.jpg.image_url)||(full.images.webp&&full.images.webp.image_url); if(im && !/questionmark/.test(im)) v.pics.push(im); }
+      await sleepMs(400);
+      const pics = await jikanGet(`/characters/${malId}/pictures`).catch(()=>[]);
+      (pics||[]).forEach(p=>{ const u=p.jpg&&p.jpg.image_url || p.webp&&p.webp.image_url; if(u && !v.pics.includes(u)) v.pics.push(u); });
+    }
+  }catch(e){}
+  saveChar(ck, v);
+  return v;
+}
+function openImgView(list, i){
+  let idx=i; const old=$("#imgview"); if(old) old.remove();
+  const ov=document.createElement("div"); ov.id="imgview"; ov.setAttribute("role","dialog");
+  const draw=()=>{ ov.innerHTML=`<img src="${esc(list[idx])}" alt=""><button class="ivx" aria-label="סגור">✕</button>${list.length>1?`<button class="ivp" aria-label="הקודמת">›</button><button class="ivn" aria-label="הבאה">‹</button><span class="ivc">${idx+1} / ${list.length}</span>`:""}`;
+    ov.querySelector(".ivx").onclick=close; const p=ov.querySelector(".ivp"), n=ov.querySelector(".ivn");
+    if(p) p.onclick=ev=>{ ev.stopPropagation(); idx=(idx-1+list.length)%list.length; draw(); };
+    if(n) n.onclick=ev=>{ ev.stopPropagation(); idx=(idx+1)%list.length; draw(); }; };
+  const close=()=>{ ov.remove(); document.removeEventListener("keydown",key); };
+  const key=ev=>{ if(ev.key==="Escape") close(); };
+  let sx=null; ov.addEventListener("touchstart",ev=>{ sx=ev.touches[0].clientX; },{passive:true});
+  ov.addEventListener("touchend",ev=>{ if(sx==null||list.length<2) return; const dx=ev.changedTouches[0].clientX-sx; sx=null; if(Math.abs(dx)>50){ idx=(idx+(dx<0?-1:1)+list.length)%list.length; draw(); } });
+  ov.addEventListener("click",ev=>{ if(ev.target===ov) close(); });
+  document.addEventListener("keydown",key);
+  draw(); document.body.appendChild(ov);
+}
+async function renderChar(c){
+  setHeader(uiEn()?"Character":"דמות", true);
+  const blur = c.adult && !prefs.noBlur;
+  const quick = c.img ? `<div class="chhero"><img src="${esc(c.img)}" alt=""${c.adult?' class="adultimg"':""}><div><p class="note">טוען פרטים על הדמות…</p></div></div>` : `<div class="empty">טוען…</div>`;
+  const st=charStore["a"+c.id];
+  if(!st) view.innerHTML = quick;
+  let v; try{ v = await loadChar(c); }catch(e){ if(current.char===c) view.innerHTML=`<div class="msg">לא הצלחתי לטעון את הדמות: ${esc(e.message)}</div><button class="btn" id="chRetry">נסה שוב</button>`; const b=$("#chRetry"); if(b) b.onclick=()=>renderChar(c); return; }
+  if(current.char!==c) return;
+  const a = v.al || {}; const nm = a.name||{};
+  // שדות: קודם מ־AniList (מובנים), אחר כך מהתיאור, ואז מ־MAL
+  const facts=[]; const seen=new Set();
+  const add=(k,val,sp,note)=>{ if(val==null||val==="") return; const kk=k.toLowerCase().replace(/[^a-z ]/g,"").trim(); if(CHAR_HIDE.test(k) || seen.has(kk)) return; seen.add(kk); facts.push({k,val:String(val),sp:!!sp,note}); };
+  if(a.age){ const grows=/[-–~,]|\d\s*\(/.test(a.age); add("Age", a.age, false, grows?(uiEn()?"Age changes over the series":"הגיל משתנה במהלך הסדרה"):""); }
+  if(a.gender) add("Gender", ({Male:uiEn()?"Male":"זכר",Female:uiEn()?"Female":"נקבה"})[a.gender]||a.gender);
+  if(a.dateOfBirth&&a.dateOfBirth.month){ const dob=a.dateOfBirth; const dt=new Date(dob.year||2000, dob.month-1, dob.day||1); add("Birthday", dt.toLocaleDateString(LOC(), dob.day?{day:"numeric",month:"long",...(dob.year?{year:"numeric"}:{})}:{month:"long"})); }
+  if(a.bloodType) add("Blood type", a.bloodType);
+  const aSplit = splitCharText(a.description||"");
+  aSplit.facts.forEach(([k,val,sp])=>add(k,val,sp));
+  const mSplit = splitCharText((v.about||"").replace(/\r/g,""));
+  mSplit.facts.forEach(([k,val])=>add(k,val,false));
+  if(v.nick&&v.nick.length) add("Nicknames", v.nick.join(", "));
+  // גיל שגדל: אם יש כמה גילאים במקורות, מציגים טווח
+  const ageRow = facts.find(f=>f.k.toLowerCase()==="age");
+  if(ageRow && !ageRow.note){ const nums=(ageRow.val.match(/\d+/g)||[]).map(Number).filter(n=>n<200); if(new Set(nums).size>1) ageRow.note = uiEn()?"Age changes over the series":"הגיל משתנה במהלך הסדרה"; }
+  const bio = aSplit.text || mSplit.text.replace(/\(Source:[^)]*\)\s*$/i,"").trim();
+  const alts = [nm.native, ...(nm.alternative||[])].filter(Boolean);
+  const mainImg = a.image&&(a.image.large||a.image.medium);
+  const gallery = []; [c.img, mainImg, ...v.pics].forEach(u=>{ if(u && !gallery.includes(u)) gallery.push(u); });
+  // מדובבים: מהאנימה הראשונה שיש בה
+  const edges = (a.media&&a.media.edges)||[];
+  const vaMap = new Map();
+  edges.forEach(e=>(e.voiceActors||[]).forEach(p=>{ const lang=p.languageV2||""; if(!/Japanese|English/i.test(lang)) return; const key=lang+"|"+p.id; if(!vaMap.has(key)) vaMap.set(key,{...p,lang}); }));
+  const vas = [...vaMap.values()].sort((x,y)=>(/Japanese/.test(x.lang)?0:1)-(/Japanese/.test(y.lang)?0:1)).slice(0,6);
+  const appears = edges.filter(e=>e.node && e.node.type==="ANIME" && (prefs.adult||!e.node.isAdult));
+  const ROLE_HE = {MAIN:["ראשי/ת","Main"],SUPPORTING:["משני/ת","Supporting"],BACKGROUND:["רקע","Background"]};
+  view.innerHTML = `
+    <div class="chhero">${mainImg||c.img?`<img id="chMain" src="${esc(c.img||mainImg)}" alt=""${c.adult?' class="adultimg"':""}>`:`<div class="ph"></div>`}
+      <div><h2 dir="auto">${esc(nm.full||"")}</h2>
+        ${alts.length?`<div class="alt" dir="auto">${alts.slice(0,4).map(esc).join(" · ")}</div>`:""}
+        ${a.favourites?`<span class="chfav">❤ ${a.favourites.toLocaleString(LOC())} ${uiEn()?"fans on AniList":"אוהבים ב־AniList"}</span>`:""}
+      </div></div>
+    ${facts.length?`<h3>${uiEn()?"Details":"פרטים"}</h3><div class="chfacts nofx">${facts.map(f=>`<div class="k">${esc(charLabel(f.k))}</div><div class="v" dir="auto">${f.sp?`<span class="spoil" role="button" tabindex="0">${charMd(f.val)}</span>`:charMd(f.val)}${f.note?`<small>${esc(f.note)}</small>`:""}</div>`).join("")}</div>
+      ${facts.some(f=>f.sp)||/class="spoil"/.test(charMd(facts.map(f=>f.val).join(" ")))?`<p class="chnote">${uiEn()?"Dark boxes are spoilers. Tap to reveal.":"ריבועים כהים הם ספוילרים. לוחצים כדי לחשוף."}</p>`:""}`:`<p class="note">${uiEn()?"No details are listed for this character.":"אין פרטים רשומים על הדמות הזו."}</p>`}
+    ${gallery.length>1?`<h3>${uiEn()?"More pictures":"תמונות נוספות"}</h3><div class="chgal">${gallery.map((u,i)=>`<button type="button" data-gi="${i}"><img src="${esc(u)}" alt="" loading="lazy" decoding="async"${c.adult?' class="adultimg"':""}></button>`).join("")}</div>`:""}
+    ${bio?`<h3>${uiEn()?"About":"על הדמות (באנגלית)"}</h3><p class="desc clamp" id="chDesc" dir="ltr" style="text-align:left;white-space:pre-line">${charMd(bio)}</p><div class="desctools"><button class="linkbtn" id="chMore">${uiEn()?"Show more":"הצג עוד"}</button>${uiEn()?"":`<a class="linkbtn" href="https://translate.google.com/?sl=en&tl=iw&op=translate&text=${encodeURIComponent(bio.replace(/~!|!~/g,"").slice(0,4500))}" target="_blank" rel="noopener">תרגם לעברית ←</a>`}</div>`:""}
+    ${vas.length?`<h3>${uiEn()?"Voice actors":"מדובבים"}</h3><div class="chva">${vas.map(p=>`<div>${p.image&&p.image.medium?`<img src="${esc(p.image.medium)}" alt="" loading="lazy" decoding="async">`:`<span class="ph" style="width:46px;height:46px;border-radius:50%"></span>`}<span><b dir="auto">${esc(p.name.full||p.name.native||"")}</b><small>${/Japanese/.test(p.lang)?(uiEn()?"Japanese":"יפנית"):(uiEn()?"English":"אנגלית")}${p.name.native&&p.name.native!==p.name.full?` · <span lang="ja">${esc(p.name.native)}</span>`:""}</small></span></div>`).join("")}</div>`:""}
+    ${appears.length?`<h3>${uiEn()?"Appears in":"מופיע/ה ב־"}</h3><div class="rel">${appears.map(e=>`<button data-rid="${e.node.id}"><img src="${esc(e.node.coverImage&&(e.node.coverImage.large||e.node.coverImage.medium)||"")}" alt="" loading="lazy" decoding="async"${e.node.isAdult?' class="adultimg"':""}><em>${(ROLE_HE[e.characterRole]||["",""])[uiEn()?1:0]}${e.node.seasonYear?" · "+e.node.seasonYear:""}</em><span>${tn({id:e.node.id,title:e.node.title})}</span></button>`).join("")}</div>`:""}
+    <p class="chnote">${uiEn()?"Sources: AniList and MyAnimeList.":"מקורות: AniList ו־MyAnimeList."}</p>
+    <div style="height:24px"></div>`;
+  view.querySelectorAll(".spoil").forEach(x=>{ const t=()=>x.classList.toggle("open"); x.onclick=t; x.onkeydown=ev=>{ if(ev.key==="Enter"||ev.key===" "){ ev.preventDefault(); t(); } }; });
+  view.querySelectorAll("[data-gi]").forEach(b=>b.onclick=()=>{ if(blur) return; openImgView(gallery,+b.dataset.gi); });
+  const mi=$("#chMain"); if(mi) mi.onclick=()=>{ if(!blur) openImgView(gallery, Math.max(0,gallery.indexOf(mi.src))); };
+  const more=$("#chMore"); if(more){ const dsc=$("#chDesc"); if(dsc.scrollHeight<=dsc.clientHeight+4) more.remove(); else more.onclick=()=>{ dsc.classList.toggle("clamp"); more.textContent=dsc.classList.contains("clamp")?(uiEn()?"Show more":"הצג עוד"):(uiEn()?"Show less":"הצג פחות"); }; }
+  view.querySelectorAll("[data-rid]").forEach(b=>b.onclick=()=>go({tab:current.tab, detail:+b.dataset.rid}));
 }
 
 /* ---------- מסך אנימה ---------- */
@@ -1867,7 +2050,7 @@ function detailHTML(id, m){
 
     ${desc?`<h3>תקציר (באנגלית)</h3><p class="desc clamp" id="desc" dir="ltr" style="text-align:left">${esc(desc).replace(/\n+/g,"<br>")}</p><div class="desctools"><button class="linkbtn" id="more">הצג עוד</button><a class="linkbtn" href="https://translate.google.com/?sl=en&tl=iw&op=translate&text=${encodeURIComponent(desc.slice(0,4500))}" target="_blank" rel="noopener">תרגם לעברית ←</a></div>`:""}
 
-    ${chars.length?`<h3>דמויות עיקריות</h3><div class="chars">${chars.map(c=>`<div class="chr"><img data-ck="${esc(charKey(c.node.name.full||""))}" src="${esc((c.node.image&&(c.node.image.large||c.node.image.medium))||"")}" alt="" loading="lazy" decoding="async"${base&&base.isAdult?' class="adultimg"':""}><b class="cname" dir="auto">${esc(c.node.name.full||c.node.name.native||"")}</b>${c.va?`<small class="cva" dir="auto">🎙️ ${esc(c.va)}</small>`:""}</div>`).join("")}</div>`:""}
+    ${chars.length?`<h3>דמויות עיקריות</h3><div class="chars">${chars.map(c=>`<div class="chr"><button type="button" data-char="${c.node.id}" data-ck="${esc(charKey(c.node.name.full||""))}" aria-label="${esc(c.node.name.full||"")}"><img data-ck="${esc(charKey(c.node.name.full||""))}" src="${esc((c.node.image&&(c.node.image.large||c.node.image.medium))||"")}" alt="" loading="lazy" decoding="async"${base&&base.isAdult?' class="adultimg"':""}><b class="cname" dir="auto">${esc(c.node.name.full||c.node.name.native||"")}</b>${c.va?`<small class="cva" dir="auto">🎙️ ${esc(c.va)}</small>`:""}</button></div>`).join("")}</div>`:""}
 
     <h3>פרקים</h3>
     ${showCount?`<div class="eptools"><button class="btn" id="allW">סמן הכל כנצפה</button><button class="btn" id="noneW">נקה סימונים</button></div>
@@ -1882,6 +2065,7 @@ function detailHTML(id, m){
     ${mineReal?`<h3>הסרה</h3><div id="rmBox"><button class="btn" id="rm">הסר מהרשימה שלי</button></div>`:""}
     <div style="height:24px"></div>`;
 
+  view.querySelectorAll("[data-char]").forEach(b=>b.onclick=()=>{ const im=b.querySelector("img"); go({tab:current.tab, char:{id:+b.dataset.char, amal:base&&base.idMal||null, ck:b.dataset.ck, adult:!!(base&&base.isAdult), img:im?im.src:""}}); });
   view.querySelectorAll("[data-studio]").forEach(b=>b.onclick=()=>go({tab:current.tab, studio:{id:+b.dataset.studio, name:b.dataset.sname}}));
   view.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{
     const it=getOrCreate(id,base); it.status = it.status===b.dataset.s?null:b.dataset.s;
