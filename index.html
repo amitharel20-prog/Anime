@@ -409,8 +409,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=97"></script>
-<script src="i18n-en.js?v=97"></script>
+<script src="he-names.js?v=98"></script>
+<script src="i18n-en.js?v=98"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -436,7 +436,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 97;
+const APP_VERSION = 98;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -486,6 +486,7 @@ const I18N_PATTERNS = [
   [/^הועתקו (\d+) שמות$/, "Copied $1 names"],
   [/^נוספו (\d+) אנימות ל'(.+)'$/, "Added $1 anime to '$2'"],
   [/^נוספו (\d+) אנימות$/, "Added $1 anime"],
+  [/^סומנו (\d+) אנימות בכוכב ⭐$/, "Starred $1 anime ⭐"],
   [/^(\d+) חלקים בסדרה · ראית (\d+)$/, "$1 parts in the series · watched $2"],
   [/^מגריל מתוך$/, "Drawing from"],
   [/^אנימות ב"אצפה בעתיד"\. ל־(\d+) אנימות עם ⭐ יש סיכוי כפול\.$/, "anime in \"Plan to watch\". $1 anime with ⭐ get double the chance."],
@@ -2315,6 +2316,10 @@ async function processPendingAdds(){
   for(const batch of list){
     if(db.meta.pendingDone[batch.key]) continue;
     const added=[], missing=[]; let netFail=false;
+    if(batch.ids && batch.ids.length){
+      for(const id of batch.ids){ const it=db.items[id]; if(!it){ missing.push("id "+id); continue; }
+        if(batch.star) it.star=true; if(!it.status) it.status=batch.status||"plan"; it.updated=Date.now(); added.push(id); }
+    }
     if(batch.mals && batch.mals.length){
       try{
         const d=await anilist(`query($m:[Int]){Page(perPage:50){media(idMal_in:$m,type:ANIME){${MEDIA_FIELDS}}}}`,{m:batch.mals},2);
@@ -2323,7 +2328,7 @@ async function processPendingAdds(){
         batch.mals.filter(x=>!got.has(x)).forEach(x=>missing.push("MAL "+x));
       }catch(e){ netFail=true; }
     }
-    for(const names of (netFail?[]:batch.titles)){
+    for(const names of (netFail?[]:(batch.titles||[]))){
       let found=null;
       for(const q of names){
         try{
@@ -2343,7 +2348,7 @@ async function processPendingAdds(){
     if(netFail) return;              // ננסה שוב בפתיחה הבאה
     db.meta.pendingDone[batch.key]={at:Date.now(), added:added.length, missing};
     save();
-    if(added.length) toast(batch.locked ? `נוספו ${added.length} אנימות` : `נוספו ${added.length} אנימות ל'${STATUS[batch.status].label}'`);
+    if(added.length) toast(batch.star ? `סומנו ${added.length} אנימות בכוכב ⭐` : batch.locked ? `נוספו ${added.length} אנימות` : `נוספו ${added.length} אנימות ל'${STATUS[batch.status].label}'`);
     if(added.length && !current.detail && !current.wheel && current.tab==="list" && !(document.activeElement&&/INPUT|SELECT/.test(document.activeElement.tagName))) renderList();
   }
 }

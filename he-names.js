@@ -1556,5 +1556,7 @@ window.PENDING_ADDS = [
   ]},
   // 3 שלא נמצאו לפי שם — מחפשים לפי מספר MAL
   {key:"locked-batch-2026-11-02-mal", status:"plan", locked:true, mals:[56511,52617,51662], titles:[]},
-  {key:"plan-death-march-2026-11-02", status:"plan", mals:[34497], titles:[]}
+  {key:"plan-death-march-2026-11-02", status:"plan", mals:[34497], titles:[]},
+  // כוכב (עדיפות) ל-Our Last Crusade ול-Sekirei
+  {key:"star-crusade-sekirei-2026-11-03", status:"plan", star:true, ids:[112667,4063]}
 ];
