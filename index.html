@@ -418,8 +418,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=99"></script>
-<script src="i18n-en.js?v=99"></script>
+<script src="he-names.js?v=100"></script>
+<script src="i18n-en.js?v=100"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -445,7 +445,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 99;
+const APP_VERSION = 100;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -1682,6 +1682,43 @@ function pickChars(edges){
   return out.slice(0,12).map(mk);
 }
 const studioCache = {};
+// תמונות דמויות מהאנימה (מ־MyAnimeList דרך Jikan); אם אין, נשארת התמונה של AniList
+function charKey(n){
+  let s=(n||"").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g,"");
+  if(s.includes(",")) s=s.split(",").map(x=>x.trim()).reverse().join(" ");
+  return s.split(/[^a-z0-9]+/).filter(Boolean).sort().join(" ");
+}
+const CHIMG_KEY = KEY+".chimg";
+let chimgStore = (()=>{ try{ return JSON.parse(localStorage.getItem(CHIMG_KEY))||{}; }catch(e){ return {}; } })();
+const chimgInflight = {};
+function getCharImages(mal){
+  const st=chimgStore[mal]; if(st && Date.now()-st.t<14*86400e3) return Promise.resolve(st.map);
+  if(chimgInflight[mal]) return chimgInflight[mal];
+  return chimgInflight[mal] = fetch(`https://api.jikan.moe/v4/anime/${mal}/characters`).then(r=>{ if(!r.ok) throw new Error("jikan "+r.status); return r.json(); }).then(d=>{
+    const map={};
+    (d.data||[]).forEach(x=>{ const c=x.character||{}; const im=c.images&&((c.images.webp&&c.images.webp.image_url)||(c.images.jpg&&c.images.jpg.image_url));
+      if(!im || /questionmark|apple-touch|na\.gif/.test(im)) return; const k=charKey(c.name); if(k && !map[k]) map[k]=im; });
+    chimgStore[mal]={t:Date.now(),map};
+    const ks=Object.keys(chimgStore).sort((a,b)=>chimgStore[b].t-chimgStore[a].t); ks.slice(60).forEach(k=>delete chimgStore[k]);
+    try{ localStorage.setItem(CHIMG_KEY, JSON.stringify(chimgStore)); }catch(e){}
+    return map;
+  }).finally(()=>{ setTimeout(()=>delete chimgInflight[mal],1000); });
+}
+async function fillCharImages(id, mal){
+  let map; try{ map=await getCharImages(mal); }catch(e){ return; }
+  if(current.detail!==id) return;
+  const keys=Object.keys(map);
+  view.querySelectorAll(".chars img[data-ck]").forEach(img=>{
+    const k=img.dataset.ck; if(!k) return;
+    let url=map[k];
+    if(!url){ // התאמה חלקית: שם קצר יותר שמוכל בשם המלא, רק אם יש מועמד אחד
+      const a=k.split(" "); const cand=keys.filter(x=>{ const b=x.split(" "); const [sm,lg]=a.length<=b.length?[a,b]:[b,a]; return sm.every(t=>lg.includes(t)) && sm.join("").length>=3; });
+      if(cand.length===1) url=map[cand[0]];
+    }
+    if(!url || img.src===url) return;
+    const pre=new Image(); pre.onload=()=>{ if(img.isConnected) img.src=url; }; pre.src=url;
+  });
+}
 async function loadStudioPage(id, page){
   const d = await anilist(`query($id:Int,$p:Int){Studio(id:$id){name media(isMain:true,sort:START_DATE_DESC,page:$p,perPage:50){pageInfo{hasNextPage} nodes{${MEDIA_FIELDS}}}}}`,{id,p:page});
   return d.Studio;
@@ -1830,8 +1867,7 @@ function detailHTML(id, m){
 
     ${desc?`<h3>תקציר (באנגלית)</h3><p class="desc clamp" id="desc" dir="ltr" style="text-align:left">${esc(desc).replace(/\n+/g,"<br>")}</p><div class="desctools"><button class="linkbtn" id="more">הצג עוד</button><a class="linkbtn" href="https://translate.google.com/?sl=en&tl=iw&op=translate&text=${encodeURIComponent(desc.slice(0,4500))}" target="_blank" rel="noopener">תרגם לעברית ←</a></div>`:""}
 
-    ${chars.length?`<h3>דמויות עיקריות</h3><div class="chars">${chars.map(c=>`<div class="chr"><img src="${esc((c.node.image&&(c.node.image.large||c.node.image.medium))||"")}" alt="" loading="lazy" decoding="async"${base&&base.isAdult?' class="adultimg"':""}><b class="cname" dir="auto">${esc(c.node.name.full||c.node.name.native||"")}</b>${c.va?`<small class="cva" dir="auto">🎙️ ${esc(c.va)}</small>`:""}</div>`).join("")}</div>`:""}
-    ${rels.length?`<h3>עונות וסדרות קשורות</h3><div class="rel">${rels.map(r=>`<button data-rid="${r.node.id}"><img src="${esc(r.node.coverImage&&(r.node.coverImage.large||r.node.coverImage.medium)||"")}" alt="" loading="lazy" decoding="async"><em>${REL[r.relationType]||"קשור"}${r.node.seasonYear?" · "+r.node.seasonYear:""}</em><span>${tn({id:r.node.id,title:r.node.title})}</span></button>`).join("")}</div>`:""}
+    ${chars.length?`<h3>דמויות עיקריות</h3><div class="chars">${chars.map(c=>`<div class="chr"><img data-ck="${esc(charKey(c.node.name.full||""))}" src="${esc((c.node.image&&(c.node.image.large||c.node.image.medium))||"")}" alt="" loading="lazy" decoding="async"${base&&base.isAdult?' class="adultimg"':""}><b class="cname" dir="auto">${esc(c.node.name.full||c.node.name.native||"")}</b>${c.va?`<small class="cva" dir="auto">🎙️ ${esc(c.va)}</small>`:""}</div>`).join("")}</div>`:""}
 
     <h3>פרקים</h3>
     ${showCount?`<div class="eptools"><button class="btn" id="allW">סמן הכל כנצפה</button><button class="btn" id="noneW">נקה סימונים</button></div>
@@ -1842,6 +1878,7 @@ function detailHTML(id, m){
       <span class="ttl" dir="auto">${esc(cleanEpTitle(epTitles[i]))}${sched[n]?`<small class="epdate ${sched[n]>Date.now()?"future":""}">${sched[n]>Date.now()?"יוצא ב":"שודר ב"}${fmtDay(sched[n])}${sched[n]>Date.now()?` בשעה <bdi dir="ltr">${new Date(sched[n]).toLocaleTimeString(LOC(),{hour:"2-digit",minute:"2-digit"})}</bdi>`:""}</small>`:""}</span></div>`;}).join(""); })()}</div>`
     :`<p class="desc">מספר הפרקים עוד לא ידוע ב־AniList.</p>`}
     ${rels.some(r=>r.relationType==="PREQUEL"||r.relationType==="SEQUEL")?`<div id="woBox"><h3>סדר צפייה</h3><p class="note">טוען סדר צפייה…</p></div>`:""}
+    ${rels.length?`<h3>עונות וסדרות קשורות</h3><div class="rel">${rels.map(r=>`<button data-rid="${r.node.id}"><img src="${esc(r.node.coverImage&&(r.node.coverImage.large||r.node.coverImage.medium)||"")}" alt="" loading="lazy" decoding="async"><em>${REL[r.relationType]||"קשור"}${r.node.seasonYear?" · "+r.node.seasonYear:""}</em><span>${tn({id:r.node.id,title:r.node.title})}</span></button>`).join("")}</div>`:""}
     ${mineReal?`<h3>הסרה</h3><div id="rmBox"><button class="btn" id="rm">הסר מהרשימה שלי</button></div>`:""}
     <div style="height:24px"></div>`;
 
@@ -1861,6 +1898,7 @@ function detailHTML(id, m){
     view.addEventListener("click",view._guard,true); view.addEventListener("pointerdown",view._guard,true);
   }
   fillWatchOrder(id);
+  if(chars.length && base && base.idMal) fillCharImages(id, base.idMal);
   const dS=$("#dStar"); if(dS) dS.onclick=()=>{ const it=db.items[id]; if(!it) return; it.star=!it.star; touch(it); toast(it.star?"סומן בכוכב עדיפות":"הכוכב הוסר"); detailHTML(id,m); };
   $("#dLock").onclick=()=>{
     const it=getOrCreate(id,base); if(!it.status) it.status="done";
