@@ -450,8 +450,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=102"></script>
-<script src="i18n-en.js?v=102"></script>
+<script src="he-names.js?v=103"></script>
+<script src="i18n-en.js?v=103"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -477,7 +477,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 102;
+const APP_VERSION = 103;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -680,6 +680,7 @@ let current = (()=>{ try{ const c=JSON.parse(sessionStorage.getItem(KEY+".cur"))
 let listFilter = "watching";
 let lastSearch = {q:"", results:[]};
 
+const overlay = ()=>!!(current.detail||current.wheel||current.notifs||current.studio||current.char);
 function go(state, push=true){
   if(push){ current.scroll = window.scrollY; stack.push(current); }
   else listLimit = LIST_STEP;
@@ -1344,7 +1345,7 @@ async function refreshFromAniList(){
     const added = buildNotifs();
     if(added) toast(added===1?"יש התראה חדשה":`יש ${added} התראות חדשות`);
     prefs.lastRefresh=Date.now(); savePrefs();
-    if(!current.detail && !current.wheel && !current.notifs && current.tab==="list") renderList();
+    if(!overlay() && !current.wheel && !current.notifs && current.tab==="list") renderList();
   }catch(e){ /* אין חיבור או ש־AniList עמוס; ננסה בפעם הבאה */ }
   finally{ refreshing=false; }
 }
@@ -1562,13 +1563,13 @@ function renderSearch(){
     bar.innerHTML = `<div class="chips" style="margin-top:12px">${Object.entries(BROWSE).map(([k,b])=>`<button class="chip${k==="tvz"?" tvzchip":""}" data-b="${k}" aria-pressed="${browseTab===k}">${b.label()}</button>`).join("")}</div>`;
     bar.querySelectorAll("[data-b]").forEach(c=>c.onclick=()=>{ browseTab=c.dataset.b; showBrowse(); });
     const k = browseTab, ck=bKey(k), g=browseGenre;
-    tvzProgress = k==="tvz" ? (list,pct)=>{ if(browseTab==="tvz" && !lastSearch.q && current.tab==="search" && !current.detail){ show(browseGenre?list.filter(m=>(m.genres||[]).includes(browseGenre)):list); sr.insertAdjacentHTML("afterbegin",`<p class="note">טוען את כל האנימות של televizio… ${pct}%</p>`); } } : null;
+    tvzProgress = k==="tvz" ? (list,pct)=>{ if(browseTab==="tvz" && !lastSearch.q && current.tab==="search" && !overlay()){ show(browseGenre?list.filter(m=>(m.genres||[]).includes(browseGenre)):list); sr.insertAdjacentHTML("afterbegin",`<p class="note">טוען את כל האנימות של televizio… ${pct}%</p>`); } } : null;
     const showMoreBtn = ()=>{ const bm=browseMore[ck]; if(k!=="tvz" && bm && bm.has && !sr.querySelector("#moreB")){ sr.insertAdjacentHTML("beforeend",`<div style="text-align:center;margin:14px 0"><button class="btn" id="moreB">טען עוד</button></div>`); $("#moreB").onclick=async ev=>{ ev.target.disabled=true; ev.target.textContent="טוען…"; try{ const y=window.scrollY; const r2=await loadBrowse(k,true); if(browseTab===k && browseGenre===g){ show(r2); window.scrollTo(0,y); showMoreBtn(); } }catch(e){ ev.target.disabled=false; ev.target.textContent="נסה שוב"; } }; } };
     const stored = !browseCache[ck] && storedBrowse(k);
     if(stored){ show(stored.data); if(Date.now()-stored.t<3600e3){ browseCache[ck]=stored.data; browseMore[ck]=browseMore[ck]||{page:1,has:true}; showMoreBtn(); return; } }
     else if(!browseCache[ck]) sr.innerHTML=`<div class="empty">טוען…</div>`;
     const slow = setTimeout(()=>{ if(browseTab===k && !browseCache[ck] && !stored) sr.innerHTML=`<div class="empty">AniList איטי כרגע, ממשיך לנסות…</div>`; }, 6000);
-    try{ const res = await loadBrowse(k); if(!lastSearch.q && browseTab===k && browseGenre===g && current.tab==="search" && !current.detail){ show(res); showMoreBtn(); } }
+    try{ const res = await loadBrowse(k); if(!lastSearch.q && browseTab===k && browseGenre===g && current.tab==="search" && !overlay()){ show(res); showMoreBtn(); } }
     catch(err){ if(!stored && browseTab===k) { sr.innerHTML=`<div class="msg">לא הצלחתי לטעון: ${esc(err.message)}</div><button class="btn" id="retryB">נסה שוב</button>`; const rb=$("#retryB"); if(rb) rb.onclick=showBrowse; } }
     finally{ clearTimeout(slow); }
   };
@@ -1659,8 +1660,8 @@ async function renderHome(){
   let stale = !homeData;
   if(!homeData){ try{ const c=JSON.parse(localStorage.getItem(KEY+".home")); if(c&&c.data){ homeData=c.data; paint(); stale = Date.now()-c.t>3600e3; } }catch(e){} }
   if(stale){
-    try{ homeData = await anilist(`query${HOME_Q}`,{}); try{ localStorage.setItem(KEY+".home",JSON.stringify({t:Date.now(),data:homeData})); }catch(e){} if(current.tab==="home"&&!current.detail) paint(); }
-    catch(err){ if(current.tab==="home"&&!current.detail) view.insertAdjacentHTML("afterbegin",`<div class="msg">לא הצלחתי לטעון אנימות: ${esc(err.message)}. בדוק חיבור לאינטרנט.</div>`); }
+    try{ homeData = await anilist(`query${HOME_Q}`,{}); try{ localStorage.setItem(KEY+".home",JSON.stringify({t:Date.now(),data:homeData})); }catch(e){} if(current.tab==="home"&&!overlay()) paint(); }
+    catch(err){ if(current.tab==="home"&&!overlay()) view.insertAdjacentHTML("afterbegin",`<div class="msg">לא הצלחתי לטעון אנימות: ${esc(err.message)}. בדוק חיבור לאינטרנט.</div>`); }
   }
 }
 
@@ -1727,7 +1728,7 @@ const chimgInflight = {};
 function getCharImages(mal){
   const st=chimgStore[mal]; if(st && st.ids && Date.now()-st.t<14*86400e3) return Promise.resolve(st.map);
   if(chimgInflight[mal]) return chimgInflight[mal];
-  return chimgInflight[mal] = fetch(`https://api.jikan.moe/v4/anime/${mal}/characters`).then(r=>{ if(!r.ok) throw new Error("jikan "+r.status); return r.json(); }).then(d=>{
+  return chimgInflight[mal] = fetchT(`https://api.jikan.moe/v4/anime/${mal}/characters`, 9000).then(r=>r.status===429?sleepMs(1300).then(()=>fetchT(`https://api.jikan.moe/v4/anime/${mal}/characters`, 9000)):r).then(r=>{ if(!r.ok) throw new Error("jikan "+r.status); return r.json(); }).then(d=>{
     const map={}, ids={};
     (d.data||[]).forEach(x=>{ const c=x.character||{}; const k=charKey(c.name); if(!k) return;
       if(c.mal_id && !ids[k]) ids[k]=c.mal_id;
@@ -1797,9 +1798,10 @@ function saveChar(k, v){
   try{ localStorage.setItem(CHAR_KEY, JSON.stringify(charStore)); }catch(e){ charStore={}; try{ localStorage.removeItem(CHAR_KEY); }catch(_){} }
 }
 const sleepMs = ms=>new Promise(r=>setTimeout(r,ms));
+function fetchT(url, ms){ const ac=new AbortController(); const t=setTimeout(()=>ac.abort(), ms||8000); return fetch(url,{signal:ac.signal}).finally(()=>clearTimeout(t)); }
 async function jikanGet(path){
   for(let i=0;i<3;i++){
-    const r = await fetch("https://api.jikan.moe/v4"+path);
+    const r = await fetchT("https://api.jikan.moe/v4"+path, 8000);
     if(r.status===429){ await sleepMs(1200*(i+1)); continue; }
     if(!r.ok) throw new Error("jikan "+r.status);
     return (await r.json()).data;
@@ -1841,27 +1843,29 @@ function splitCharText(raw){
   });
   return {facts, text: rest.join("\n").replace(/\n{3,}/g,"\n\n").trim()};
 }
-async function loadChar(c){
-  const ck = "a"+c.id; const st=charStore[ck];
-  if(st && Date.now()-st.t<7*86400e3) return st.v;
-  const d = await anilist(`query($id:Int){Character(id:$id){id name{full native alternative} image{large medium} description(asHtml:false) age gender dateOfBirth{year month day} bloodType favourites media(sort:[POPULARITY_DESC],perPage:20,type:ANIME){edges{characterRole node{id type format isAdult title{romaji english native} coverImage{large medium} seasonYear} voiceActors{id name{full native} image{medium} languageV2}}}}}`,{id:c.id});
-  const v = {al:d.Character, mal:null, about:"", pics:[], malName:"", nick:[]};
-  // MAL: מוצאים את מספר הדמות דרך רשימת הדמויות של האנימה
-  try{
-    let malId = null;
-    if(c.amal){ await getCharImages(c.amal).catch(()=>{}); const S=chimgStore[c.amal]; if(S&&S.ids){ const mk=matchCharKey(c.ck||charKey(v.al.name.full), Object.keys(S.ids)); if(mk) malId=S.ids[mk]; } }
-    if(malId){
-      v.mal = malId;
-      const full = await jikanGet(`/characters/${malId}/full`);
-      v.about = full.about||""; v.malName = full.name||""; v.nick = full.nicknames||[];
-      if(full.images){ const im=(full.images.jpg&&full.images.jpg.image_url)||(full.images.webp&&full.images.webp.image_url); if(im && !/questionmark/.test(im)) v.pics.push(im); }
-      await sleepMs(400);
-      const pics = await jikanGet(`/characters/${malId}/pictures`).catch(()=>[]);
-      (pics||[]).forEach(p=>{ const u=p.jpg&&p.jpg.image_url || p.webp&&p.webp.image_url; if(u && !v.pics.includes(u)) v.pics.push(u); });
-    }
-  }catch(e){}
-  saveChar(ck, v);
-  return v;
+const charAlInflight = {};
+function loadCharAL(id){
+  if(charAlInflight[id]) return charAlInflight[id];
+  return charAlInflight[id] = anilist(`query($id:Int){Character(id:$id){id name{full native alternative} image{large medium} description(asHtml:false) age gender dateOfBirth{year month day} bloodType favourites media(sort:[POPULARITY_DESC],perPage:20,type:ANIME){edges{characterRole node{id type format isAdult title{romaji english native} coverImage{large medium} seasonYear} voiceActors{id name{full native} image{medium} languageV2}}}}}`,{id},2)
+    .then(d=>d.Character).finally(()=>{ setTimeout(()=>delete charAlInflight[id], 1500); });
+}
+// מקדימים טעינה כשנוגעים בדמות
+document.addEventListener("pointerdown",ev=>{ const b=ev.target.closest&&ev.target.closest("[data-char]"); if(!b) return; const id=+b.dataset.char; const st=charStore["a"+id]; if(id && !(st && st.v.malOk && Date.now()-st.t<7*86400e3)) loadCharAL(id).catch(()=>{}); },{passive:true});
+async function loadCharMal(c, al){
+  const out = {mal:null, about:"", pics:[], malName:"", nick:[]};
+  let malId = null;
+  if(c.amal){ await getCharImages(c.amal).catch(()=>{}); const S=chimgStore[c.amal]; if(S&&S.ids){ const mk=matchCharKey(c.ck||charKey(al&&al.name&&al.name.full), Object.keys(S.ids)); if(mk) malId=S.ids[mk]; } }
+  if(!malId) return out;
+  out.mal = malId;
+  const [full, pics] = await Promise.all([
+    jikanGet(`/characters/${malId}/full`).catch(()=>null),
+    sleepMs(450).then(()=>jikanGet(`/characters/${malId}/pictures`)).catch(()=>[])
+  ]);
+  if(full){ out.about = full.about||""; out.malName = full.name||""; out.nick = full.nicknames||[];
+    if(full.images){ const im=(full.images.jpg&&full.images.jpg.image_url)||(full.images.webp&&full.images.webp.image_url); if(im && !/questionmark/.test(im)) out.pics.push(im); } }
+  (pics||[]).forEach(p=>{ const u=p.jpg&&p.jpg.image_url || p.webp&&p.webp.image_url; if(u && !out.pics.includes(u)) out.pics.push(u); });
+  if(!full && !(pics&&pics.length)) throw new Error("mal failed");
+  return out;
 }
 function openImgView(list, i){
   let idx=i; const old=$("#imgview"); if(old) old.remove();
@@ -1880,12 +1884,21 @@ function openImgView(list, i){
 }
 async function renderChar(c){
   setHeader(uiEn()?"Character":"דמות", true);
+  const ck="a"+c.id; const st=charStore[ck];
+  if(st && st.v && st.v.al){ paintChar(c, st.v); if(st.v.malOk ? Date.now()-st.t<7*86400e3 : Date.now()-st.t<3600e3) return; }
+  else view.innerHTML = c.img ? `<div class="chhero"><img src="${esc(c.img)}" alt=""${c.adult?' class="adultimg"':""}><div><p class="note">טוען פרטים על הדמות…</p></div></div>` : `<div class="empty">טוען…</div>`;
+  let al;
+  try{ al = (st&&st.v&&st.v.al&&Date.now()-st.t<7*86400e3) ? st.v.al : await loadCharAL(c.id); }
+  catch(e){ if(current.char===c && !(st&&st.v)){ view.innerHTML=`<div class="msg">לא הצלחתי לטעון את הדמות: ${esc(e.message)}</div><button class="btn" id="chRetry">נסה שוב</button>`; const b=$("#chRetry"); if(b) b.onclick=()=>renderChar(c); } return; }
+  const v = {al, mal:null, about:"", pics:[], malName:"", nick:[], malOk:false, loadingMal:true};
+  if(current.char===c && !(st&&st.v&&st.v.al)) paintChar(c, v);
+  try{ Object.assign(v, await loadCharMal(c, al)); v.malOk=true; }catch(e){}
+  v.loadingMal=false;
+  saveChar(ck, v);
+  if(current.char===c){ const y=window.scrollY; paintChar(c, v); window.scrollTo(0,y); }
+}
+function paintChar(c, v){
   const blur = c.adult && !prefs.noBlur;
-  const quick = c.img ? `<div class="chhero"><img src="${esc(c.img)}" alt=""${c.adult?' class="adultimg"':""}><div><p class="note">טוען פרטים על הדמות…</p></div></div>` : `<div class="empty">טוען…</div>`;
-  const st=charStore["a"+c.id];
-  if(!st) view.innerHTML = quick;
-  let v; try{ v = await loadChar(c); }catch(e){ if(current.char===c) view.innerHTML=`<div class="msg">לא הצלחתי לטעון את הדמות: ${esc(e.message)}</div><button class="btn" id="chRetry">נסה שוב</button>`; const b=$("#chRetry"); if(b) b.onclick=()=>renderChar(c); return; }
-  if(current.char!==c) return;
   const a = v.al || {}; const nm = a.name||{};
   // שדות: קודם מ־AniList (מובנים), אחר כך מהתיאור, ואז מ־MAL
   const facts=[]; const seen=new Set();
@@ -1929,6 +1942,7 @@ async function renderChar(c){
     ${bio?`<h3>${uiEn()?"About":"על הדמות (באנגלית)"}</h3><p class="desc clamp" id="chDesc" dir="ltr" style="text-align:left;white-space:pre-line">${charMd(bio)}</p><div class="desctools"><button class="linkbtn" id="chMore">${uiEn()?"Show more":"הצג עוד"}</button>${uiEn()?"":`<a class="linkbtn" href="https://translate.google.com/?sl=en&tl=iw&op=translate&text=${encodeURIComponent(bio.replace(/~!|!~/g,"").slice(0,4500))}" target="_blank" rel="noopener">תרגם לעברית ←</a>`}</div>`:""}
     ${vas.length?`<h3>${uiEn()?"Voice actors":"מדובבים"}</h3><div class="chva">${vas.map(p=>`<div>${p.image&&p.image.medium?`<img src="${esc(p.image.medium)}" alt="" loading="lazy" decoding="async">`:`<span class="ph" style="width:46px;height:46px;border-radius:50%"></span>`}<span><b dir="auto">${esc(p.name.full||p.name.native||"")}</b><small>${/Japanese/.test(p.lang)?(uiEn()?"Japanese":"יפנית"):(uiEn()?"English":"אנגלית")}${p.name.native&&p.name.native!==p.name.full?` · <span lang="ja">${esc(p.name.native)}</span>`:""}</small></span></div>`).join("")}</div>`:""}
     ${appears.length?`<h3>${uiEn()?"Appears in":"מופיע/ה ב־"}</h3><div class="rel">${appears.map(e=>`<button data-rid="${e.node.id}"><img src="${esc(e.node.coverImage&&(e.node.coverImage.large||e.node.coverImage.medium)||"")}" alt="" loading="lazy" decoding="async"${e.node.isAdult?' class="adultimg"':""}><em>${(ROLE_HE[e.characterRole]||["",""])[uiEn()?1:0]}${e.node.seasonYear?" · "+e.node.seasonYear:""}</em><span>${tn({id:e.node.id,title:e.node.title})}</span></button>`).join("")}</div>`:""}
+    ${v.loadingMal?`<p class="note">${uiEn()?"Loading more details and pictures from MyAnimeList…":"טוען עוד פרטים ותמונות מ־MyAnimeList…"}</p>`:""}
     <p class="chnote">${uiEn()?"Sources: AniList and MyAnimeList.":"מקורות: AniList ו־MyAnimeList."}</p>
     <div style="height:24px"></div>`;
   view.querySelectorAll(".spoil").forEach(x=>{ const t=()=>x.classList.toggle("open"); x.onclick=t; x.onkeydown=ev=>{ if(ev.key==="Enter"||ev.key===" "){ ev.preventDefault(); t(); } }; });
@@ -2263,7 +2277,7 @@ async function syncNow(silent){
     c.last=Date.now(); setSyncCfg(c);
     syncState=`סונכרן ${new Date().toLocaleTimeString(LOC(),{hour:"2-digit",minute:"2-digit"})}`;
     if(changed && !silent) toast(`התקבלו ${changed} עדכונים מהמכשיר השני`);
-    if(changed && !current.detail && !current.wheel) render();
+    if(changed && !overlay() && !current.wheel) render();
   }catch(err){
     syncState="הסנכרון נכשל: "+err.message;
     if(!silent) toast("הסנכרון נכשל");
@@ -2636,7 +2650,7 @@ async function processPendingAdds(){
     db.meta.pendingDone[batch.key]={at:Date.now(), added:added.length, missing};
     save();
     if(added.length) toast(batch.star ? `סומנו ${added.length} אנימות בכוכב ⭐` : batch.locked ? `נוספו ${added.length} אנימות` : `נוספו ${added.length} אנימות ל'${STATUS[batch.status].label}'`);
-    if(added.length && !current.detail && !current.wheel && current.tab==="list" && !(document.activeElement&&/INPUT|SELECT/.test(document.activeElement.tagName))) renderList();
+    if(added.length && !overlay() && !current.wheel && current.tab==="list" && !(document.activeElement&&/INPUT|SELECT/.test(document.activeElement.tagName))) renderList();
   }
 }
 setTimeout(()=>{ processPendingAdds().catch(()=>{}); }, 2500);
