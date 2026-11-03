@@ -13,6 +13,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://graphql.anilist.co" crossorigin>
 <link rel="preconnect" href="https://s4.anilist.co">
+<link rel="preconnect" href="https://api.jikan.moe" crossorigin>
+<link rel="preconnect" href="https://cdn.myanimelist.net">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Secular+One&display=swap">
@@ -150,6 +152,7 @@ h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute
 .ep .fill{display:inline-block;font-size:11px;font-weight:800;padding:1px 7px;border-radius:6px;background:#e67e22;color:#fff;line-height:1.5}
 .ep .fill.mix{background:transparent;color:#e67e22;border:1px solid #e67e22}
 .ep.isfill{border-color:#e67e2266}
+.eps.many .ep{content-visibility:auto;contain-intrinsic-size:auto 46px}
 .ep .ttl{color:var(--muted);font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .eptools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
 .rel{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px}
@@ -450,8 +453,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=103"></script>
-<script src="i18n-en.js?v=103"></script>
+<script src="he-names.js?v=104"></script>
+<script src="i18n-en.js?v=104"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -477,7 +480,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 103;
+const APP_VERSION = 104;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -494,11 +497,19 @@ if(!db.meta.holdToStar1){
   db.meta.holdToStar1 = true;
   try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){}
 }
-function save(sync=true){
+// שמירה בטלפון: מאחדים שמירות רצופות (למשל סימון כמה פרקים ברצף) לשמירה אחת, ושומרים מיד כשיוצאים מהאפליקציה
+let saveTimer=null;
+function flushSave(){
+  if(saveTimer){ clearTimeout(saveTimer); saveTimer=null; }
   try{ localStorage.setItem(KEY, JSON.stringify(db)); }
   catch(e){ toast("השמירה בטלפון נכשלה. כדאי לגבות עכשיו."); }
+}
+function save(sync=true){
+  if(!saveTimer) saveTimer=setTimeout(flushSave, 250);
   if(sync) scheduleSync();
 }
+addEventListener("pagehide", ()=>{ if(saveTimer) flushSave(); });
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden" && saveTimer) flushSave(); });
 function removeItem(id){ delete db.items[id]; db.meta.deleted[id]=Date.now(); save(); }
 const prefs = (()=>{ try{ return JSON.parse(localStorage.getItem(KEY+".prefs"))||{}; }catch(e){ return {}; } })();
 function savePrefs(){ try{ localStorage.setItem(KEY+".prefs", JSON.stringify(prefs)); }catch(e){} }
@@ -671,7 +682,7 @@ $("#langBtn").onclick=()=>{
   prefs.lang = isHeLang() ? "en" : "he"; savePrefs();
   // שומרים איפה היית, וטוענים מחדש בשפה החדשה
   try{ sessionStorage.setItem(KEY+".cur", JSON.stringify({tab:current.tab, detail:current.detail||null})); }catch(e){}
-  location.reload();
+  if(saveTimer) flushSave(); location.reload();
 };
 
 /* ---------- ניווט ---------- */
@@ -946,6 +957,8 @@ function enTitle(o){ if(!o) return ""; if(o.title && typeof o.title==="object") 
 const keyN = s => (s||"").toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g,"");
 const FAN = (()=>{ const m=new Map(); for(const [en,he] of Object.entries(window.HE_FAN_NAMES||{})) m.set(keyN(en),he); return m; })();
 const FAN_KEYS = [...FAN.keys()].filter(k=>k.length>=4).sort((a,b)=>b.length-a.length);
+const FAN_BY4 = (()=>{ const m=new Map(); for(const b of FAN_KEYS){ const p=b.slice(0,4); (m.get(p)||m.set(p,[]).get(p)).push(b); } return m; })();
+const fanPrefix = k => (FAN_BY4.get(k.slice(0,4))||[]).find(b=>k.startsWith(b));
 const fanMemo = new Map();
 function fanFor(o){
   if(!o) return null;
@@ -957,7 +970,7 @@ function fanFor(o){
   if(!res) for(const t of titles){ const k=keyN(t); if(FAN.has(k)){ res=FAN.get(k); break; } }
   if(!res){
     for(const t of titles){
-      const k=keyN(t), base=FAN_KEYS.find(b=>k.startsWith(b));
+      const k=keyN(t), base=fanPrefix(k);
       if(!base) continue;
       // מוצאים איפה נגמר שם הבסיס בטקסט המקורי, ומתרגמים את ההמשך (עונה 2, חלק 2...)
       let i=0, n=0; while(i<t.length && n<base.length){ if(/[a-z0-9]/i.test(t[i].normalize("NFKD")[0]||"")) n++; i++; }
@@ -990,20 +1003,22 @@ function outsideNames(){
   for(const [id,c] of Object.entries(heCache)){
     if(!/^\d+$/.test(id) || !c || !c.en) continue;
     const it=db.items[id]; if(it && it.status) continue;
-    if(c.src==="wiki" || FAN.has(keyN(c.en)) || FAN_KEYS.some(b=>keyN(c.en).startsWith(b))) continue;
+    if(c.src==="wiki" || FAN.has(keyN(c.en)) || fanPrefix(keyN(c.en))) continue;
     out.push(c.src==="mt"&&c.t ? `${c.en} — ${c.t} (תרגום אוטומטי)` : `${c.en} — ${translitHe(c.en)} (לפי הצליל)`);
   }
   return out.sort();
 }
 const keyW = s => (s||"").toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g," ").trim();
 const TVZ_KEYS = (window.TELEVIZIO||[]).filter(t=>t[0]!=="=").map(t=>keyW(t)).filter(Boolean);
+// אינדקס לפי המילה הראשונה: במקום לעבור על כל הרשימה לכל אנימה
+const TVZ_BY_W = (()=>{ const m=new Map(); for(const b of TVZ_KEYS){ const w=b.split(" ")[0]; (m.get(w)||m.set(w,[]).get(w)).push(b); } return m; })();
 const TVZ_EXACT = new Set((window.TELEVIZIO||[]).filter(t=>t[0]==="=").map(t=>keyW(t.slice(1))));
 const tvzMemo = new Map();
 function onTvz(o){
   if(!o) return false;
   if(tvzMemo.has(o.id)) return tvzMemo.get(o.id);
   const ts=[enTitle(o), o.romaji||(o.title&&o.title.romaji)||"", o.title&&o.title.english||"", typeof o.title==="string"?o.title:""].filter(Boolean).map(keyW);
-  const r = ts.some(k=>TVZ_EXACT.has(k) || TVZ_KEYS.some(b=>k===b || k.startsWith(b+" ")));
+  const r = ts.some(k=>TVZ_EXACT.has(k) || (TVZ_BY_W.get(k.split(" ")[0])||[]).some(b=>k===b || k.startsWith(b+" ")));
   tvzMemo.set(o.id,r); return r;
 }
 const TVZ = '<span class="tvz">televizio</span>';
@@ -2073,7 +2088,7 @@ function detailHTML(id, m){
     <h3>פרקים</h3>
     ${showCount?`<div class="eptools"><button class="btn" id="allW">סמן הכל כנצפה</button><button class="btn" id="noneW">נקה סימונים</button></div>
     ${(()=>{ const fl=fillerOf(e); return fl&&(fl.f.size||fl.m.size)?`<p class="note fillnote">בסדרה הזו יש <b>${fl.f.size}</b> פרקי פילר (לא מהמנגה, אפשר לדלג) ו־${fl.m.size} פרקים חצי פילר. הם מסומנים ברשימה.</p>`:""; })()}
-    <div class="eps">${(()=>{ const fl=fillerOf(e); return Array.from({length:showCount},(_,i)=>{const n=i+1, ep=(e.eps||{})[n]||{};
+    <div class="eps${showCount>60?" many":""}">${(()=>{ const fl=fillerOf(e); return Array.from({length:showCount},(_,i)=>{const n=i+1, ep=(e.eps||{})[n]||{};
       const ftag = fl ? (fl.f.has(n)?'<span class="fill">פילר</span>':(fl.m.has(n)?'<span class="fill mix">חצי פילר</span>':"")) : "";
       return `<div class="ep${ftag?(fl.f.has(n)?" isfill":" ismix"):""}"><label><input type="checkbox" id="w${n}" data-ep="${n}" ${ep.w?"checked":""}>פרק ${n}${ftag}</label>
       <span class="ttl" dir="auto">${esc(cleanEpTitle(epTitles[i]))}${sched[n]?`<small class="epdate ${sched[n]>Date.now()?"future":""}">${sched[n]>Date.now()?"יוצא ב":"שודר ב"}${fmtDay(sched[n])}${sched[n]>Date.now()?` בשעה <bdi dir="ltr">${new Date(sched[n]).toLocaleTimeString(LOC(),{hour:"2-digit",minute:"2-digit"})}</bdi>`:""}</small>`:""}</span></div>`;}).join(""); })()}</div>`
@@ -2222,7 +2237,7 @@ function renderSettings(){
     toast("טוען גרסה חדשה…");
     try{ if(window.caches){ for(const k of await caches.keys()) await caches.delete(k); } }catch(e){}
     try{ if(navigator.serviceWorker){ for(const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); } }catch(e){}
-    location.replace(location.pathname + "?v=" + Date.now());
+    if(saveTimer) flushSave(); location.replace(location.pathname + "?v=" + Date.now());
   };
   $("#ai").onclick = ()=>importAniList($("#au").value.trim());
   $("#mf").onchange = ev=>{ const f=ev.target.files[0]; if(f) importMAL(f); };
@@ -2592,14 +2607,14 @@ document.addEventListener("click",ev=>{ const a=ev.target.closest&&ev.target.clo
 
 /* ---------- הפעלה ---------- */
 if("serviceWorker" in navigator && location.protocol==="https:"){ navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>r.update()).catch(()=>{});
-  let reloaded=false; navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(!reloaded){ reloaded=true; location.reload(); } }); }
+  let reloaded=false; navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(!reloaded){ reloaded=true; if(saveTimer) flushSave(); location.reload(); } }); }
 // בדיקת גרסה חדשה בכל פתיחה: עוקף את הזיכרון של GitHub (כ־10 דקות)
 async function checkForUpdate(){
   try{
     const r = await fetch("version.json?t="+Date.now(),{cache:"no-store"});
     const v = (await r.json()).v;
     if(v>APP_VERSION && new URLSearchParams(location.search).get("v")!==String(v)){
-      location.replace(location.pathname+"?v="+v);
+      if(saveTimer) flushSave(); location.replace(location.pathname+"?v="+v);
     }
   }catch(e){}
 }
