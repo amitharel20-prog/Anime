@@ -197,6 +197,21 @@ h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute
 #imgview .ivp{right:10px;top:50%;transform:translateY(-50%)}
 #imgview .ivn{left:10px;top:50%;transform:translateY(-50%)}
 #imgview .ivc{position:absolute;bottom:calc(env(safe-area-inset-bottom) + 16px);color:#fff;font-size:13px;opacity:.8}
+.wtw{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}
+.wtwl{font-size:13px;color:var(--muted);margin-inline-end:2px}
+.wtwb{display:inline-flex;align-items:center;gap:6px;padding:5px 11px 5px 9px;border-radius:999px;background:color-mix(in srgb,var(--sc) 16%,var(--surface));border:1px solid color-mix(in srgb,var(--sc) 45%,transparent);color:var(--fg);font-size:13.5px;font-weight:700;text-decoration:none}
+.wtwb img{width:16px;height:16px;border-radius:4px;background:var(--sc);padding:2px;box-sizing:content-box}
+.epsum{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin-top:22px;padding:14px 16px;border-radius:14px;background:var(--surface);border:1px solid var(--line);cursor:pointer}
+.epsum:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.epsum.open{border-color:var(--accent)}
+.epsum-t{display:flex;flex-direction:column;gap:3px;min-width:0}
+.epsum-t b{font-family:var(--display);font-weight:400;font-size:20px}
+.epsum-t span{font-size:14.5px;color:var(--muted)}
+.epsum-t small{font-size:13.5px;color:var(--accent);font-weight:700}
+.epsum-c{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent);font-size:13px}
+.epbar{height:5px;border-radius:99px;background:var(--line);margin:8px 4px 12px;overflow:hidden}
+.epbar span{display:block;height:100%;background:var(--s-watch);border-radius:99px}
+.recs{margin-bottom:6px}
 .studiolink{background:none;border:0;padding:0;font:inherit;color:var(--accent);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .stchips{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0 12px}
 .stchips .lbl{font-size:13px;color:var(--muted)}
@@ -486,8 +501,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=110"></script>
-<script src="i18n-en.js?v=110"></script>
+<script src="he-names.js?v=111"></script>
+<script src="i18n-en.js?v=111"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -513,7 +528,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 110;
+const APP_VERSION = 111;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -2089,13 +2104,13 @@ function saveFull(id, m){
 }
 function fetchFull(id){
   if(fullInflight[id]) return fullInflight[id];
-  const p = anilist(`query($id:Int){Media(id:$id){${MEDIA_FIELDS} description(asHtml:false) airingSchedule(perPage:150){nodes{episode airingAt}} bannerImage season studios(isMain:true){nodes{id name}} characters(sort:[ROLE,RELEVANCE,ID],perPage:12){edges{role node{id name{full native} image{large medium}} voiceActors(language:JAPANESE,sort:[RELEVANCE,ID]){name{full native}}}} trailer{id site} streamingEpisodes{title} relations{edges{relationType node{id type format title{romaji english} coverImage{large medium} seasonYear}}}}}`,{id}).then(d=>{ cacheMedia[id+"full"]=d.Media; saveFull(id,d.Media); return d.Media; })
+  const p = anilist(`query($id:Int){Media(id:$id){${MEDIA_FIELDS} description(asHtml:false) airingSchedule(perPage:150){nodes{episode airingAt}} bannerImage season studios(isMain:true){nodes{id name}} externalLinks{site url type color icon isDisabled} recommendations(sort:[RATING_DESC,ID],perPage:15){nodes{rating mediaRecommendation{${MEDIA_FIELDS}}}} characters(sort:[ROLE,RELEVANCE,ID],perPage:12){edges{role node{id name{full native} image{large medium}} voiceActors(language:JAPANESE,sort:[RELEVANCE,ID]){name{full native}}}} trailer{id site} streamingEpisodes{title} relations{edges{relationType node{id type format title{romaji english} coverImage{large medium} seasonYear}}}}}`,{id}).then(d=>{ cacheMedia[id+"full"]=d.Media; saveFull(id,d.Media); return d.Media; })
     .finally(()=>{ setTimeout(()=>delete fullInflight[id], 1000); });
   return fullInflight[id]=p;
 }
 function prefetchFull(id){
   if(cacheMedia[id+"full"] || fullInflight[id]) return;
-  const st=fullStore[id]; if(st && Date.now()-st.t<6*3600e3 && st.m && st.m.characters!==undefined){ cacheMedia[id+"full"]=st.m; return; }
+  const st=fullStore[id]; if(st && Date.now()-st.t<6*3600e3 && st.m && st.m.characters!==undefined && st.m.externalLinks!==undefined){ cacheMedia[id+"full"]=st.m; return; }
   fetchFull(id).catch(()=>{});
 }
 document.addEventListener("pointerdown",ev=>{ const b=ev.target.closest&&ev.target.closest("[data-id],[data-rid]"); if(!b) return; const id=+(b.dataset.id||b.dataset.rid); if(id) prefetchFull(id); },{passive:true});
@@ -2107,7 +2122,7 @@ async function renderDetail(id){
   if(!m && st){ m = cacheMedia[id+"full"] = st.m; }
   const paint = ()=>detailHTML(id, m);
   paint();
-  const fresh = st && Date.now()-st.t < 6*3600e3 && st.m && st.m.characters!==undefined;
+  const fresh = st && Date.now()-st.t < 6*3600e3 && st.m && st.m.characters!==undefined && st.m.externalLinks!==undefined;
   if(!m || !fresh || fullInflight[id]){
     try{
       const hadM = !!m;
@@ -2124,6 +2139,7 @@ function getOrCreate(id, m){
 }
 function touch(e){ e.updated=Date.now(); save(); }
 
+const epsOpen = new Set(); // אנימות שרשימת הפרקים שלהן פתוחה (עד שיוצאים מהאפליקציה)
 function detailHTML(id, m){
   const base = m || cacheMedia[id];
   // אנימה נעולה: מחוץ לנעול היא מוצגת כאילו אינה ברשימות שלך
@@ -2147,6 +2163,10 @@ function detailHTML(id, m){
   const studioId = m&&m.studios&&m.studios.nodes[0] ? m.studios.nodes[0].id : null;
   const studioHTML = studio ? (studioId?`<button class="studiolink" data-studio="${studioId}" data-sname="${esc(studio)}">${esc(studio)}</button>`:esc(studio)) : "";
   const chars = pickChars(m&&m.characters&&m.characters.edges);
+  // איפה לצפות: אתרי סטרימינג רשמיים מ־AniList
+  const streams = (()=>{ const seen=new Set(); return ((m&&m.externalLinks)||[]).filter(l=>l.type==="STREAMING" && !l.isDisabled && l.url && !seen.has(l.site) && seen.add(l.site)); })();
+  // המלצות: אנימות שאנשים שאהבו את זו אהבו גם
+  const recs = ((m&&m.recommendations&&m.recommendations.nodes)||[]).map(x=>x.mediaRecommendation).filter(r=>r && (prefs.adult||!r.isAdult) && !isHidden(db.items[r.id])).slice(0,12);
   const banner = m&&m.bannerImage;
   // באנר של אנימה 18+ מוצג רק אם בחרת להציג בלי טשטוש (אחרת גם הכותרת לא נדחפת מתחת לפס העליון)
   const showBanner = !!banner && (!(base&&base.isAdult) || !!prefs.noBlur);
@@ -2172,6 +2192,7 @@ function detailHTML(id, m){
         </div>
         ${m&&m.season&&m.seasonYear?`<div class="facts"><span>${SEASON_HE[m.season]} ${m.seasonYear} (${SEASON_MONTHS[m.season]})</span>${studio?`<span>${studioHTML}</span>`:""}</div>`:(studio?`<div class="facts"><span>${studioHTML}</span></div>`:"")}
         ${genres.length?`<div class="gtags big">${genres.map(g=>`<span>${esc(genreHe(g))}</span>`).join("")}</div>`:""}
+        ${streams.length?`<div class="wtw"><span class="wtwl">איפה לצפות:</span>${streams.map(l=>`<a class="wtwb" href="${esc(l.url)}" target="_blank" rel="noopener" style="--sc:${esc(l.color||"var(--accent)")}">${l.icon?`<img src="${esc(l.icon)}" alt="" loading="lazy">`:""}<span>${esc(l.site)}</span></a>`).join("")}</div>`:""}
         ${trailer?`<a class="trailer" href="${trailer}" target="_blank" rel="noopener" data-yt="${esc(m.trailer.id)}">▶ טריילר</a>`:""}
         ${base&&base.status==="NOT_YET_RELEASED"?`<div class="relbig">${esc(releaseText(relEntry))}</div>`:""}
         ${base&&base.nextAiringEpisode?`<div class="facts"><span>פרק ${base.nextAiringEpisode.episode} יוצא ב־<b>${new Date(base.nextAiringEpisode.airingAt*1000).toLocaleDateString(LOC(),{day:"numeric",month:"numeric",weekday:"short"})}</b></span></div>`:""}
@@ -2193,19 +2214,30 @@ function detailHTML(id, m){
 
     ${chars.length?`<h3>דמויות עיקריות</h3><div class="chars">${chars.map(c=>`<div class="chr"><button type="button" data-char="${c.node.id}" data-ck="${esc(charKey(c.node.name.full||""))}" aria-label="${esc(c.node.name.full||"")}"><img data-ck="${esc(charKey(c.node.name.full||""))}" src="${esc((c.node.image&&(c.node.image.large||c.node.image.medium))||"")}" alt="" loading="lazy" decoding="async"${base&&base.isAdult?' class="adultimg"':""}><b class="cname" dir="auto">${esc(c.node.name.full||c.node.name.native||"")}</b>${c.va?`<small class="cva" dir="auto">🎙️ ${esc(c.va)}</small>`:""}</button></div>`).join("")}</div>`:""}
 
-    <h3>פרקים</h3>
-    ${showCount?`<div class="eptools"><button class="btn" id="allW">סמן הכל כנצפה</button><button class="btn" id="noneW">נקה סימונים</button></div>
+    ${showCount?(()=>{ const wc=watchedCount(e), open=epsOpen.has(id), fl=fillerOf(e);
+      let nx=0; for(let n=1;n<=showCount;n++){ if(!((e.eps||{})[n]||{}).w){ nx=n; break; } }
+      const airedN = base&&base.nextAiringEpisode ? base.nextAiringEpisode.episode-1 : showCount;
+      const en=uiEn();
+      return `<button class="epsum nofx${open?" open":""}" id="epToggle" aria-expanded="${open}">
+        <span class="epsum-t"><b>${en?"Episodes":"פרקים"}</b><span>${en?`${showCount} episodes${wc?` · watched ${wc}`:""}${fl&&fl.f.size?` · ${fl.f.size} filler`:""}`:`${showCount} פרקים${wc?` · צפית ב־${wc}`:""}${fl&&fl.f.size?` · ${fl.f.size} פילר`:""}`}</span>
+          ${wc&&wc<showCount&&nx&&nx<=airedN?`<small>${en?`Up next: episode ${nx}`:`הבא בתור: פרק ${nx}`}</small>`:wc>=showCount?`<small>${en?"All episodes watched ✓":"סיימת את כל הפרקים ✓"}</small>`:""}</span>
+        <span class="epsum-c" aria-hidden="true">${open?"▲":"▼"}</span></button>
+        ${wc?`<div class="epbar" aria-hidden="true"><span style="width:${Math.min(100,Math.round(wc/showCount*100))}%"></span></div>`:""}`; })():`<h3>פרקים</h3>`}
+    ${showCount&&epsOpen.has(id)?`<div class="eptools"><button class="btn" id="allW">סמן הכל כנצפה</button><button class="btn" id="noneW">נקה סימונים</button></div>
     ${(()=>{ const fl=fillerOf(e); return fl&&(fl.f.size||fl.m.size)?`<p class="note fillnote">בסדרה הזו יש <b>${fl.f.size}</b> פרקי פילר (לא מהמנגה, אפשר לדלג) ו־${fl.m.size} פרקים חצי פילר. הם מסומנים ברשימה.</p>`:""; })()}
     <div class="eps${showCount>60?" many":""}">${(()=>{ const fl=fillerOf(e); return Array.from({length:showCount},(_,i)=>{const n=i+1, ep=(e.eps||{})[n]||{};
       const ftag = fl ? (fl.f.has(n)?'<span class="fill">פילר</span>':(fl.m.has(n)?'<span class="fill mix">חצי פילר</span>':"")) : "";
       return `<div class="ep${ftag?(fl.f.has(n)?" isfill":" ismix"):""}"><label><input type="checkbox" id="w${n}" data-ep="${n}" ${ep.w?"checked":""}>פרק ${n}${ftag}</label>
       <span class="ttl" dir="auto">${esc(cleanEpTitle(epTitles[i]))}${sched[n]?`<small class="epdate ${sched[n]>Date.now()?"future":""}">${sched[n]>Date.now()?"יוצא ב":"שודר ב"}${fmtDay(sched[n])}${sched[n]>Date.now()?` בשעה <bdi dir="ltr">${new Date(sched[n]).toLocaleTimeString(LOC(),{hour:"2-digit",minute:"2-digit"})}</bdi>`:""}</small>`:""}</span></div>`;}).join(""); })()}</div>`
-    :`<p class="desc">מספר הפרקים עוד לא ידוע ב־AniList.</p>`}
+    :(showCount?"":`<p class="desc">מספר הפרקים עוד לא ידוע ב־AniList.</p>`)}
     ${rels.some(r=>r.relationType==="PREQUEL"||r.relationType==="SEQUEL")?`<div id="woBox"><h3>סדר צפייה</h3><p class="note">טוען סדר צפייה…</p></div>`:""}
     ${rels.length?`<h3>עונות וסדרות קשורות</h3><div class="rel">${rels.map(r=>`<button data-rid="${r.node.id}"><img src="${esc(r.node.coverImage&&(r.node.coverImage.large||r.node.coverImage.medium)||"")}" alt="" loading="lazy" decoding="async"><em>${REL[r.relationType]||"קשור"}${r.node.seasonYear?" · "+r.node.seasonYear:""}</em><span>${tn({id:r.node.id,title:r.node.title})}</span></button>`).join("")}</div>`:""}
+    ${recs.length?`<h3>אם אהבת את זו, אולי תאהב גם</h3><div class="rails recs" id="recs">${recs.map(posterCard).join("")}</div>`:""}
     ${mineReal?`<h3>הסרה</h3><div id="rmBox"><button class="btn" id="rm">הסר מהרשימה שלי</button></div>`:""}
     <div style="height:24px"></div>`;
 
+  const et=$("#epToggle"); if(et) et.onclick=()=>{ if(epsOpen.has(id)) epsOpen.delete(id); else epsOpen.add(id); const y=window.scrollY; detailHTML(id,m); window.scrollTo(0,y); };
+  const rc=$("#recs"); if(rc) bindRows(rc, current.tab, recs);
   view.querySelectorAll("[data-char]").forEach(b=>b.onclick=()=>{ const im=b.querySelector("img"); go({tab:current.tab, char:{id:+b.dataset.char, amal:base&&base.idMal||null, ck:b.dataset.ck, adult:!!(base&&base.isAdult), img:im?im.src:""}}); });
   view.querySelectorAll("[data-studio]").forEach(b=>b.onclick=()=>go({tab:current.tab, studio:{id:+b.dataset.studio, name:b.dataset.sname}}));
   view.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{
@@ -2262,8 +2294,10 @@ function detailHTML(id, m){
       it.eps[n]={...(it.eps[n]||{}),w:false};
       if(!it.status) it.status="watching";
     }
-    const w=watchedCount(it); if(it.episodes && w===it.episodes && it.status==="watching"){ it.status="done"; toast("סיימת את כל הפרקים. עבר לרשימת 'נצפה'"); detailHTML(id,m); }
+    const w=watchedCount(it); if(it.episodes && w===it.episodes && it.status==="watching"){ it.status="done"; toast("סיימת את כל הפרקים. עבר לרשימת 'נצפה'"); }
     touch(it);
+    // מעדכנים את הסיכום (כמה צפית / הבא בתור) בלי לקפוץ במסך
+    const y=window.scrollY; detailHTML(id,m); window.scrollTo(0,y);
   });
   const all=$("#allW"); if(all) all.onclick=()=>{ const it=getOrCreate(id,base); for(let n=1;n<=showCount;n++) it.eps[n]={...(it.eps[n]||{}),w:true}; if(!it.status||it.status==="plan"||it.status==="watching") it.status = it.episodes&&showCount>=it.episodes?"done":"watching"; touch(it); detailHTML(id,m); };
   const none=$("#noneW"); if(none) none.onclick=()=>{ const it=getOrCreate(id,base); Object.values(it.eps).forEach(x=>x.w=false); touch(it); detailHTML(id,m); };
