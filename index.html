@@ -453,8 +453,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=104"></script>
-<script src="i18n-en.js?v=104"></script>
+<script src="he-names.js?v=105"></script>
+<script src="i18n-en.js?v=105"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -480,7 +480,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 104;
+const APP_VERSION = 105;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -523,6 +523,7 @@ const NUM_RE = /\d+(?:[.,:/]\d+)*/g;
 const I18N_PATTERNS = [
   [/^יצאו (\d+) פרקים חדשים של (.+) \(עד פרק (\d+)\)$/, "$1 new episodes of $2 are out (up to ep. $3)"],
   [/^יצא פרק (\d+) של (.+)$/, "Episode $1 of $2 is out"],
+  [/^(.+): הפרק הראשון יצא! 🎉$/, "$1: the first episode is out! 🎉"],
   [/^העונה החדשה של (.+) יוצאת ב־(.+)$/, "New season of $1 comes out $2"],
   [/^ב־(.+) ←$/, "in $1 →"],
   [/^העונה \((.+)\)$/, "This season ($1)"],
@@ -1273,7 +1274,7 @@ function addNotif(key, animeId, text, at){
   list.unshift({key, animeId, text, at:at||Date.now(), read:false});
   if(list.length>100) list.length=100;
   if(prefs.sysNotif && "Notification" in window && Notification.permission==="granted"){
-    try{ navigator.serviceWorker && navigator.serviceWorker.ready.then(r=>r.showNotification("מעקב אנימה",{body:text,icon:"icon-192.png",tag:key})); }catch(e){}
+    try{ navigator.serviceWorker && navigator.serviceWorker.ready.then(r=>r.showNotification("מעקב אנימה",{body:text,icon:"icon-192.png",badge:"icon-192.png",tag:key,data:{id:animeId}})); }catch(e){}
   }
   return 1;
 }
@@ -1287,6 +1288,11 @@ function buildNotifs(){
       if(r && r.t && r.t-now<=3*DAY && r.t>now-DAY) added+=addNotif("season:"+e.id, e.id, `העונה החדשה של ${e.title} יוצאת ב־${fmtDay(r.t)}`);
     }
     // פרק חדש באנימה שאתה רואה
+    // פרק חדש באנימה שב"אצפה בעתיד" (כולל עדיפות): רק על הפרק האחרון, אם יצא ביומיים האחרונים
+    if(e.status==="plan" && e.air==="RELEASING" && e.next && e.next.at){
+      const latest=e.next.ep-1, at=e.next.at*1000-7*DAY;
+      if(latest>=1 && at>now-2*DAY && at<=now) added+=addNotif(`ep:${e.id}:${latest}`, e.id, latest===1?`${e.title}: הפרק הראשון יצא! 🎉`:`יצא פרק ${latest} של ${e.title}`, at);
+    }
     const n=newEps(e);
     if(n>0){ const latest=aired(e); added+=addNotif(`ep:${e.id}:${latest}`, e.id, n===1?`יצא פרק ${latest} של ${e.title}`:`יצאו ${n} פרקים חדשים של ${e.title} (עד פרק ${latest})`); }
   }
@@ -1313,18 +1319,44 @@ function renderNotifs(){
   // פתיחת החלונית מסמנת הכל כנקרא
   let ch=false; list.forEach(n=>{ if(!n.read){ n.read=true; ch=true; } }); if(ch){ save(false); updateBell(); }
 }
+// התראות גם כשהאפליקציה סגורה: הטלפון נרשם לשרת (Supabase), שבודק כל רבע שעה אם יצאו פרקים חדשים
+const VAPID_PUB = "BPP8rJV1i8Xt_cv78O5bJIjwcDc2EuYG8MWzs4pMpWvPwQiGz7ekkwiOTwHQbsj5cal0CyMlQ8cL1aeMOF8Y7d8";
+const pushOK = ()=>"serviceWorker" in navigator && "PushManager" in window && location.protocol==="https:";
+function b64u(s){ const p="=".repeat((4-s.length%4)%4); const b=atob((s+p).replace(/-/g,"+").replace(/_/g,"/")); return Uint8Array.from(b,c=>c.charCodeAt(0)); }
+async function pushOn(loud){
+  try{
+    if(!pushOK() || !prefs.sysNotif || Notification.permission!=="granted") return;
+    const c=syncCfg(); if(!c) return;
+    const reg=await navigator.serviceWorker.ready;
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64u(VAPID_PUB)});
+    const mark=sub.endpoint+"|"+c.code;
+    if(prefs.pushSaved===mark && Date.now()-(prefs.pushSavedAt||0)<7*864e5) return;
+    await rpc(c,"save_push_sub",{p_code:c.code, p_sub:sub.toJSON()});
+    prefs.pushSaved=mark; prefs.pushSavedAt=Date.now(); savePrefs();
+    if(loud) toast("נרשמת להתראות גם כשהאפליקציה סגורה");
+  }catch(e){ if(loud) toast("לא הצלחתי לרשום את הטלפון להתראות: "+e.message); }
+}
+async function pushOff(){
+  try{
+    if(!pushOK()) return;
+    const reg=await navigator.serviceWorker.ready; const sub=await reg.pushManager.getSubscription(); if(!sub) return;
+    const c=syncCfg(); if(c) await rpc(c,"delete_push_sub",{p_endpoint:sub.endpoint}).catch(()=>{});
+    await sub.unsubscribe(); prefs.pushSaved=""; savePrefs();
+  }catch(e){}
+}
 function notifCardHTML(){
   if(!("Notification" in window)) return "";
   const on = prefs.sysNotif && Notification.permission==="granted";
-  return `<div class="card" style="margin-top:16px"><h2>התראות בטלפון</h2><p>כשהאפליקציה פתוחה או רצה ברקע, ההתראות יופיעו גם בשורת ההתראות של הטלפון. כשהיא סגורה לגמרי, תראה אותן בפתיחה הבאה.</p>
+  return `<div class="card" style="margin-top:16px"><h2>התראות בטלפון</h2><p>${pushOK()?(syncCfg()?"כשיוצא פרק חדש באנימה שב\"בצפייה\", ב\"אצפה בעתיד\" או ב\"עדיפות\", תקבל התראה בטלפון, גם כשהאפליקציה סגורה לגמרי. הבדיקה רצה כל רבע שעה.":"כדי לקבל התראות גם כשהאפליקציה סגורה, צריך להפעיל סנכרון בהגדרות. בינתיים ההתראות יופיעו כשהאפליקציה פתוחה או ברקע."):"כשהאפליקציה פתוחה או רצה ברקע, ההתראות יופיעו גם בשורת ההתראות של הטלפון."}</p>
     <div class="actions"><button class="btn ${on?"":"primary"}" id="sysN">${on?"כבה התראות בטלפון":"הפעל התראות בטלפון"}</button></div></div>`;
 }
 function bindNotifCard(){
   const b=$("#sysN"); if(!b) return;
   b.onclick=async ()=>{
-    if(prefs.sysNotif && Notification.permission==="granted"){ prefs.sysNotif=false; savePrefs(); renderNotifs(); return; }
+    if(prefs.sysNotif && Notification.permission==="granted"){ prefs.sysNotif=false; savePrefs(); pushOff(); renderNotifs(); return; }
     const p = await Notification.requestPermission();
-    if(p==="granted"){ prefs.sysNotif=true; savePrefs(); toast("התראות בטלפון הופעלו"); } else toast("הטלפון לא אישר התראות. אפשר לאשר בהגדרות של Chrome.");
+    if(p==="granted"){ prefs.sysNotif=true; savePrefs(); toast("התראות בטלפון הופעלו"); pushOn(true); } else toast("הטלפון לא אישר התראות. אפשר לאשר בהגדרות של Chrome.");
     renderNotifs();
   };
 }
@@ -2289,7 +2321,7 @@ async function syncNow(silent){
     const changed = mergeRemote(remote);
     save(false);
     await rpc(c,"save_list",{p_code:c.code,p_data:{items:db.items,deleted:db.meta.deleted}});
-    c.last=Date.now(); setSyncCfg(c);
+    c.last=Date.now(); setSyncCfg(c); pushOn(false);
     syncState=`סונכרן ${new Date().toLocaleTimeString(LOC(),{hour:"2-digit",minute:"2-digit"})}`;
     if(changed && !silent) toast(`התקבלו ${changed} עדכונים מהמכשיר השני`);
     if(changed && !overlay() && !current.wheel) render();
@@ -2620,8 +2652,12 @@ async function checkForUpdate(){
 }
 checkForUpdate();
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") checkForUpdate(); });
+// פתיחה מהתראה: ?open=<מספר אנימה>
+(()=>{ const sp=new URLSearchParams(location.search); const o=+sp.get("open"); if(o){ current={tab:"list",detail:o}; sp.delete("open"); history.replaceState(null,"",location.pathname+(sp.toString()?"?"+sp:"")); } })();
+if("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message",ev=>{ const id=ev.data&&ev.data.open; if(id) go({tab:current.tab||"list",detail:+id}); });
 render();
 buildNotifs(); updateBell();
+setTimeout(()=>pushOn(false), 4000);
 // שמות בעברית לכל הרשימה שלך ברקע, כדי שהחיפוש יעבוד בשתי השפות
 setTimeout(()=>{ Object.values(db.items).forEach(e=>{ if(e.status) wantHe(e); }); }, 1500);
 setTimeout(()=>{ syncNow(true); }, 600);
