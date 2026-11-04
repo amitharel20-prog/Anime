@@ -1,9 +1,9 @@
 // שומר את קבצי האפליקציה ואת תמונות הפוסטרים, כדי שהכול ייפתח מהר (גם בלי אינטרנט).
 // מידע מ-AniList (פרקים, ציונים) לא נשמר כאן - הוא תמיד מגיע עדכני.
-const CACHE = "anime-tracker-v105";
+const CACHE = "anime-tracker-v106";
 const IMG_CACHE = "anime-images-v1";   // תמונות לא משתנות, אז נשמרות גם בין גרסאות
 const FONT_CACHE = "anime-fonts-v1";
-const SHELL = ["./", "index.html", "he-names.js?v=105", "i18n-en.js?v=105", "manifest.webmanifest", "icon-192.png", "icon-512.png"];
+const SHELL = ["./", "index.html", "he-names.js?v=106", "i18n-en.js?v=106", "manifest.webmanifest", "icon-192.png", "icon-512.png"];
 const KEEP = [CACHE, IMG_CACHE, FONT_CACHE];
 const IMG_MAX = 800;
 
@@ -18,7 +18,7 @@ self.addEventListener("activate", e => {
 self.addEventListener("push", e => {
   let d = {}; try { d = e.data ? e.data.json() : {}; } catch (_) { d = { body: e.data && e.data.text() }; }
   e.waitUntil(self.registration.showNotification(d.title || "מעקב אנימה", {
-    body: d.body || "", icon: "icon-192.png", badge: "icon-192.png", tag: d.tag || undefined, data: { id: d.id || null }, lang: "he", dir: "rtl"
+    body: d.body || "", icon: "icon-192.png", badge: "icon-192.png", tag: d.tag || undefined, data: { id: d.id || null }, lang: "he", dir: "rtl", requireInteraction: true
   }));
 });
 // לחיצה על התראה: פותחים את האפליקציה ישר בעמוד של האנימה
