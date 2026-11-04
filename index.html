@@ -105,6 +105,8 @@ main{padding-block:16px}
 .sheet-list button[aria-pressed="true"] span{color:var(--bg)}
 .rmain img,.rmain .ph{width:64px;height:90px;object-fit:cover;border-radius:6px;background:var(--line)}
 .row .t{min-width:0}
+.row.mine .rmain{grid-template-columns:84px 1fr auto}
+.row.mine .rmain img,.row.mine .rmain .ph{width:84px;height:120px;border-radius:8px}
 .list>.row{content-visibility:auto;contain-intrinsic-size:auto 128px}
 .row .name{font-weight:700;line-height:1.3;overflow-wrap:anywhere}
 .row .sub{color:var(--muted);font-size:13px}
@@ -501,8 +503,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=111"></script>
-<script src="i18n-en.js?v=111"></script>
+<script src="he-names.js?v=112"></script>
+<script src="i18n-en.js?v=112"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -528,7 +530,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 111;
+const APP_VERSION = 112;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -923,14 +925,12 @@ function rowHTML(e){
   const canPlus = false; // כפתור +1 הוסר לבקשת המשתמש
   const showPill = e.status && (typeof listFilter==="undefined" || listFilter!==e.status || current.tab!=="list" || listQuery);
   const pct = tot ? Math.min(100, w/tot*100) : 0;
-  const genres = (e.genres||[]).slice(0,3);
-  return `<div class="row"><button class="rmain" data-id="${e.id}">
+  return `<div class="row mine"><button class="rmain" data-id="${e.id}">
     ${poster(e.cover, e.adult)}
     <span class="t"><span class="name">${e.star&&e.status==="plan"?'<i class="rstar" aria-label="עדיפות">⭐</i>':""}${tn(e)}</span>
       <span class="sub">${esc(sub)}</span>
-      ${genres.length?`<span class="gtags">${genres.map(g=>`<span>${esc(genreHe(g))}</span>`).join("")}</span>`:""}
       ${e.air==="NOT_YET_RELEASED"?`<span class="reldate">${esc(releaseText(e))}</span>`:""}
-      <span class="pills">${onTvz(e)?TVZ:""}${showPill?`<span class="pill ${STATUS[e.status].cls}">${STATUS[e.status].label}</span>`:""}${n?`<span class="pill st-new">${n===1?"פרק חדש":n+" פרקים חדשים"}</span>`:""}</span>
+      <span class="pills">${showPill?`<span class="pill ${STATUS[e.status].cls}">${STATUS[e.status].label}</span>`:""}${n?`<span class="pill st-new">${n===1?"פרק חדש":n+" פרקים חדשים"}</span>`:""}</span>
       ${tot?`<span class="prog"><span class="bar"><i class="${e.status?STATUS[e.status].cls:""}" style="width:${pct}%"></i></span><span class="pnum">${w}/${tot}</span></span>`:(w?`<span class="pnum">${w} פרקים</span>`:"")}
     </span>
     ${e.score ? `<span class="myscore has"><b>${fmtScore(e.score)}</b><small>הציון שלי</small></span>` : "<span></span>"}</button>
