@@ -214,6 +214,11 @@ h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute
 .epbar{height:5px;border-radius:99px;background:var(--line);margin:8px 4px 12px;overflow:hidden}
 .epbar span{display:block;height:100%;background:var(--s-watch);border-radius:99px}
 .recs{margin-bottom:6px}
+.segl{font-size:13px;font-weight:700;color:var(--muted);margin:12px 0 6px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:14px;background:var(--bg);border:1px solid var(--line)}
+.seg button{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border:0;border-radius:10px;background:transparent;color:var(--muted);font:inherit;font-weight:700;font-size:15px;cursor:pointer}
+.seg button svg{width:18px;height:18px}
+.seg button[aria-pressed=true]{background:var(--surface);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 .studiolink{background:none;border:0;padding:0;font:inherit;color:var(--accent);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .stchips{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0 12px}
 .stchips .lbl{font-size:13px;color:var(--muted)}
@@ -397,6 +402,8 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 .bellbtn svg{width:20px;height:20px}
 #bellBadge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:#d64545;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px}
 .bellbtn + .themebtn{margin-inline-start:0}
+.themebtn[hidden],.langbtn[hidden]{display:none}
+header.top .bellbtn{margin-inline-start:auto}
 .langbtn{flex:none;margin-inline-start:auto;width:40px;height:40px;border:1px solid var(--line);background:var(--surface);border-radius:50%;font-weight:800;font-size:13px;color:var(--fg)}
 .langbtn + .bellbtn{margin-inline-start:0}
 .nhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
@@ -480,9 +487,9 @@ button,a,.chip,select,input{touch-action:manipulation}
 <header class="top"><div class="wrap">
   <button class="back nofx" id="backBtn" hidden aria-label="חזרה">→</button>
   <h1 id="pageTitle">הרשימה שלי</h1>
-  <button class="langbtn nofx" id="langBtn" aria-label="שפת שמות האנימות"></button>
+  <button class="langbtn nofx" id="langBtn" hidden aria-label="שפת שמות האנימות"></button>
   <button class="bellbtn" id="bellBtn" aria-label="התראות"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg><span id="bellBadge" hidden>0</span></button>
-  <button class="themebtn" id="themeBtn" aria-label="מצב תצוגה"></button>
+  <button class="themebtn" id="themeBtn" hidden aria-label="מצב תצוגה"></button>
 </div></header>
 
 <main class="wrap" id="view"></main>
@@ -503,8 +510,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=112"></script>
-<script src="i18n-en.js?v=112"></script>
+<script src="he-names.js?v=113"></script>
+<script src="i18n-en.js?v=113"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -530,7 +537,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 112;
+const APP_VERSION = 113;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -717,24 +724,28 @@ function applyTheme(){
   const meta=document.querySelector('meta[name="theme-color"]'); if(meta) meta.content = dark?"#8b97ff":"#3b4bb8";
 }
 const reduceMotion = ()=>matchMedia("(prefers-reduced-motion: reduce)").matches;
-$("#themeBtn").onclick=()=>{
-  prefs.theme = prefs.theme==="dark" ? "light" : "dark"; savePrefs();
+function setTheme(t){
+  if(prefs.theme===t) return;
+  prefs.theme = t; savePrefs();
   const html=document.documentElement;
   if(!reduceMotion()){ html.classList.add("theming"); clearTimeout(window._thT); window._thT=setTimeout(()=>html.classList.remove("theming"),400); }
   applyTheme(); toast("מצב תצוגה: "+THEMES[prefs.theme].label);
-};
+}
+$("#themeBtn").onclick=()=>setTheme(prefs.theme==="dark" ? "light" : "dark");
 applyTheme();
 applyUiLang();
 document.documentElement.classList.toggle("noblur", !!prefs.noBlur);
 $("#bellBtn").onclick=()=>go({tab:current.tab,notifs:true});
 function paintLangBtn(){ $("#langBtn").textContent = isHeLang() ? "עב" : "EN"; }
 paintLangBtn();
-$("#langBtn").onclick=()=>{
-  prefs.lang = isHeLang() ? "en" : "he"; savePrefs();
+function setLang(l){
+  if(prefs.lang===l || (l==="he" && isHeLang())) return;
+  prefs.lang = l; savePrefs();
   // שומרים איפה היית, וטוענים מחדש בשפה החדשה
   try{ sessionStorage.setItem(KEY+".cur", JSON.stringify({tab:current.tab, detail:current.detail||null})); }catch(e){}
   if(saveTimer) flushSave(); location.reload();
-};
+}
+$("#langBtn").onclick=()=>setLang(isHeLang() ? "en" : "he");
 
 /* ---------- ניווט ---------- */
 let stack = [];
@@ -2318,6 +2329,11 @@ function renderSettings(){
   const n = Object.keys(db.items).length;
   const lb = db.meta.lastBackup ? new Date(db.meta.lastBackup).toLocaleDateString(LOC()) : "עוד לא גיבית";
   view.innerHTML = `
+    <div class="card"><h2>תצוגה ושפה</h2>
+      <div class="segl">מצב תצוגה</div>
+      <div class="seg" role="group"><button data-th="light" aria-pressed="${prefs.theme!=="dark"}">${THEMES.light.icon}<span>בהיר</span></button><button data-th="dark" aria-pressed="${prefs.theme==="dark"}">${THEMES.dark.icon}<span>כהה</span></button></div>
+      <div class="segl">שפת ממשק</div>
+      <div class="seg nofx" role="group"><button data-lg="he" aria-pressed="${isHeLang()}"><span>עברית</span></button><button data-lg="en" aria-pressed="${!isHeLang()}"><span>English</span></button></div></div>
     ${syncCardHTML()}
     ${notifCardHTML().replace('style="margin-top:16px"','')}
     <div class="card"><h2>גיבוי</h2><p>שומר קובץ עם כל ${n} האנימות, הסטטוסים והציונים. שמור אותו בדרייב או שלח לעצמך. גיבוי אחרון: ${lb}.</p>
@@ -2347,6 +2363,8 @@ function renderSettings(){
     <p class="note" style="text-align:center">גרסה ${APP_VERSION}</p>`;
 
   bindNotifCard();
+  view.querySelectorAll("[data-th]").forEach(b=>b.onclick=()=>{ setTheme(b.dataset.th); view.querySelectorAll("[data-th]").forEach(x=>x.setAttribute("aria-pressed", x.dataset.th===prefs.theme)); });
+  view.querySelectorAll("[data-lg]").forEach(b=>b.onclick=()=>setLang(b.dataset.lg));
   $("#bk").onclick = ()=>{
     const blob = new Blob([JSON.stringify({app:"anime-tracker",version:1,exported:new Date().toISOString(),...db},null,1)],{type:"application/json"});
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
