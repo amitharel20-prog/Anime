@@ -386,9 +386,9 @@ header.top{background:linear-gradient(180deg,var(--surface),var(--bg))}
 .nlist{display:grid;gap:8px}
 .nrow{position:relative}
 .fbtools{display:flex;justify-content:flex-end;gap:16px;margin:-4px 0 4px}
-.fbn{margin-inline:-16px;background:var(--surface);border-block:1px solid var(--line);padding-bottom:6px}
-.fbsec{font-family:var(--display);font-weight:400;font-size:21px;margin:0;padding:14px 16px 6px}
-.fbsec+.fbr,.fbr+.fbsec{border-top:0}
+.fbn{margin-inline:-16px;background:var(--surface);border-block:1px solid var(--line)}
+.fbsec{font-family:var(--display);font-weight:400;font-size:21px;margin:18px 0 10px}
+.fbwrap>.fbsec:first-child{margin-top:8px}
 .fbr{display:flex;align-items:center;gap:4px;background:var(--surface);border-radius:0}
 .fbr+.fbr{border-top:1px solid color-mix(in srgb,var(--line) 60%,transparent)}
 .fbr.unread{background:color-mix(in srgb,var(--accent) 14%,var(--surface))}
@@ -486,8 +486,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=109"></script>
-<script src="i18n-en.js?v=109"></script>
+<script src="he-names.js?v=110"></script>
+<script src="i18n-en.js?v=110"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -513,7 +513,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 109;
+const APP_VERSION = 110;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -1363,10 +1363,10 @@ function renderNotifs(){
   };
   const DAY_MS=864e5, now=Date.now();
   const fresh=[], older=[]; list.forEach((n,i)=>(now-n.at<DAY_MS?fresh:older).push([n,i]));
-  const sec=(title,arr)=>arr.length?`<h2 class="fbsec">${title}</h2>${arr.map(([n,i])=>row(n,i)).join("")}`:"";
+  const sec=(title,arr)=>arr.length?`<h2 class="fbsec">${title}</h2><div class="fbn">${arr.map(([n,i])=>row(n,i)).join("")}</div>`:"";
   view.innerHTML = list.length ? `
     <div class="fbtools">${list.some(n=>!n.read)?`<button class="linkbtn" id="nRead">${en?"Mark all as read":"סמן הכל כנקרא"}</button>`:""}<button class="linkbtn" id="nClear">${en?"Delete all":"מחק התראות"}</button></div>
-    <div class="fbn nofx">${sec(en?"New":"חדש",fresh)}${sec(en?"Earlier":"מוקדם יותר",older)}</div>`
+    <div class="fbwrap nofx">${sec(en?"New":"חדש",fresh)}${sec(en?"Earlier":"מוקדם יותר",older)}</div>`
   : `<div class="empty"><h2>אין התראות</h2><p>כאן יופיעו פרקים חדשים באנימות שב"בצפייה", ב"אצפה בעתיד" וב"עדיפות", ועונות חדשות של אנימות שראית (3 ימים לפני שהן יוצאות). גם התראות שהגיעו כשהאפליקציה הייתה סגורה יופיעו כאן.</p><p class="note">${en?"Phone notifications can be turned on in Settings.":"את ההתראות בטלפון מפעילים בהגדרות."}</p></div>`;
   const keepY = fn=>{ const y=window.scrollY; fn(); window.scrollTo(0,y); };
   // לחיצה על התראה: מסמנים כנקראה ופותחים את האנימה
