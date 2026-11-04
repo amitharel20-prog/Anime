@@ -461,8 +461,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=106"></script>
-<script src="i18n-en.js?v=106"></script>
+<script src="he-names.js?v=107"></script>
+<script src="i18n-en.js?v=107"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -488,7 +488,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 106;
+const APP_VERSION = 107;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -1334,7 +1334,9 @@ function renderNotifs(){
 const VAPID_PUB = "BPP8rJV1i8Xt_cv78O5bJIjwcDc2EuYG8MWzs4pMpWvPwQiGz7ekkwiOTwHQbsj5cal0CyMlQ8cL1aeMOF8Y7d8";
 const pushOK = ()=>"serviceWorker" in navigator && "PushManager" in window && location.protocol==="https:";
 function b64u(s){ const p="=".repeat((4-s.length%4)%4); const b=atob((s+p).replace(/-/g,"+").replace(/_/g,"/")); return Uint8Array.from(b,c=>c.charCodeAt(0)); }
-async function pushOn(loud){
+let pushBusy=null;
+function pushOn(loud){ if(pushBusy) return pushBusy; pushBusy=pushOn2(loud).finally(()=>{ pushBusy=null; }); return pushBusy; }
+async function pushOn2(loud){
   try{
     if(!pushOK() || !prefs.sysNotif || Notification.permission!=="granted") return;
     const c=syncCfg(); if(!c) return;
@@ -1343,7 +1345,9 @@ async function pushOn(loud){
     if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64u(VAPID_PUB)});
     const mark=sub.endpoint+"|"+c.code;
     if(prefs.pushSaved===mark && Date.now()-(prefs.pushSavedAt||0)<7*864e5) return;
+    const prevEp=(prefs.pushSaved||"").split("|")[0];
     await rpc(c,"save_push_sub",{p_code:c.code, p_sub:sub.toJSON()});
+    if(prevEp && prevEp!==sub.endpoint) rpc(c,"delete_push_sub",{p_endpoint:prevEp}).catch(()=>{}); // רישום ישן של אותו טלפון
     prefs.pushSaved=mark; prefs.pushSavedAt=Date.now(); savePrefs();
     if(loud) toast("נרשמת להתראות גם כשהאפליקציה סגורה");
   }catch(e){ if(loud) toast("לא הצלחתי לרשום את הטלפון להתראות: "+e.message); }
