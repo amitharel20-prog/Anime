@@ -510,8 +510,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=113"></script>
-<script src="i18n-en.js?v=113"></script>
+<script src="he-names.js?v=114"></script>
+<script src="i18n-en.js?v=114"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -537,7 +537,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 113;
+const APP_VERSION = 114;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -646,10 +646,19 @@ function applyUiLang(){
 // בקשה מהדפדפן לא למחוק את הנתונים
 try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
 
+// שם באנגלית: אם אין ל־AniList שם אנגלי רשמי (נפוץ באנימות שעוד לא יצאו), מחפשים שם אנגלי בשמות החלופיים
+const EN_WORDS = /\b(the|a|an|of|my|to|is|in|and|with|you|your|i|me|who|girl|girls|boy|love|world|life|days?|story|hero|demon|king|princess|another|crush|friend|wife|sister|brother|school|club|lady|villainess|reincarnated|dungeon|magic|witch|game|night|summer|can't|don't|i'm|it's)\b/i;
+function engName(t, syn){
+  if(!t) return "";
+  if(t.english) return t.english;
+  const r=(t.romaji||"").toLowerCase();
+  const en=(syn||[]).find(x=>x && /^[\x20-\x7E’‘“”—–…]+$/.test(x) && x.toLowerCase()!==r && /\s/.test(x) && EN_WORDS.test(x));
+  return en || t.romaji || t.native || "";
+}
 function entryFromMedia(m){
   return {
     id:m.id, idMal:m.idMal||null,
-    title: m.title.english || m.title.romaji || m.title.native,
+    title: engName(m.title, m.synonyms),
     romaji: m.title.romaji || "", native: m.title.native || "", cover: m.coverImage ? (m.coverImage.large||m.coverImage.medium) : "",
     episodes: epCount(m), format:m.format||"", year:m.seasonYear||(m.startDate&&m.startDate.year)||null,
     genres:m.genres||[], duration:m.duration||null, air:m.status||null, adult:!!m.isAdult,
@@ -682,7 +691,7 @@ function epCount(m){
 function watchedCount(e){ return Object.values(e.eps||{}).filter(x=>x.w).length; }
 
 /* ---------- AniList ---------- */
-const MEDIA_FIELDS = `id idMal isAdult title{romaji english native} coverImage{extraLarge large medium} episodes format status seasonYear startDate{year month day} averageScore genres duration nextAiringEpisode{episode airingAt}`;
+const MEDIA_FIELDS = `id idMal isAdult title{romaji english native} synonyms coverImage{extraLarge large medium} episodes format status seasonYear startDate{year month day} averageScore genres duration nextAiringEpisode{episode airingAt}`;
 async function anilist(query, variables, tries=3){
   for(let i=0;i<tries;i++){
     const r = await fetch("https://graphql.anilist.co",{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({query,variables})});
@@ -1012,7 +1021,7 @@ const HE_KEY = KEY+".he";
 let heCache = (()=>{ try{ return JSON.parse(localStorage.getItem(HE_KEY))||{}; }catch(e){ return {}; } })();
 function saveHe(){ try{ localStorage.setItem(HE_KEY, JSON.stringify(heCache)); }catch(e){} }
 function isHeLang(){ return prefs.lang!=="en"; }
-function enTitle(o){ if(!o) return ""; if(o.title && typeof o.title==="object") return o.title.english||o.title.romaji||o.title.native||""; return o.title||o.titleStr||""; }
+function enTitle(o){ if(!o) return ""; if(o.title && typeof o.title==="object") return engName(o.title, o.synonyms); return o.title||o.titleStr||""; }
 // שמות מאתרי תרגום ישראליים (he-names.js) — המקור המועדף
 const keyN = s => (s||"").toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g,"");
 const FAN = (()=>{ const m=new Map(); for(const [en,he] of Object.entries(window.HE_FAN_NAMES||{})) m.set(keyN(en),he); return m; })();
@@ -1311,7 +1320,7 @@ function releaseInfo(e){
   if(e.next && e.next.ep===1 && e.next.at) return {t:e.next.at*1000, exact:true};
   if(e.start && e.start.y){
     if(e.start.m && e.start.d) return {t:new Date(e.start.y,e.start.m-1,e.start.d).getTime(), exact:true};
-    return {t:null, label: e.start.m ? `${HE_MONTHS[e.start.m-1]} ${e.start.y}` : String(e.start.y)};
+    return {t:null, label: e.start.m ? `${uiEn()?new Date(2000,e.start.m-1,1).toLocaleString("en-US",{month:"long"}):HE_MONTHS[e.start.m-1]} ${e.start.y}` : String(e.start.y)};
   }
   return null;
 }
@@ -1477,11 +1486,11 @@ async function refreshFromAniList(){
     const before = {}; need.forEach(e=>before[e.id]=aired(e));
     for(let i=0;i<need.length;i+=50){
       const ids = need.slice(i,i+50).map(e=>e.id);
-      const d = await anilist(`query($ids:[Int]){Page(perPage:50){media(id_in:$ids,type:ANIME){id episodes status duration genres coverImage{large medium} title{english romaji} startDate{year month day} nextAiringEpisode{episode airingAt} relations{edges{relationType node{id type}}}}}}`,{ids});
+      const d = await anilist(`query($ids:[Int]){Page(perPage:50){media(id_in:$ids,type:ANIME){id episodes status duration genres coverImage{large medium} title{english romaji} synonyms startDate{year month day} nextAiringEpisode{episode airingAt} relations{edges{relationType node{id type}}}}}}`,{ids});
       for(const m of d.Page.media){
         const e = db.items[m.id]; if(!e) continue;
         if(!e.cover && m.coverImage) e.cover = m.coverImage.large||m.coverImage.medium;
-        if(!e.title && m.title) e.title = m.title.english||m.title.romaji;
+        if(m.title){ const en=engName(m.title, m.synonyms); if(!e.title || (en && en!==e.title && e.title===(m.title.romaji||e.romaji))) e.title = en; } // מעדכנים לשם אנגלי כשהוא מתפרסם
         e.episodes = m.episodes || e.episodes; e.air = m.status; e.duration = m.duration||null; e.genres = m.genres||[];
         e.next = m.nextAiringEpisode?{ep:m.nextAiringEpisode.episode,at:m.nextAiringEpisode.airingAt}:null;
         if(!m.episodes && m.nextAiringEpisode) e.episodes = Math.max(e.episodes||0, m.nextAiringEpisode.episode-1);
