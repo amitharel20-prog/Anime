@@ -510,8 +510,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=114"></script>
-<script src="i18n-en.js?v=114"></script>
+<script src="he-names.js?v=115"></script>
+<script src="i18n-en.js?v=115"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -537,7 +537,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 114;
+const APP_VERSION = 115;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -647,13 +647,22 @@ function applyUiLang(){
 try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
 
 // שם באנגלית: אם אין ל־AniList שם אנגלי רשמי (נפוץ באנימות שעוד לא יצאו), מחפשים שם אנגלי בשמות החלופיים
-const EN_WORDS = /\b(the|a|an|of|my|to|is|in|and|with|you|your|i|me|who|girl|girls|boy|love|world|life|days?|story|hero|demon|king|princess|another|crush|friend|wife|sister|brother|school|club|lady|villainess|reincarnated|dungeon|magic|witch|game|night|summer|can't|don't|i'm|it's)\b/i;
+const EN_W = new Set("the a an of my to is in and with you your i me who girl girls boy boys love world life day days story hero demon king princess another crush friend friends wife sister brother school club lady villainess reincarnated dungeon magic witch game night summer season part final chapter mission that we are be it so on for from how what when why this not all his her their our can wants know about sometimes hides feelings secret fake great lord guardians blades hound alchemist draw now final turned into childhood where teacher toilet live happy every cute dangerous landmine big really come see thing apparently strongest job weakest only one jobless reincarnation four three two eight no.".split(" "));
+const JP_W = new Set("wa ga wo ni de desu shite kara no mo e ya made dake shitara naze ka kun chan san sama sensei tachi suru shinai nai tensei isekai ittara honki dasu hime ero kizoku ansatsu jikan hatsukoi mama".split(" "));
+// שם באנגלית: אם אין ל־AniList שם אנגלי רשמי (נפוץ באנימות שעוד לא יצאו), בוחרים מהשמות החלופיים את זה שהכי נראה אנגלית
 function engName(t, syn){
   if(!t) return "";
   if(t.english) return t.english;
   const r=(t.romaji||"").toLowerCase();
-  const en=(syn||[]).find(x=>x && /^[\x20-\x7E’‘“”—–…]+$/.test(x) && x.toLowerCase()!==r && /\s/.test(x) && EN_WORDS.test(x));
-  return en || t.romaji || t.native || "";
+  let best="", bestSc=0;
+  for(const x of (syn||[])){
+    if(!x || !/^[\x20-\x7E’‘“”—–…♥]+$/.test(x) || x.toLowerCase()===r || !/\s/.test(x.trim())) continue;
+    const ws=x.toLowerCase().replace(/[’‘]/g,"'").split(/[^a-z']+/).filter(Boolean);
+    const en=ws.filter(w=>EN_W.has(w)).length, jp=ws.filter(w=>JP_W.has(w)).length;
+    const sc=en-jp;
+    if(sc>bestSc){ bestSc=sc; best=x; }
+  }
+  return best || t.romaji || t.native || "";
 }
 function entryFromMedia(m){
   return {
@@ -871,7 +880,7 @@ function renderList(){
   const inStatus = (e,k)=> e.status===k && !(k==="plan" && e.star);
   const counts = {}; Object.keys(STATUS).forEach(k=>counts[k]=visible.filter(e=>inStatus(e,k)).length);
   const fresh = visible.filter(e=>newEps(e)>0);
-  if(listFilter==="new" && !fresh.length) listFilter="watching";
+  if(listFilter==="new") listFilter="watching"; // אין יותר עמודת "פרקים חדשים"
   const tvzItems = visible.filter(onTvz);
   if(listFilter==="tvz" && !tvzItems.length) listFilter="watching";
   const starItems = visible.filter(e=>e.status==="plan" && e.star);
@@ -898,12 +907,11 @@ function renderList(){
   const newTotal = fresh.reduce((a,e)=>a+newEps(e),0);
   view.innerHTML = `
     ${needBackup?`<div class="msg warn">עבר זמן מאז הגיבוי האחרון. <button class="linkbtn" id="toBackup">לגבות עכשיו</button></div>`:""}
-    ${fresh.length&&listFilter!=="new"?`<button class="msg fresh" id="toNew"><b>יצאו ${newTotal} פרקים חדשים</b> ב־${fresh.length===1?esc(fresh[0].title):fresh.length+" אנימות שאתה רואה"} ←</button>`:""}
+    ${fresh.length?`<button class="msg fresh" id="toNew"><b>יצאו ${newTotal} פרקים חדשים</b> ב־${fresh.length===1?esc(fresh[0].title):fresh.length+" אנימות שאתה רואה"} ←</button>`:""}
     <div class="lsearch"><input type="search" id="lq" placeholder="חפש ברשימה שלי…" value="${esc(listQuery)}" autocomplete="off" enterkeyhint="search"></div>
     ${q&&!(showLocked&&!lockOpen)?`<p class="note">נמצאו ${items.length} ${showLocked?"בנעול":"בכל הרשימות"}</p>`:""}
     <div class="chips" role="group" aria-label="סינון">
       <button class="chip" data-f="all" aria-pressed="${listFilter==="all"}">הכל<span class="n">${all.length}</span></button>
-      ${fresh.length?`<button class="chip" data-f="new" aria-pressed="${listFilter==="new"}">פרקים חדשים<span class="n">${fresh.length}</span></button>`:""}
       ${Object.entries(STATUS).map(([k,s])=>`<button class="chip schip ${s.cls}" data-f="${k}" aria-pressed="${listFilter===k}"><span class="cl">${s.label}</span><span class="n">${counts[k]}</span></button>`).join("")}
       ${starItems.length?`<button class="chip starchip" data-f="star" aria-pressed="${listFilter==="star"}"><span class="cl">⭐ עדיפות</span><span class="n">${starItems.length}</span></button>`:""}
       ${(counts.plan||starItems.length)?`<button class="chip wheelchip" data-wheel="1">🎡 הגרלה</button>`:""}
@@ -937,7 +945,7 @@ function renderList(){
   const sl=$("#toStats"); if(sl) sl.onclick=()=>go({tab:"stats"});
   $("#sort").onchange=ev=>{ prefs.sort=ev.target.value; savePrefs(); listLimit=LIST_STEP; renderList(); };
   const tb=$("#toBackup"); if(tb) tb.onclick=()=>go({tab:"settings"},false);
-  const tn=$("#toNew"); if(tn) tn.onclick=()=>{ listFilter="new"; renderList(); };
+  const tn=$("#toNew"); if(tn) tn.onclick=()=>{ if(fresh.length===1) go({tab:"list",detail:fresh[0].id}); else { listFilter="watching"; renderList(); } };
 }
 function rowHTML(e){
   const w = watchedCount(e), tot = e.episodes, n = newEps(e);
@@ -1480,7 +1488,9 @@ async function refreshFromAniList(){
     const last = prefs.lastRefresh||0;
     const all = Object.values(db.items).filter(e=>e.status);
     // סדרות פעילות כל פעם; השאר רק אם חסר להן מידע (ז'אנרים / אורך פרק)
-    const need = all.filter(e=>e.status==="watching"||e.status==="plan"&&e.air!=="FINISHED"||e.duration===undefined||!e.genres)
+    // וגם: אנימות ששמן ביפנית בלבד, כדי לבדוק אם יש להן שם באנגלית (פעם בשבוע)
+    const noEn = e=>(!e.romaji || e.title===e.romaji) && !(e.enChk>Date.now()-7*864e5);
+    const need = all.filter(e=>e.status==="watching"||e.status==="plan"&&e.air!=="FINISHED"||e.duration===undefined||!e.genres||noEn(e))
                     .sort((a,b)=>(b.status==="watching")-(a.status==="watching")).slice(0,300);
     if(!need.length) return;
     const before = {}; need.forEach(e=>before[e.id]=aired(e));
@@ -1490,6 +1500,7 @@ async function refreshFromAniList(){
       for(const m of d.Page.media){
         const e = db.items[m.id]; if(!e) continue;
         if(!e.cover && m.coverImage) e.cover = m.coverImage.large||m.coverImage.medium;
+        e.enChk=Date.now(); if(m.title && !e.romaji) e.romaji=m.title.romaji||"";
         if(m.title){ const en=engName(m.title, m.synonyms); if(!e.title || (en && en!==e.title && e.title===(m.title.romaji||e.romaji))) e.title = en; } // מעדכנים לשם אנגלי כשהוא מתפרסם
         e.episodes = m.episodes || e.episodes; e.air = m.status; e.duration = m.duration||null; e.genres = m.genres||[];
         e.next = m.nextAiringEpisode?{ep:m.nextAiringEpisode.episode,at:m.nextAiringEpisode.airingAt}:null;
