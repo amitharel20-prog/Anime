@@ -510,8 +510,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=115"></script>
-<script src="i18n-en.js?v=115"></script>
+<script src="he-names.js?v=116"></script>
+<script src="i18n-en.js?v=116"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -537,7 +537,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 115;
+const APP_VERSION = 116;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -1015,7 +1015,7 @@ function openListSheet(id){
     if(!st){ removeItem(id); toast("הוסר מהרשימות"); closeSheet(); render(); return; }
     const e = getOrCreate(id, m);
     e.status = st;
-    if(st==="done" && e.episodes){ for(let n=1;n<=e.episodes;n++) e.eps[n]={...(e.eps[n]||{}),w:true}; }
+    if(st==="done"){ const upto=aired(e)||e.episodes||0; for(let n=1;n<=upto;n++) e.eps[n]={...(e.eps[n]||{}),w:true}; }
     delete db.meta.deleted[id];
     touch(e); toast(`נוסף ל'${STATUS[st].label}'`); closeSheet(); render();
   });
@@ -2273,7 +2273,8 @@ function detailHTML(id, m){
   view.querySelectorAll("[data-studio]").forEach(b=>b.onclick=()=>go({tab:current.tab, studio:{id:+b.dataset.studio, name:b.dataset.sname}}));
   view.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{
     const it=getOrCreate(id,base); it.status = it.status===b.dataset.s?null:b.dataset.s;
-    if(it.status==="done" && it.episodes && !watchedCount(it)){ for(let n=1;n<=it.episodes;n++){ it.eps[n]={...(it.eps[n]||{}),w:true}; } }
+    // "נצפה" מסמן את כל הפרקים שיצאו כנצפים (גם אם כבר התחלת לצפות)
+    if(it.status==="done"){ const upto=aired(it)||it.episodes||0; for(let n=1;n<=upto;n++){ it.eps[n]={...(it.eps[n]||{}),w:true}; } }
     touch(it); detailHTML(id,m); toast(it.status?`סומן: ${STATUS[it.status].label}`:"הסטטוס הוסר");
   });
   if(view._guard){ view.removeEventListener("click",view._guard,true); view.removeEventListener("pointerdown",view._guard,true); view._guard=null; }
