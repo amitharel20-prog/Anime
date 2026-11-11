@@ -510,8 +510,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=116"></script>
-<script src="i18n-en.js?v=116"></script>
+<script src="he-names.js?v=117"></script>
+<script src="i18n-en.js?v=117"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -537,7 +537,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 116;
+const APP_VERSION = 117;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -552,6 +552,17 @@ if(!db.meta.holdToStar1){
     if(e.status==="hold" && !Object.values(e.eps||{}).some(x=>x.w)){ e.status="plan"; e.star=true; e.updated=Date.now(); }
   }
   db.meta.holdToStar1 = true;
+  try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){}
+}
+// חד־פעמי: אנימות שמסומנות "נצפה" אבל לא כל הפרקים שלהן מסומנים - מסמנים את כל הפרקים שיצאו
+if(!db.meta.doneFill1){
+  for(const e of Object.values(db.items)){
+    if(e.status!=="done") continue;
+    const upto=aired(e)||e.episodes||0; let ch=false; e.eps=e.eps||{};
+    for(let n=1;n<=upto;n++){ if(!(e.eps[n]&&e.eps[n].w)){ e.eps[n]={...(e.eps[n]||{}),w:true}; ch=true; } }
+    if(ch) e.updated=Date.now();
+  }
+  db.meta.doneFill1 = true;
   try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){}
 }
 // שמירה בטלפון: מאחדים שמירות רצופות (למשל סימון כמה פרקים ברצף) לשמירה אחת, ושומרים מיד כשיוצאים מהאפליקציה
