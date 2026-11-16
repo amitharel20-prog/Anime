@@ -510,8 +510,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=117"></script>
-<script src="i18n-en.js?v=117"></script>
+<script src="he-names.js?v=118"></script>
+<script src="i18n-en.js?v=118"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -537,7 +537,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 117;
+const APP_VERSION = 118;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -580,7 +580,17 @@ addEventListener("pagehide", ()=>{ if(saveTimer) flushSave(); });
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden" && saveTimer) flushSave(); });
 function removeItem(id){ delete db.items[id]; db.meta.deleted[id]=Date.now(); save(); }
 const prefs = (()=>{ try{ return JSON.parse(localStorage.getItem(KEY+".prefs"))||{}; }catch(e){ return {}; } })();
-function savePrefs(){ try{ localStorage.setItem(KEY+".prefs", JSON.stringify(prefs)); }catch(e){} }
+// שמירת העדפות: הקוד של "נעול" נלקח תמיד מהשמירה העדכנית, כדי שחלון ישן של האפליקציה (למשל גם בדפדפן וגם באפליקציה המותקנת) לא ידרוס קוד חדש
+let pinDirty=false;
+function savePrefs(){ try{
+  const cur=JSON.parse(localStorage.getItem(KEY+".prefs")||"{}")||{};
+  if(!pinDirty && "pinHash" in cur) prefs.pinHash=cur.pinHash;
+  pinDirty=false;
+  localStorage.setItem(KEY+".prefs", JSON.stringify(prefs));
+}catch(e){} }
+addEventListener("storage",ev=>{ if(ev.key===KEY+".prefs"){ try{ const cur=JSON.parse(ev.newValue||"{}"); if(cur && "pinHash" in cur) prefs.pinHash=cur.pinHash; }catch(e){} } });
+// חד־פעמי (לבקשת המשתמש, 16.11): איפוס הקוד של "נעול" - בפתיחה הבאה בוחרים קוד חדש. האנימות הנעולות לא משתנות.
+if(!prefs.pinReset1){ prefs.pinHash=""; prefs.pinReset1=1; try{ localStorage.setItem(KEY+".prefs", JSON.stringify(prefs)); }catch(e){} }
 /* ---------- שפת הממשק (עברית / English) ---------- */
 // הכפתור עב/EN למעלה משנה גם את שמות האנימות וגם את כל הממשק
 if(!prefs.ui2){ prefs.ui2=1; if(prefs.lang!=="en") prefs.lang="he"; else prefs.lang="he"; try{ localStorage.setItem(KEY+".prefs", JSON.stringify(prefs)); }catch(e){} }
@@ -857,7 +867,7 @@ function bindLockScreen(){
     if(!/^\d{4,12}$/.test(pin)){ msg.textContent="הקוד צריך להיות 4 ספרות או יותר"; return; }
     if(!prefs.pinHash){
       if($("#pinIn2").value.trim()!==pin){ msg.textContent="הקודים לא זהים, נסה שוב"; return; }
-      prefs.pinHash = await hashPin(pin); savePrefs(); lockOpen=true; toast("הקוד נשמר"); renderList(); return;
+      prefs.pinHash = await hashPin(pin); pinDirty=true; savePrefs(); lockOpen=true; toast("הקוד נשמר"); renderList(); return;
     }
     if(await hashPin(pin)===prefs.pinHash){ lockOpen=true; renderList(); }
     else { msg.textContent="קוד שגוי"; inp.value=""; inp.focus(); }
@@ -951,7 +961,7 @@ function renderList(){
   const lqx=$("#lqx"); if(lqx) lqx.onclick=()=>{ listQuery=""; renderList(); };
   if(showLocked && !lockOpen) bindLockScreen();
   const rl=$("#relock"); if(rl) rl.onclick=()=>{ lockOpen=false; renderList(); };
-  const cp=$("#chpin"); if(cp) cp.onclick=()=>{ prefs.pinHash=""; savePrefs(); lockOpen=false; listFilter="locked"; renderList(); toast("בחר קוד חדש"); };
+  const cp=$("#chpin"); if(cp) cp.onclick=()=>{ prefs.pinHash=""; pinDirty=true; savePrefs(); lockOpen=false; listFilter="locked"; renderList(); toast("בחר קוד חדש"); };
   bindRows(view,"list");
   const sl=$("#toStats"); if(sl) sl.onclick=()=>go({tab:"stats"});
   $("#sort").onchange=ev=>{ prefs.sort=ev.target.value; savePrefs(); listLimit=LIST_STEP; renderList(); };
