@@ -234,6 +234,11 @@ h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute
 .sfc b{display:block;font-size:13px;line-height:1.25;margin-top:5px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .sfc small{display:block;font-size:11.5px;color:var(--muted);line-height:1.25;margin-top:2px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .sfc em{display:block;font-style:normal;font-size:11px;color:var(--muted);margin-top:2px}
+.memrows{display:grid;gap:10px}
+.memr{display:grid;grid-template-columns:1fr auto auto;gap:4px 10px;align-items:baseline}
+.memr span{font-size:14.5px}.memr b{font-size:15px}.memr small{font-size:12.5px;color:var(--muted);min-width:56px;text-align:end}
+.memr i{grid-column:1/-1;height:6px;border-radius:9px;background:var(--line);position:relative;overflow:hidden}
+.memr i::after{content:"";position:absolute;inset-block:0;inset-inline-start:0;width:var(--w);background:var(--accent);border-radius:9px}
 .studiolink{background:none;border:0;padding:0;font:inherit;color:var(--accent);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .stchips{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0 12px}
 .stchips .lbl{font-size:13px;color:var(--muted)}
@@ -526,8 +531,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=121"></script>
-<script src="i18n-en.js?v=121"></script>
+<script src="he-names.js?v=122"></script>
+<script src="i18n-en.js?v=122"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -553,7 +558,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 121;
+const APP_VERSION = 122;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -583,6 +588,28 @@ if(!db.meta.doneFill1){
 }
 // שמירה בטלפון: מאחדים שמירות רצופות (למשל סימון כמה פרקים ברצף) לשמירה אחת, ושומרים מיד כשיוצאים מהאפליקציה
 let saveTimer=null;
+// כמה זיכרון כל חלק באפליקציה תופס בטלפון
+async function fillMemory(){
+  const box=$("#memBox"); if(!box) return;
+  const en=uiEn();
+  const G=[["list",en?"Your list":"הרשימה שלך",k=>k===KEY],["full",en?"Saved anime pages":"עמודי אנימות שמורים",k=>k===KEY+".full"],["char",en?"Characters & their pictures":"דמויות ותמונות דמויות",k=>k===KEY+".char"||k===KEY+".chimg"],["staff",en?"Voice actors":"מדבבים",k=>k===KEY+".staff"],
+    ["browse",en?"Home, seasonal & search":"בית, עונתי וחיפוש",k=>/\.(browse\..*|season.*|home|tvz)$/.test(k)],["wo",en?"Watch order":"סדר צפייה",k=>k===KEY+".wo"],["he",en?"Hebrew names":"שמות בעברית",k=>k===KEY+".he"],["other",en?"Settings & other":"הגדרות ושאר",()=>true]];
+  const sum={}; let total=0;
+  try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(!k||!k.startsWith("animeTracker")) continue; const b=(k.length+(localStorage.getItem(k)||"").length); /* הדפדפן סופר תווים, בערך 5 מיליון */ const g=G.find(x=>x[2](k)); sum[g[0]]=(sum[g[0]]||0)+b; total+=b; } }catch(e){}
+  let imgN=0, imgB=0;
+  try{ if(window.caches){ const c=await caches.open("anime-images-v1"); const ks=await c.keys(); imgN=ks.length; } }catch(e){}
+  try{ if(navigator.storage&&navigator.storage.estimate){ const est=await navigator.storage.estimate(); if(est.usageDetails&&est.usageDetails.caches) imgB=est.usageDetails.caches; } }catch(e){}
+  const fmt=b=>b>=1048576?(b/1048576).toFixed(1)+" MB":Math.max(1,Math.round(b/1024))+" KB";
+  const all=total+imgB, LIMIT=5*1048576;
+  const rows=G.filter(g=>sum[g[0]]).map(g=>[g[1],sum[g[0]]]); if(imgB) rows.push([en?`Poster images (${imgN})`:`תמונות פוסטרים (${imgN})`,imgB]);
+  rows.sort((a,b)=>b[1]-a[1]);
+  if(!$("#memBox")) return;
+  $("#memBox").classList.add("nofx");
+  $("#memBox").innerHTML=`<div class="memrows">${rows.map(([n,b])=>`<div class="memr"><span>${esc(n)}</span><b>${Math.round(b/all*100)}%</b><small>${fmt(b)}</small><i style="--w:${Math.max(2,Math.round(b/all*100))}%"></i></div>`).join("")}</div>
+    <p class="note">${en?`Total ${fmt(all)}. Data alone (without images) uses ${fmt(total)} of about 5 MB the browser allows.${total>LIMIT*.7?" <b>Close to the limit.</b>":""}`:`סה"כ ${fmt(all)}. הנתונים עצמם (בלי התמונות) תופסים ${fmt(total)} מתוך כ־5 MB שהדפדפן מקצה.${total>LIMIT*.7?" <b>קרוב למגבלה.</b>":""}`}</p>
+    <button class="btn" id="memClear">${en?"Clear saved pages & images":"נקה עמודים ותמונות שמורים"}</button><p class="note">${en?"Your list isn't deleted. Pages and images just download again when you open them.":"הרשימה שלך לא נמחקת. העמודים והתמונות פשוט יורדו שוב כשתפתח אותם."}</p>`;
+  $("#memClear").onclick=async()=>{ dropCaches(); fullStore={}; charStore={}; staffStore={}; chimgStore={}; try{ await caches.delete("anime-images-v1"); }catch(e){} toast(en?"Storage cleared":"הזיכרון נוקה"); fillMemory(); };
+}
 // מטמונים שאפשר למחוק בלי לאבד מידע (הם נטענים מחדש מהאינטרנט)
 function dropCaches(keepKey){
   try{ for(let i=localStorage.length-1;i>=0;i--){ const k=localStorage.key(i);
@@ -2492,6 +2519,7 @@ function renderSettings(){
       <div class="segl">שפת ממשק</div>
       <div class="seg nofx" role="group"><button data-lg="he" aria-pressed="${isHeLang()}"><span>עברית</span></button><button data-lg="en" aria-pressed="${!isHeLang()}"><span>English</span></button></div></div>
     ${syncCardHTML()}
+    <div class="card"><h2>${uiEn()?"Phone storage":"זיכרון בטלפון"}</h2><div id="memBox"><p class="note">${uiEn()?"Calculating…":"מחשב…"}</p></div></div>
     ${notifCardHTML().replace('style="margin-top:16px"','')}
     <div class="card"><h2>גיבוי</h2><p>שומר קובץ עם כל ${n} האנימות, הסטטוסים והציונים. שמור אותו בדרייב או שלח לעצמך. גיבוי אחרון: ${lb}.</p>
       <div class="actions"><button class="btn primary" id="bk">הורד קובץ גיבוי</button></div></div>
@@ -2520,6 +2548,7 @@ function renderSettings(){
     <p class="note" style="text-align:center">גרסה ${APP_VERSION}</p>`;
 
   bindNotifCard();
+  fillMemory();
   view.querySelectorAll("[data-th]").forEach(b=>b.onclick=()=>{ setTheme(b.dataset.th); view.querySelectorAll("[data-th]").forEach(x=>x.setAttribute("aria-pressed", x.dataset.th===prefs.theme)); });
   view.querySelectorAll("[data-lg]").forEach(b=>b.onclick=()=>setLang(b.dataset.lg));
   $("#bk").onclick = ()=>{
