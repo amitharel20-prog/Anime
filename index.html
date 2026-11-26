@@ -105,6 +105,7 @@ main{padding-block:16px}
 .sheet-list button[aria-pressed="true"] span{color:var(--bg)}
 .rmain img,.rmain .ph{width:64px;height:90px;object-fit:cover;border-radius:6px;background:var(--line)}
 .row .t{min-width:0}
+.row.mine{content-visibility:auto;contain-intrinsic-size:auto 148px}
 .row.mine .rmain{grid-template-columns:84px 1fr auto}
 .row.mine .rmain img,.row.mine .rmain .ph{width:84px;height:120px;border-radius:8px}
 .list>.row{content-visibility:auto;contain-intrinsic-size:auto 128px}
@@ -531,8 +532,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=123"></script>
-<script src="i18n-en.js?v=123"></script>
+<script src="he-names.js?v=125"></script>
+<script src="i18n-en.js?v=125"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -558,7 +559,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 123;
+const APP_VERSION = 125;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -995,7 +996,7 @@ function renderList(){
     <div class="sortrow"><label for="sort">מיון</label><select id="sort">${Object.entries(SORTS).map(([k,s])=>`<option value="${k}" ${k===sortKey?"selected":""}>${s.label}</option>`).join("")}</select><button class="linkbtn" id="toStats" style="margin-inline-start:auto">סטטיסטיקות ←</button></div>
     ${showLocked&&!lockOpen ? lockScreenHTML() : `${showLocked?`<div class="lockbar">${LOCK_ICON}<span>רשימה נעולה</span><button class="linkbtn" id="chpin" style="margin-inline-start:auto">שנה קוד</button><button class="linkbtn" id="relock" style="margin-inline-start:12px">נעל שוב</button></div>`:""}
     <div class="list" id="myList">${items.slice(0,listLimit).map(rowHTML).join("") || `<div class="empty">${showLocked?"אין כאן אנימות. כדי להעביר אנימה לכאן, לוחצים על ⋯ לידה ובוחרים 'העבר לנעול'.":"אין כאן כלום עדיין."}</div>`}</div>`}
-    ${items.length>listLimit?`<div id="moreRows" class="empty">טוען עוד…</div>`:""}`;
+    ${items.length>listLimit?`<div id="moreRows" style="height:1px"></div>`:""}`;
   // טוען את הרשימה בחלקים כשגוללים, כדי שהמסך ייפתח מהר
   const mr=$("#moreRows");
   if(mr && "IntersectionObserver" in window){
@@ -1005,7 +1006,7 @@ function renderList(){
       $("#myList").insertAdjacentHTML("beforeend", items.slice(from,listLimit).map(rowHTML).join(""));
       bindRows($("#myList"),"list");
       if(listLimit>=items.length){ io.disconnect(); mr.remove(); }
-    },{rootMargin:"600px"});
+    },{rootMargin:"2000px"});
     io.observe(mr);
   }
   view.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ if(c.dataset.wheel){ go({tab:"list", wheel:true}); return; } listFilter=c.dataset.f; listLimit=LIST_STEP; renderList(); window.scrollTo(0,0); });
@@ -1567,8 +1568,11 @@ function bindNotifCard(){
 
 /* ---------- רענון פרקים מ־AniList ---------- */
 let refreshing=false;
+// "חתימה" של מה שרואים ברשימה, כדי לא לצייר מחדש סתם (זה מה שגורם לקפיצות)
+const listSig = ()=>Object.values(db.items).filter(e=>e.status).map(e=>[e.id,e.status,e.title,e.cover,e.episodes,e.next&&e.next.ep,e.air,watchedCount(e),e.star?1:0].join(",")).join(";");
 async function refreshFromAniList(){
   if(refreshing || !navigator.onLine) return; refreshing=true;
+  const sig0=listSig();
   try{
     const last = prefs.lastRefresh||0;
     const all = Object.values(db.items).filter(e=>e.status);
@@ -1599,7 +1603,7 @@ async function refreshFromAniList(){
     const added = buildNotifs();
     if(added) toast(added===1?"יש התראה חדשה":`יש ${added} התראות חדשות`);
     prefs.lastRefresh=Date.now(); savePrefs();
-    if(!overlay() && !current.wheel && !current.notifs && current.tab==="list") renderList();
+    if(sig0!==listSig() && !overlay() && !current.wheel && !current.notifs && current.tab==="list" && !(document.activeElement&&/INPUT|SELECT/.test(document.activeElement.tagName))){ const y=window.scrollY; renderList(); window.scrollTo(0,y); }
   }catch(e){ /* אין חיבור או ש־AniList עמוס; ננסה בפעם הבאה */ }
   finally{ refreshing=false; }
 }
@@ -1942,8 +1946,10 @@ async function renderSeasonal(){
   view.querySelectorAll("[data-fmt]").forEach(c=>c.onclick=()=>{ seasonFmt=c.dataset.fmt; renderSeasonal(); });
   try{
     const skey = KEY+".season."+key+(prefs.adult?".a":"");
-    if(!seasonCache[key]){ try{ const c=JSON.parse(localStorage.getItem(skey)); if(c&&c.data&&Date.now()-c.t<6*3600e3) seasonCache[key]=c.data; }catch(e){} }
-    if(!seasonCache[key]){
+    // מציגים מיד מה ששמור (גם אם ישן), ומעדכנים ברקע - בלי מסך טעינה
+    let stale=false;
+    if(!seasonCache[key]){ try{ const c=JSON.parse(localStorage.getItem(skey)); if(c&&c.data){ seasonCache[key]=c.data; stale=Date.now()-c.t>=6*3600e3; } }catch(e){} }
+    const fetchSeason = async ()=>{
       let all=[], page=1, more=true;
       while(more && page<=4){
         const d = await anilist(`query($s:MediaSeason,$y:Int,$p:Int){Page(page:$p,perPage:50){pageInfo{hasNextPage} media(type:ANIME,${adultFilter()}season:$s,seasonYear:$y,sort:POPULARITY_DESC){${MEDIA_FIELDS}}}}`,{s,y,p:page});
@@ -1951,7 +1957,9 @@ async function renderSeasonal(){
       }
       seasonCache[key]=all;
       try{ localStorage.setItem(skey,JSON.stringify({t:Date.now(),data:all})); }catch(e){}
-    }
+    };
+    if(!seasonCache[key]) await fetchSeason();
+    else if(stale) fetchSeason().then(()=>{ if(current.tab==="seasonal" && !overlay() && seasonSel.s===s && seasonSel.y===y){ const yy=window.scrollY; renderSeasonal(); window.scrollTo(0,yy); } }).catch(()=>{});
     if(current.tab!=="seasonal"||current.detail||seasonSel.s!==s||seasonSel.y!==y) return;
     const list = seasonCache[key].filter(m=>m.format===seasonFmt);
     const sg=$("#sg");
@@ -2642,7 +2650,7 @@ async function syncNow(silent){
     c.last=Date.now(); setSyncCfg(c); pushOn(false);
     syncState=`סונכרן ${new Date().toLocaleTimeString(LOC(),{hour:"2-digit",minute:"2-digit"})}`;
     if(changed && !silent) toast(`התקבלו ${changed} עדכונים מהמכשיר השני`);
-    if(changed && !overlay() && !current.wheel) render();
+    if(changed && !overlay() && !current.wheel && !(document.activeElement&&/INPUT|SELECT/.test(document.activeElement.tagName))){ const y=window.scrollY; render(); window.scrollTo(0,y); }
   }catch(err){
     syncState="הסנכרון נכשל: "+err.message;
     if(!silent) toast("הסנכרון נכשל");
@@ -2980,11 +2988,23 @@ document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==
 if("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message",ev=>{ const id=ev.data&&ev.data.open; if(id) go({tab:current.tab||"list",detail:+id}); });
 render();
 buildNotifs(); updateBell();
-setTimeout(()=>pushOn(false), 4000);
-setTimeout(loadPushLog, 1500);
+// משימות רקע: אחרי שהמסך כבר מוצג, אחת אחרי השנייה, כשהטלפון פנוי - כדי שלא יהיו תקיעות בהתחלה
+const idle = (fn, ms)=>setTimeout(()=>("requestIdleCallback" in window ? requestIdleCallback(()=>fn(),{timeout:3000}) : fn()), ms);
+idle(()=>pushOn(false), 6000);
+idle(loadPushLog, 2500);
+// טעינה מראש בזמן שקט: העונה הנוכחית (לטאב "עונתי")
+idle(async()=>{ try{ if(!navigator.onLine) return; const {s:ss,y:yy}=curSeason(); const k=KEY+".season."+ss+"-"+yy+(prefs.adult?".a":""); const c=JSON.parse(localStorage.getItem(k)||"null"); if(c && Date.now()-c.t<6*3600e3) return;
+  let all=[], page=1, more=true; while(more && page<=4){ const d=await anilist(`query($s:MediaSeason,$y:Int,$p:Int){Page(page:$p,perPage:50){pageInfo{hasNextPage} media(type:ANIME,${adultFilter()}season:$s,seasonYear:$y,sort:POPULARITY_DESC){${MEDIA_FIELDS}}}}`,{s:ss,y:yy,p:page},1); all=all.concat(d.Page.media); more=d.Page.pageInfo.hasNextPage; page++; await sleep(800); }
+  try{ localStorage.setItem(k,JSON.stringify({t:Date.now(),data:all})); }catch(e){} }catch(e){} }, 20000);
+// טעינה מראש בזמן שקט: עמודי האנימות שאתה בצפייה בהן, כדי שייפתחו מיד
+idle(async()=>{
+  if(!navigator.onLine || (navigator.connection && navigator.connection.saveData)) return;
+  const ids=Object.values(db.items).filter(e=>e.status==="watching" && !isHidden(e)).sort((a,b)=>(b.updated||0)-(a.updated||0)).slice(0,8).map(e=>e.id);
+  for(const id of ids){ if(document.visibilityState!=="visible") break; prefetchFull(id); await sleep(1500); }
+}, 10000);
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") loadPushLog(); });
 // שמות בעברית לכל הרשימה שלך ברקע, כדי שהחיפוש יעבוד בשתי השפות
-setTimeout(()=>{ Object.values(db.items).forEach(e=>{ if(e.status) wantHe(e); }); }, 1500);
+idle(()=>{ const all=Object.values(db.items).filter(e=>e.status); let i=0; const step=()=>{ const end=Math.min(i+60,all.length); for(;i<end;i++) wantHe(all[i]); if(i<all.length) idle(step,200); }; step(); }, 3000);
 setTimeout(()=>{ syncNow(true); }, 600);
 // הוספות שביקשת דרך Claude: מחפשים כל שם ב־AniList פעם אחת ומוסיפים לרשימה
 async function processPendingAdds(){
@@ -3031,7 +3051,7 @@ async function processPendingAdds(){
 }
 setTimeout(()=>{ processPendingAdds().catch(()=>{}); }, 2500);
 // רענון פרקים ברקע: רק אחרי שהמסך נטען, ולכל היותר פעם בחצי שעה
-setTimeout(()=>{ if(Date.now()-(prefs.lastRefresh||0)>30*60e3) refreshFromAniList(); }, 8000);
+idle(()=>{ if(Date.now()-(prefs.lastRefresh||0)>30*60e3) refreshFromAniList(); }, 8000);
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"){ syncNow(true); if(Date.now()-(prefs.lastRefresh||0)>30*60e3) refreshFromAniList(); } });
 </script>
 </body>
