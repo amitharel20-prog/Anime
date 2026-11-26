@@ -526,8 +526,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=119"></script>
-<script src="i18n-en.js?v=119"></script>
+<script src="he-names.js?v=120"></script>
+<script src="i18n-en.js?v=120"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -553,7 +553,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 119;
+const APP_VERSION = 120;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -618,6 +618,8 @@ const I18N_PATTERNS = [
   [/^יצאו (\d+) פרקים חדשים של (.+) \(עד פרק (\d+)\)$/, "$1 new episodes of $2 are out (up to ep. $3)"],
   [/^יצא פרק (\d+) של (.+)$/, "Episode $1 of $2 is out"],
   [/^(.+): הפרק הראשון יצא! 🎉$/, "$1: the first episode is out! 🎉"],
+  [/^נוספה ל"אצפה בעתיד": (.+)$/, "Added to Plan to watch: $1"],
+  [/^נוספו (\d+) עונות חדשות ל"אצפה בעתיד"$/, "Added $1 new seasons to Plan to watch"],
   [/^הוכרזה עונה חדשה: (.+?)(?: \(צפויה ב(.+)\))?$/, (m,a,b)=>`New season announced: ${a}${b?` (expected ${trText(b.replace(/^־/,""))})`:""}`],
   [/^העונה החדשה של (.+) יוצאת ב־(.+)$/, "New season of $1 comes out $2"],
   [/^ב־(.+) ←$/, "in $1 →"],
@@ -1494,6 +1496,16 @@ async function loadPushLog(){
     const rows=await rpc(c,"get_push_log",{p_code:c.code}); let added=0;
     (rows||[]).forEach(r=>{ if(r.key && r.body) added+=addNotif(r.key, r.anime_id, r.body, Date.parse(r.at)||Date.now(), true, r.cover); });
     if(added){ save(false); updateBell(); if(current.notifs) renderNotifs(); }
+    // עונה חדשה שהוכרזה לאנימה שראית / שאתה בצפייה בה: מוסיפים אוטומטית ל"אצפה בעתיד" (פעם אחת בלבד; אם הסרת אותה, היא לא תחזור)
+    const done=db.meta.annAdded||(db.meta.annAdded={});
+    const ids=[...new Set((rows||[]).filter(r=>/^ann:/.test(r.key||"")).map(r=>r.anime_id))].filter(id=>id && !done[id] && !(db.items[id]&&db.items[id].status) && !db.meta.deleted[id]);
+    if(ids.length){
+      const d=await anilist(`query($i:[Int]){Page(perPage:50){media(id_in:$i,type:ANIME){${MEDIA_FIELDS}}}}`,{i:ids},2);
+      const got=[];
+      for(const m of (d.Page.media||[])){ const it=db.items[m.id] || (db.items[m.id]=entryFromMedia(m)); if(!it.status){ it.status="plan"; it.updated=Date.now(); got.push(it); } done[m.id]=Date.now(); }
+      save();
+      if(got.length){ toast(got.length===1?`נוספה ל"אצפה בעתיד": ${nameOf(got[0])}`:`נוספו ${got.length} עונות חדשות ל"אצפה בעתיד"`); if(!overlay() && current.tab==="list" && !(document.activeElement&&/INPUT|SELECT/.test(document.activeElement.tagName))) renderList(); }
+    }
   }catch(e){}
 }
 async function pushOff(){
