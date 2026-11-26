@@ -531,8 +531,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=122"></script>
-<script src="i18n-en.js?v=122"></script>
+<script src="he-names.js?v=123"></script>
+<script src="i18n-en.js?v=123"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -558,7 +558,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 122;
+const APP_VERSION = 123;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -2211,7 +2211,9 @@ function paintChar(c, v){
 const STAFF_KEY = KEY+".staff";
 let staffStore = (()=>{ try{ return JSON.parse(localStorage.getItem(STAFF_KEY))||{}; }catch(e){ return {}; } })();
 function saveStaff(id, v){
-  staffStore[id]={t:Date.now(),v};
+  // שומרים רק את מה שהעמוד מציג (בלי הנתונים הגולמיים של כל הסדרות)
+  const lite={...v, st:v.st?{...v.st, characterMedia:undefined}:v.st, roles:(v.roles||[]).map(r=>({role:r.role, c:{id:r.c.id, name:{full:r.c.name.full, native:r.c.name.native}, image:{large:r.c.image&&(r.c.image.large||r.c.image.medium)}}, m:{id:r.m.id, idMal:r.m.idMal, isAdult:r.m.isAdult, seasonYear:r.m.seasonYear, title:r.m.title}}))};
+  staffStore[id]={t:Date.now(),v:lite};
   Object.keys(staffStore).sort((a,b)=>staffStore[b].t-staffStore[a].t).slice(8).forEach(k=>delete staffStore[k]);
   try{ localStorage.setItem(STAFF_KEY, JSON.stringify(staffStore)); }catch(e){ staffStore={}; try{ localStorage.removeItem(STAFF_KEY); }catch(_){} }
 }
