@@ -526,8 +526,8 @@ button,a,.chip,select,input{touch-action:manipulation}
 <div class="toast" id="toast" hidden role="status"></div>
 <div class="sheet" id="sheet" hidden></div>
 
-<script src="he-names.js?v=120"></script>
-<script src="i18n-en.js?v=120"></script>
+<script src="he-names.js?v=121"></script>
+<script src="i18n-en.js?v=121"></script>
 <script>
 "use strict";
 /* ---------- נתונים ---------- */
@@ -553,7 +553,7 @@ function load(){
 let db = load();
 if(!db.meta) db.meta={};
 if(!db.meta.deleted) db.meta.deleted={};
-const APP_VERSION = 120;
+const APP_VERSION = 121;
 // חד־פעמי: אנימות ב"נצפה" או "בצפייה" בלי אף פרק שסומן עוברות ל"בהמתנה"
 if(!db.meta.zeroToHold2){
   for(const e of Object.values(db.items)){
@@ -583,10 +583,16 @@ if(!db.meta.doneFill1){
 }
 // שמירה בטלפון: מאחדים שמירות רצופות (למשל סימון כמה פרקים ברצף) לשמירה אחת, ושומרים מיד כשיוצאים מהאפליקציה
 let saveTimer=null;
+// מטמונים שאפשר למחוק בלי לאבד מידע (הם נטענים מחדש מהאינטרנט)
+function dropCaches(keepKey){
+  try{ for(let i=localStorage.length-1;i>=0;i--){ const k=localStorage.key(i);
+    if(k && k!==keepKey && /^animeTracker\.v1\.(full|char|staff|chimg|wo|browse\..*|season.*|home|tvz|he)$/.test(k)) localStorage.removeItem(k); } }catch(e){}
+}
 function flushSave(){
   if(saveTimer){ clearTimeout(saveTimer); saveTimer=null; }
-  try{ localStorage.setItem(KEY, JSON.stringify(db)); }
-  catch(e){ toast("השמירה בטלפון נכשלה. כדאי לגבות עכשיו."); }
+  const data=JSON.stringify(db);
+  try{ localStorage.setItem(KEY, data); }
+  catch(e){ dropCaches(); try{ localStorage.setItem(KEY, data); } catch(e2){ toast("השמירה בטלפון נכשלה. כדאי לגבות עכשיו."); } }
 }
 function save(sync=true){
   if(!saveTimer) saveTimer=setTimeout(flushSave, 250);
@@ -2015,7 +2021,7 @@ const CHAR_KEY = KEY+".char";
 let charStore = (()=>{ try{ return JSON.parse(localStorage.getItem(CHAR_KEY))||{}; }catch(e){ return {}; } })();
 function saveChar(k, v){
   charStore[k]={t:Date.now(),v};
-  const ks=Object.keys(charStore).sort((a,b)=>charStore[b].t-charStore[a].t); ks.slice(30).forEach(x=>delete charStore[x]);
+  const ks=Object.keys(charStore).sort((a,b)=>charStore[b].t-charStore[a].t); ks.slice(20).forEach(x=>delete charStore[x]);
   try{ localStorage.setItem(CHAR_KEY, JSON.stringify(charStore)); }catch(e){ charStore={}; try{ localStorage.removeItem(CHAR_KEY); }catch(_){} }
 }
 const sleepMs = ms=>new Promise(r=>setTimeout(r,ms));
@@ -2179,7 +2185,7 @@ const STAFF_KEY = KEY+".staff";
 let staffStore = (()=>{ try{ return JSON.parse(localStorage.getItem(STAFF_KEY))||{}; }catch(e){ return {}; } })();
 function saveStaff(id, v){
   staffStore[id]={t:Date.now(),v};
-  Object.keys(staffStore).sort((a,b)=>staffStore[b].t-staffStore[a].t).slice(20).forEach(k=>delete staffStore[k]);
+  Object.keys(staffStore).sort((a,b)=>staffStore[b].t-staffStore[a].t).slice(8).forEach(k=>delete staffStore[k]);
   try{ localStorage.setItem(STAFF_KEY, JSON.stringify(staffStore)); }catch(e){ staffStore={}; try{ localStorage.removeItem(STAFF_KEY); }catch(_){} }
 }
 async function loadStaff(id, page){
@@ -2256,9 +2262,11 @@ const fullInflight = {};
 const FULL_KEY = KEY+".full";
 let fullStore = (()=>{ try{ return JSON.parse(localStorage.getItem(FULL_KEY))||{}; }catch(e){ return {}; } })();
 function saveFull(id, m){
-  fullStore[id]={t:Date.now(),m};
+  // שומרים גרסה רזה: המלצות רק עם מה שצריך לכרטיס
+  const lite = m && m.recommendations ? {...m, recommendations:{nodes:(m.recommendations.nodes||[]).slice(0,12).map(x=>{ const r=x&&x.mediaRecommendation; return r?{mediaRecommendation:{id:r.id,idMal:r.idMal,isAdult:r.isAdult,title:r.title,synonyms:r.synonyms,format:r.format,status:r.status,episodes:r.episodes,seasonYear:r.seasonYear,season:r.season,startDate:r.startDate,averageScore:r.averageScore,coverImage:r.coverImage,genres:r.genres,nextAiringEpisode:r.nextAiringEpisode}}:x; })}} : m;
+  fullStore[id]={t:Date.now(),m:lite};
   const ids=Object.keys(fullStore).sort((a,b)=>fullStore[b].t-fullStore[a].t);
-  ids.slice(40).forEach(k=>delete fullStore[k]);
+  ids.slice(25).forEach(k=>delete fullStore[k]);
   try{ localStorage.setItem(FULL_KEY, JSON.stringify(fullStore)); }catch(e){ fullStore={}; try{ localStorage.removeItem(FULL_KEY); }catch(_){} }
 }
 function fetchFull(id){
@@ -2920,12 +2928,17 @@ document.addEventListener("click",ev=>{ const a=ev.target.closest&&ev.target.clo
 if("serviceWorker" in navigator && location.protocol==="https:"){ navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>r.update()).catch(()=>{});
   let reloaded=false; navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(!reloaded){ reloaded=true; if(saveTimer) flushSave(); location.reload(); } }); }
 // בדיקת גרסה חדשה בכל פתיחה: עוקף את הזיכרון של GitHub (כ־10 דקות)
+let updWanted=0;
+function applyUpdate(){ if(!updWanted) return; if(saveTimer) flushSave(); location.replace(location.pathname+"?v="+updWanted); }
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden" && updWanted) applyUpdate(); });
 async function checkForUpdate(){
   try{
     const r = await fetch("version.json?t="+Date.now(),{cache:"no-store"});
     const v = (await r.json()).v;
+    // גרסה חדשה: לא טוענים מחדש מול העיניים (זה מה שגרם לטעינה כפולה בפתיחה).
+    // הקבצים החדשים נשמרים ברקע, והמעבר קורה כשיוצאים מהאפליקציה - בחזרה כבר רואים את החדשה.
     if(v>APP_VERSION && new URLSearchParams(location.search).get("v")!==String(v)){
-      if(saveTimer) flushSave(); location.replace(location.pathname+"?v="+v);
+      if(!updWanted){ updWanted=v; try{ const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration(); if(reg) reg.update(); fetch("index.html?v="+v).catch(()=>{}); fetch("he-names.js?v="+v).catch(()=>{}); fetch("i18n-en.js?v="+v).catch(()=>{}); }catch(e){} }
     }
   }catch(e){}
 }
